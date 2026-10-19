@@ -50,4 +50,6 @@ A integração com LLMs via API (utilizando saídas estruturadas / Structured Ou
 
 ### Como vocês garantem que vão entregar esse projeto dentro de 2 meses?
 
-Escolhemos esse tema pela alta escalabilidade e pela clara lacuna de mercado (market gap), já que faltam ferramentas eficientes voltadas à jornada de candidatura (job hunting) em tecnologia. Embora seja um desafio técnico relevante, garantimos a entrega dentro de um escopo realista de 
+Escolhemos esse tema pela alta escalabilidade e pela clara lacuna de mercado (market gap), já que faltam ferramentas eficientes voltadas à jornada de candidatura (job hunting) em tecnologia. Embora seja um desafio técnico relevante, garantimos a entrega, por meio de divisão de tarefas, comunicação assíncrona, seguimento rígido ao cronograma estipulado pelos docs. 
+
+#### - Raul Kolaric, Lorenzo Cunha, Thierry Nadjarian.
