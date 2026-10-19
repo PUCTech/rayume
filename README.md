@@ -1,4 +1,5 @@
 ## Rayume
+<img width="1200" height="400" alt="v0Artboard 6 copy@2x (2)" src="https://github.com/user-attachments/assets/f4e4519a-f396-4f0e-a03c-02e58d3fa346" />
 
 ### Qual o problema que vocês querem resolver?
 
@@ -21,40 +22,32 @@ O Rayume se diferencia por unir a qualidade tipográfica do LaTeX (sem necessida
 Para garantir uma entrega focada e de alta qualidade, o escopo inicial (MVP) do Rayume está delimitado da seguinte forma:
 
 - O que está dentro do escopo: Plataforma web responsiva e extensão de navegador complementar; cadastro e estruturação de perfil técnico (Currículo Mestre); módulo de IA generativa parametrizado para redação e adaptação de currículos de TI (foco em hard e soft skills); galeria com busca e pré-visualização dinâmica preenchida com os dados do usuário; e compilação transparente em LaTeX com exportação em PDF pronto para filtros ATS.
-- **Limites do escopo (O que o Rayume não é no momento):** A plataforma não atuará como portal de vagas, rede social profissional ou sistema de recrutamento para empresas. O foco é 100% voltado ao candidato e à excelência na construção, personalização e apresentação do seu currículo.
+- Limites do escopo (O que o Rayume não é no momento): A plataforma não atuará como portal de vagas, rede social profissional ou sistema de recrutamento para empresas. O foco é 100% voltado ao candidato e à excelência na construção, personalização e apresentação do seu currículo.
 
 ### Quais as features?
 
-- **Autenticação ágil para devs:** Login integrado via GitHub, Google e e-mail.
-- **Currículo Mestre (Master Resume) assistido por IA:** Cadastro centralizado de experiências, formação e projetos, onde a IA auxilia a extrair e redigir tanto hard skills quanto soft skills.
-- **Personalização inteligente por vaga (via Extensão e Web):** Funcionalidade que captura a descrição da vaga aberta no navegador e gera uma versão do currículo adaptada especificamente para aquela oportunidade a partir do Currículo Mestre do usuário.
-- **Galeria de templates LaTeX com Live Preview:** Sistema de busca e visualização dinâmica dos modelos já renderizados com as informações reais do candidato.
-- **Exportação em PDF (Padrão ATS):** Compilação transparente do código LaTeX em segundo plano, gerando um PDF limpo, padronizado e otimizado para sistemas de triagem.
+- Autenticação ágil para devs: Login integrado via GitHub, Google e e-mail.
+- Currículo Mestre (Master Resume) assistido por IA: Cadastro centralizado de experiências, formação e projetos, onde a IA auxilia a extrair e redigir tanto hard skills quanto soft skills.
+- Personalização inteligente por vaga (via Extensão e Web): Funcionalidade que captura a descrição da vaga aberta no navegador e gera uma versão do currículo adaptada especificamente para aquela oportunidade a partir do Currículo Mestre do usuário.
+- Galeria de templates LaTeX com Live Preview: Sistema de busca e visualização dinâmica dos modelos já renderizados com as informações reais do candidato.
+- Exportação em PDF (Padrão ATS): Compilação transparente do código LaTeX em segundo plano, gerando um PDF limpo, padronizado e otimizado para sistemas de triagem.
 
 ### Como vocês vão incorporar IA via API na solução?
 
 A integração com LLMs via API (utilizando saídas estruturadas / Structured Outputs) atuará em três frentes principais:
 
-- **Refinamento de experiências e extração de Hard e Soft Skills:** Ao cadastrar um projeto ou experiência bruta, a IA processa o relato do usuário para reescrevê-lo com foco em impacto e resultados, evidenciando competências técnicas e interpessoais (liderança, comunicação, resolução de problemas) que costumam passar despercebidas.
-- **Currículo personalizado por vaga (Tailoring):** A partir dos atributos e keywords de uma vaga específica (capturados via extensão ou inseridos na plataforma), a IA cruza os requisitos com o "Currículo Mestre" da pessoa, selecionando os projetos mais relevantes e ajustando o resumo e os termos técnicos para maximizar a aderência à vaga.
-- **Mapeamento automático para múltiplos templates LaTeX:** Como diferentes templates possuem seções e limites de espaço distintos, a IA adapta e sintetiza as informações do usuário em estruturas padronizadas (JSON), permitindo que o motor do sistema preencha e compile diferentes layouts de LaTeX automaticamente sem quebrar a formatação.
+- Refinamento de experiências e extração de Hard e Soft Skills: Ao cadastrar um projeto ou experiência bruta, a IA processa o relato do usuário para reescrevê-lo com foco em impacto e resultados, evidenciando competências técnicas e interpessoais (liderança, comunicação, resolução de problemas) que costumam passar despercebidas.
+- Currículo personalizado por vaga (Tailoring): A partir dos atributos e keywords de uma vaga específica (capturados via extensão ou inseridos na plataforma), a IA cruza os requisitos com o "Currículo Mestre" da pessoa, selecionando os projetos mais relevantes e ajustando o resumo e os termos técnicos para maximizar a aderência à vaga.
+- Mapeamento automático para múltiplos templates LaTeX: Como diferentes templates possuem seções e limites de espaço distintos, a IA adapta e sintetiza as informações do usuário em estruturas padronizadas (JSON), permitindo que o motor do sistema preencha e compile diferentes layouts de LaTeX automaticamente sem quebrar a formatação.
 
 ### O que pode ou vai ficar para o futuro?
 
-- **ATS interno (Resume Scoring):** Sistema para pontuar e ranquear a compatibilidade do currículo frente a uma vaga antes do envio.
-- **Modelo SaaS e precificação:** Planos de assinatura para cobrir o custo de processamento de usuários com alto volume de candidaturas (heavy job hunting).
-- **Scraper e alertas de vagas (Job Alerts):** Monitoramento e coleta ativa de oportunidades alinhadas ao perfil técnico do usuário.
-- **Aplicação automática em vagas (Auto-apply):** Preenchimento automatizado de formulários de candidatura em plataformas de recrutamento.
-- **Classificador preditivo de sucesso:** Modelo analítico (teórico) treinado com base no histórico de currículos que converteram em entrevistas reais para otimizar futuras gerações.
+- ATS interno (Resume Scoring): Sistema para pontuar e ranquear a compatibilidade do currículo frente a uma vaga antes do envio.
+- Modelo SaaS e precificação: Planos de assinatura para cobrir o custo de processamento de usuários com alto volume de candidaturas (heavy job hunting).
+- Scraper e alertas de vagas (Job Alerts): Monitoramento e coleta ativa de oportunidades alinhadas ao perfil técnico do usuário.
+- Aplicação automática em vagas (Auto-apply): Preenchimento automatizado de formulários de candidatura em plataformas de recrutamento.
+- Classificador preditivo de sucesso: Modelo analítico (teórico) treinado com base no histórico de currículos que converteram em entrevistas reais para otimizar futuras gerações.
 
 ### Como vocês garantem que vão entregar esse projeto dentro de 2 meses?
 
-Escolhemos esse tema pela alta escalabilidade e pela clara lacuna de mercado (market gap), já que faltam ferramentas eficientes voltadas à jornada de candidatura (job hunting) em tecnologia. Embora seja um desafio técnico relevante, garantimos a entrega dentro de um escopo realista de 8 semanas através de decisões estratégicas de arquitetura:
-
-1. **Desacoplamento entre IA e Compilação LaTeX:** Em vez de depender da IA para gerar código LaTeX bruto do zero a cada requisição (o que geraria erros de sintaxe e lentidão), utilizaremos a API de IA para retornar dados estritamente estruturados (JSON) que serão injetados diretamente em templates LaTeX pré-validados no back-end.
-2. **Uso de ferramentas consolidadas:** A autenticação (OAuth com GitHub/Google) e a compilação de LaTeX via containers já contam com bibliotecas maduras, permitindo que a equipe dedique o tempo de programação do back-end à regra de negócios e à integração com a API de IA.
-3. **Execução incremental em 4 sprints (2 semanas cada):**
-   - **Semanas 1 e 2:** Estruturação do back-end, banco de dados, autenticação e cadastro do "Currículo Mestre".
-   - **Semanas 3 e 4:** Integração da API de IA para extração de hard/soft skills e configuração do motor de compilação LaTeX para PDF.
-   - **Semanas 5 e 6:** Construção da galeria de templates com pré-visualização dinâmica e fluxo de personalização por vaga.
-   - **Semanas 7 e 8:** Desenvolvimento da extensão de navegador para captura de vagas, testes integrados e refinamento da interface.
+Escolhemos esse tema pela alta escalabilidade e pela clara lacuna de mercado (market gap), já que faltam ferramentas eficientes voltadas à jornada de candidatura (job hunting) em tecnologia. Embora seja um desafio técnico relevante, garantimos a entrega dentro de um escopo realista de 
