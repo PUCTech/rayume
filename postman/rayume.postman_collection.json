@@ -1,0 +1,26 @@
+{
+  "info": {
+    "name": "Rayume API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('ok is true', () => pm.expect(pm.response.json().ok).to.be.true);"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
