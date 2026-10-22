@@ -9,6 +9,10 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "fastapi[standard]>=0.159.1",
+    "google-genai>=2.32.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings>=2.16.1",
+    "sqlalchemy>=2.1.6",
 ]
 
 [project.scripts]
@@ -17,3 +21,8 @@ backend = "backend:main"
 [build-system]
 requires = ["uv_build>=0.13.4,<0.14.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
