@@ -177,11 +177,3 @@ Compared with `raul-schema.md`:
 | Resume language | `users.language` only (UI) | adds `resumes.locale` | The audience is English-first, but users may want the same resume in pt-BR without duplicating the Master Resume |
 | Table count | 5 | 7 (adds `job_postings`, `resume_renders`; `entries` replaces `experiences`) | Above the "about 2 to 5" guideline. The two extra tables come from features in scope: job tailoring (3) and gallery preview + PDF export (4, 5). If we need to cut, merge `job_postings` into `resumes` as a jsonb column |
 
-## Not in this schema
-- **Skills catalog** (`skills` and a join table): the AI matches skills against a job. Revisit if we need to filter or query by skill.
-- **Template versions**: only the team writes templates. Add `template_versions` if old resumes must recompile identically, or if users can upload templates.
-- **Resume or entry history**: only the current state is kept.
-- **AI call log** (`ai_runs`): can go to application logging.
-- **Sessions table**: covered by `refresh_tokens`.
-- **Logs and cms**: same as Raul's proposal.
-- Future features (scoring, job alerts, billing, auto-apply): no tables until they're in scope.
