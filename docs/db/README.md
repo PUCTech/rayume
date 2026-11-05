@@ -44,7 +44,19 @@ Tables in the sketch: `users` (id, name, created_at, profession, email, age, pho
 | `cms`, `logs` | Removed | Logs go to app logging; cms is undefined and not MVP |
 | Portuguese names (`arquivo`) | English names | Project convention: code is in English |
 
-Result: 4 tables (`users`, `experiences`, `resumes`, `templates`). Auth tables are left to the auth library.
+Result: 4 tables (`users`, `experiences`, `resumes`, `templates`).
+
+### Update: in-house JWT auth
+
+The directors asked us to **implement JWT auth ourselves** (for learning), so there is no auth library. `raul-schema.md` added the following for that:
+
+| Change | Why |
+|--------|-----|
+| `users.password_hash` (nullable) | Email/password login. Null for OAuth-only users |
+| `users.github_id`, `users.google_id` (unique, nullable) | Link OAuth identities. Two fixed providers, so columns instead of an `accounts` table |
+| `refresh_tokens` table (`token_hash`, `expires_at`, `revoked_at`) | Access JWTs are stateless and not stored. Hashed refresh tokens allow rotation, logout and revocation |
+
+Result: 5 tables.
 
 ## 4. Your task
 
@@ -58,7 +70,7 @@ Result: 4 tables (`users`, `experiences`, `resumes`, `templates`). Auth tables a
 - **Never edit another member's `*-schema.md`.** Put your disagreements in your own file.
 - Use English identifiers, `snake_case` plural table names, `uuid` primary keys and `timestamptz` timestamps.
 - Stay inside MVP scope (see `PROJECT.md`). No tables for future features such as scoring, job alerts, billing or auto-apply.
-- Don't design auth tables (`accounts`, `sessions`); the auth library provides them.
+- Auth is **in-house JWT** (a directors' requirement), so your schema must support it: password hashes, OAuth identity linking (GitHub/Google), and refresh tokens. Never store plain passwords, raw refresh tokens or access tokens.
 - If you add a picture, save it as `<name>-sketch.png` and embed it.
 
 ### Required format for `<name>-schema.md`

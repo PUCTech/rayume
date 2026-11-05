@@ -29,7 +29,7 @@ Differentiators:
 
 ## MVP features (in scope)
 
-1. **Auth**: login via GitHub, Google and email.
+1. **Auth**: login via GitHub, Google and email. **JWT is implemented in-house, with no auth library**: the directors require it for learning purposes. Access + refresh tokens; see `db/raul-schema.md`.
 2. **Master Resume** (Currículo Mestre): one central profile with experiences, education and projects. AI helps write entries and extract hard/soft skills.
 3. **Job tailoring** (web + browser extension): capture a job description and generate a version of the resume tailored to it from the Master Resume.
 4. **LaTeX template gallery**: search plus live preview rendered with the user's real data.
