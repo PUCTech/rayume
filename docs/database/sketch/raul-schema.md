@@ -1,7 +1,7 @@
 # Database Schema
 
 > AI-oriented. PostgreSQL via SQLAlchemy 2 + psycopg 3. Status: **proposed**, not yet implemented.
-> Product context: [`../PROJECT.md`](../PROJECT.md).
+> Product context: [`../../PROJECT.md`](../../PROJECT.md).
 
 ## Diagram
 

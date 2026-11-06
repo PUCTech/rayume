@@ -9,7 +9,7 @@ Read [`../PROJECT.md`](../PROJECT.md) first. In short, **Rayume** turns a tech w
 
 ## 2. How this folder works
 
-Each team member submits one proposal:
+Each team member submits one proposal in `sketch/`:
 
 | File | Owner |
 |------|-------|
@@ -23,7 +23,7 @@ The team compares the proposals and merges them into one final schema.
 
 ### Raul's original sketch
 
-![Raul's sketch](raul-sketch.png)
+![Raul's sketch](sketch/raul-sketch.png)
 
 Tables in the sketch: `users` (id, name, created_at, profession, email, age, phone, language, address, picture), `socials` (id, user_id, link, text), `experience` (id, user_id, type, text), a `type` list (professional, educational, certification, volunteering, about), `resumes` (id, user_id, template_id, text, arquivo), `templates` (id, arquivo), plus empty `cms` and `logs` boxes.
 
@@ -60,10 +60,10 @@ Result: 5 tables.
 
 ## 4. Your task
 
-1. Read `raul-schema.md`, and any other `*-schema.md` files already here.
+1. Read `raul-schema.md`, and any other `*-schema.md` files in `sketch/`.
 2. Interview your team member about their ideas, or start from their sketch if they have one.
 3. **Critically review the existing proposals.** Don't just agree. If you disagree with something (a table, a column, a type, a relationship, a design choice), **change it in your own proposal** and explain why.
-4. Write the result to `<name>-schema.md` in this folder.
+4. Write the result to `sketch/<name>-schema.md`.
 
 ### Rules
 
@@ -71,7 +71,7 @@ Result: 5 tables.
 - Use English identifiers, `snake_case` plural table names, `uuid` primary keys and `timestamptz` timestamps.
 - Stay inside MVP scope (see `PROJECT.md`). No tables for future features such as scoring, job alerts, billing or auto-apply.
 - Auth is **in-house JWT** (a directors' requirement), so your schema must support it: password hashes, OAuth identity linking (GitHub/Google), and refresh tokens. Never store plain passwords, raw refresh tokens or access tokens.
-- If you add a picture, save it as `<name>-sketch.png` and embed it.
+- If you add a picture, save it as `sketch/<name>-sketch.png` and embed it.
 
 ### Required format for `<name>-schema.md`
 

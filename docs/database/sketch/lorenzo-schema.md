@@ -2,7 +2,7 @@
 
 > Status: **proposed**. Author: Lorenzo Cunha.
 > PostgreSQL (hosted on Supabase) via SQLAlchemy 2 + psycopg 3. Compared against [`raul-schema.md`](raul-schema.md).
-> Product context: [`../PROJECT.md`](../PROJECT.md).
+> Product context: [`../../PROJECT.md`](../../PROJECT.md).
 
 ## Diagram
 
