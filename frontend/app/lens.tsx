@@ -3,12 +3,28 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
-// SVG displacement filter used by `.lg` as a backdrop-filter. Only Chromium renders url() in
-// backdrop-filter; userAgentData is Chromium-only, so it doubles as the feature check.
+// Page-wide glass effects. The SVG displacement filter is used by `.glass` as a backdrop-filter;
+// only Chromium renders url() in backdrop-filter, and userAgentData is Chromium-only, so it
+// doubles as the feature check. A single pointer listener lights up whichever glass surface the
+// mouse is over (--mx/--my/--glow drive the highlight and rim in globals.css).
 export function Refraction() {
   useEffect(() => {
     if ("userAgentData" in navigator) document.documentElement.dataset.refract = "";
+    let lit: HTMLElement | null = null;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      const el = (e.target as Element).closest<HTMLElement>(".glass");
+      if (lit && lit !== el) lit.style.setProperty("--glow", "0");
+      lit = el;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      el.style.setProperty("--my", `${e.clientY - r.top}px`);
+      el.style.setProperty("--glow", "1");
+    };
+    document.addEventListener("pointermove", onMove, { passive: true });
     return () => {
+      document.removeEventListener("pointermove", onMove);
       delete document.documentElement.dataset.refract;
     };
   }, []);
@@ -17,7 +33,7 @@ export function Refraction() {
       <filter id="lg-refract" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
         <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="4" result="noise" />
         <feGaussianBlur in="noise" stdDeviation="3" result="soft" />
-        <feDisplacementMap in="SourceGraphic" in2="soft" scale="34" xChannelSelector="R" yChannelSelector="G" />
+        <feDisplacementMap in="SourceGraphic" in2="soft" scale="46" xChannelSelector="R" yChannelSelector="G" />
       </filter>
     </svg>
   );
