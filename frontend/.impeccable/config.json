@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "createdAt": "2026-11-08T16:21:55.015Z",
+        "reason": "user confirmed: asked to use Geist Sans and Geist Serif (vercel.com/font) for Rayume"
+      }
+    ]
+  }
+}

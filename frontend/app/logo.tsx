@@ -1,0 +1,20 @@
+// Manta mark traced from the README banner; uses currentColor so it can be tinted.
+export function Mark({ className = "h-8 w-auto" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 182 243" fill="currentColor" fillRule="evenodd" className={className} aria-hidden>
+      <path d="M174.41 239.18C166.52 234.08 159.68 226.26 155.54 217.61C152.19 210.62 150.32 202.76 148.01 186.11C146.45 174.79 142.73 162.17 138.11 152.50C134.14 144.19 126.03 132.59 123.15 131.12C122.24 130.65 115.42 130.00 108.00 129.68C94.560 129.10 83.680 127.55 72.470 124.62C69.240 123.77 66.500 123.18 66.390 123.29C66.280 123.41 63.870 132.05 61.030 142.50C51.580 177.22 51.230 178.03 45.600 177.96C41.300 177.92 39.070 176.42 33.060 169.50C21.900 156.69 13.860 140.67 8.7700 121.11C5.9500 110.30 5.7100 107.99 5.3100 87.500C4.9500 69.420 4.4900 63.990 2.7500 57.000C-0.090 45.660 -0.310 27.820 2.3000 20.330C4.8500 13.040 10.590 6.9200 18.190 3.4100C24.040 0.7100 25.300 0.5100 35.500 0.6500C43.350 0.7600 48.790 1.4300 54.500 3.0000C59.710 4.4300 67.560 5.4900 77.000 6.0500C121.22 8.6800 154.19 19.340 173.75 37.340C178.46 41.680 179.36 45.840 176.32 49.200C175.40 50.220 168.76 52.870 161.57 55.100C145.26 60.150 123.61 67.180 123.15 67.570C122.96 67.730 123.27 70.030 123.83 72.680C124.40 75.330 125.82 86.030 127.00 96.450L129.15 115.41L134.57 123.57C147.94 143.66 153.81 161.64 157.47 193.75C159.85 214.70 164.41 225.49 175.60 236.75C179.02 240.19 181.48 243.00 181.06 243.00C180.65 243.00 177.65 241.28 174.41 239.18ZM22.000 53.540C22.000 51.100 17.880 47.000 15.420 47.000C14.700 47.000 13.420 47.990 12.570 49.200C11.260 51.070 11.230 51.720 12.370 53.450C15.650 58.440 22.000 58.490 22.000 53.540ZM55.800 21.800C57.580 20.020 57.260 17.910 54.830 15.310C52.150 12.470 48.440 12.320 47.000 15.000C44.540 19.590 52.140 25.460 55.800 21.800Z" />
+    </svg>
+  );
+}
+
+// The mark swimming: the outer layer glides across its container, the middle one bobs and
+// the mark itself beats its wings. Size, color, speed and delay come in through className.
+export function SwimmingRay({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden className={`pointer-events-none absolute animate-swim motion-reduce:animate-none ${className}`}>
+      <div className="h-full animate-bob motion-reduce:animate-none">
+        <Mark className="h-full w-auto origin-[35%_35%] animate-flap motion-reduce:animate-none" />
+      </div>
+    </div>
+  );
+}
