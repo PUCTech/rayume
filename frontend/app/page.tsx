@@ -1,10 +1,13 @@
-import { Fragment, type ReactNode } from "react";
-import Image from "next/image";
+import { Fragment } from "react";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { BrandMark, type Brand } from "./brands";
 import { Mark } from "./logo";
 import { Lens, Refraction } from "./lens";
 import { Nav } from "./nav";
+import { Footer } from "./footer";
+import { OceanScene } from "./ocean";
+import { Steps } from "./steps";
+import { Gallery } from "./gallery";
 
 const serif = GeistSerifRegular.className;
 
@@ -31,49 +34,6 @@ const sources = [
   },
 ];
 
-const steps: { title: string; body: string; demo: ReactNode }[] = [
-  {
-    title: "Tell Rayume what you've done",
-    body: "In your own words, as messy as you like. It asks follow-up questions and keeps everything in one Master Resume you only write once.",
-    demo: (
-      <div className="rounded-2xl bg-white p-4 text-sm shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
-        <p className="text-ink/45">worked on the uni app team, did the login screen and fixed a bunch of bugs</p>
-        <p className="mt-3 rounded-xl bg-paper px-3 py-2 text-ink/80">
-          How many people used the app? Roughly how many bugs did you close?
-        </p>
-      </div>
-    ),
-  },
-  {
-    title: "Paste the job you want",
-    body: "From the app, or one click with the browser extension. Rayume reads what the posting asks for and picks what fits from your experience.",
-    demo: (
-      <div className="rounded-2xl bg-white p-4 text-sm leading-relaxed shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
-        <p className="font-medium">Full Stack Engineer, Orbita</p>
-        <p className="mt-2 text-ink/60">
-          You&apos;ll build features in <mark className="rounded bg-verm/15 px-1 text-verm-text">React</mark> and{" "}
-          <mark className="rounded bg-verm/15 px-1 text-verm-text">TypeScript</mark>, work closely with design, and{" "}
-          <mark className="rounded bg-verm/15 px-1 text-verm-text">explain your work clearly</mark> to the team.
-        </p>
-        <p className="mt-3 text-xs text-ink/50">3 of 4 requirements matched in your Master Resume</p>
-      </div>
-    ),
-  },
-  {
-    title: "Download a PDF that gets read",
-    body: "Typeset in LaTeX, the format senior engineers swear by, and laid out so applicant tracking systems parse every line.",
-    demo: (
-      <div className="flex items-center gap-3 rounded-2xl bg-white p-4 text-sm shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
-        <span className="grid size-10 place-items-center rounded-xl bg-verm text-xs font-semibold text-white">PDF</span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">lucas-mendes-orbita.pdf</span>
-          <span className="block text-xs text-ink/50">1 page, ready to send</span>
-        </span>
-        <span className="rounded-full bg-ink px-3 py-1.5 text-xs text-white">Download</span>
-      </div>
-    ),
-  },
-];
 
 type Mark3 = "yes" | "part" | "no";
 // cells: reads well in ATS, writes it with you, tailors to each job, no code
@@ -85,13 +45,6 @@ const compare: { name: string; brand?: Brand; cells: Mark3[]; note: string }[] =
   { name: "Notion", brand: "notion", cells: ["no", "part", "no", "yes"], note: "Cute as a link. Exports like a ransom note." },
   { name: "Overleaf", brand: "overleaf", cells: ["yes", "no", "no", "no"], note: "Stunning, right after you spend a weekend learning LaTeX." },
   { name: "ChatGPT", brand: "openai", cells: ["no", "yes", "part", "yes"], note: "Calls you “synergy-driven.” Formatting not included." },
-];
-
-const footer: [string, string[]][] = [
-  ["Product", ["How it works", "Templates", "Browser extension", "Job tailoring"]],
-  ["Resources", ["Resume guide", "ATS checklist", "Interview prep", "Blog"]],
-  ["Company", ["About", "Team", "Contact", "GitHub"]],
-  ["Legal", ["Privacy", "Terms", "Cookies"]],
 ];
 
 function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
@@ -111,16 +64,6 @@ function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
   );
 }
 
-// Real renders of Lucas's resume, compiled from resumes/*.tex: the team's template, four of the
-// most used resume templates on Overleaf, and a vermilion variant of ours.
-const templates = [
-  { name: "Classic", file: "classic", layout: "One column" },
-  { name: "Jake's Resume", file: "jake", layout: "One column" },
-  { name: "Awesome CV", file: "awesome", layout: "One column" },
-  { name: "AltaCV", file: "altacv", layout: "Two column" },
-  { name: "moderncv", file: "moderncv", layout: "One column" },
-  { name: "Modern", file: "modern", layout: "One column" },
-] as const;
 
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
 const primary = `${btn} bg-verm-deep text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[#E5471F]`;
@@ -136,7 +79,7 @@ export default function Landing() {
       <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:pt-24">
         <div aria-hidden className="pointer-events-none absolute right-[-10%] top-16 -z-0 size-[34rem] rounded-full bg-verm/35 blur-[110px] max-lg:hidden" />
         <div className="relative">
-          <h1 className={`${serif} text-[clamp(3.1rem,7.4vw,6.4rem)] leading-[0.94] tracking-[-0.035em]`}>
+          <h1 className={`${serif} text-[clamp(3.1rem,7.4vw,6.4rem)] leading-[1.04] tracking-[-0.035em]`}>
             Your day to day tool to jobhunt.
           </h1>
           <p className="mt-7 max-w-[34rem] text-[19px] leading-[1.55] text-ink/70">
@@ -156,8 +99,7 @@ export default function Landing() {
 
       {/* vermilion band: what counts as experience */}
       <section aria-labelledby="sources" className="relative overflow-hidden bg-verm py-24 text-ink sm:py-32">
-        <Mark className="pointer-events-none absolute -left-40 top-56 h-[34rem] w-auto -rotate-12 text-[#FF7A4D]" />
-        <Mark className="pointer-events-none absolute -right-20 bottom-[-6rem] h-[30rem] w-auto rotate-[160deg] text-[#C73A17]" />
+        <OceanScene />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <h2 id="sources" className={`${serif} max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1] tracking-[-0.03em]`}>
             Entry level doesn&apos;t mean an empty page.
@@ -183,36 +125,23 @@ export default function Landing() {
       </section>
 
       {/* how it works: a real sequence, so it is numbered */}
-      <section id="how" aria-labelledby="how-h" className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 py-28 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
-        <div className="lg:sticky lg:top-28 lg:self-start">
+      <section id="how" aria-labelledby="how-h" className="mx-auto max-w-6xl px-4 py-28 sm:px-6 lg:py-36">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-end">
           <h2 id="how-h" className={`${serif} text-[clamp(2.4rem,4.6vw,3.8rem)] leading-[1] tracking-[-0.03em]`}>
             Three steps, then you&apos;re applying.
           </h2>
-          <p className="mt-5 max-w-sm text-lg leading-relaxed text-ink/65">
+          <p className="max-w-md text-lg leading-relaxed text-ink/65 lg:justify-self-end">
             Write your story once. Every application after that takes a couple of minutes.
           </p>
         </div>
-        <ol className="space-y-4">
-          {steps.map((s, i) => (
-            <li key={s.title} className="grid grid-cols-1 items-start gap-5 rounded-[28px] bg-mist p-5 sm:grid-cols-[1fr_1.15fr] sm:gap-6 sm:p-6">
-              <div>
-                <h3 className="flex items-baseline gap-3 text-lg font-medium tracking-tight">
-                  <span className={`${serif} text-3xl leading-none text-verm`}>{i + 1}</span>
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-ink/65">{s.body}</p>
-              </div>
-              {s.demo}
-            </li>
-          ))}
-        </ol>
+        <Steps serif={serif} />
       </section>
 
       {/* templates */}
       <section id="templates" aria-labelledby="tpl-h" className="relative overflow-hidden bg-mist py-28 lg:py-36">
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-verm/25 blur-[120px]" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+          <Gallery>
             <div>
               <h2 id="tpl-h" className={`${serif} max-w-xl text-[clamp(2.4rem,4.6vw,3.8rem)] leading-[1] tracking-[-0.03em]`}>
                 Every template, already filled in with you.
@@ -221,42 +150,7 @@ export default function Landing() {
                 The Overleaf favorites, filled in with your real name, projects and skills. Compare, then switch with one tap.
               </p>
             </div>
-            <div role="tablist" aria-label="Filter templates" className="glass flex max-w-full gap-1 self-start overflow-x-auto rounded-full p-1 text-sm md:self-auto">
-              {["All", "One column", "Two column"].map((t, i) => (
-                <button
-                  key={t}
-                  role="tab"
-                  aria-selected={i === 0}
-                  className={`shrink-0 rounded-full px-4 py-2 transition ${i === 0 ? "bg-ink text-white" : "text-ink/70 hover:bg-white/50"}`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="mt-14 grid grid-cols-2 gap-5 lg:grid-cols-3">
-            {templates.map((t, i) => (
-              <figure key={t.file} className={`glass rounded-[26px] p-3 ${i === 1 ? "ring-2 ring-verm" : ""}`}>
-                <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]">
-                  <Image
-                    src={`/resumes/${t.file}.png`}
-                    alt={`Lucas Mendes's resume in the ${t.name} template`}
-                    fill
-                    sizes="(min-width: 1024px) 360px, 45vw"
-                    className="object-cover"
-                  />
-                </div>
-                <figcaption className="flex items-center justify-between px-1.5 pb-1 pt-3 text-sm font-medium">
-                  {t.name}
-                  {i === 1 ? (
-                    <span className="rounded-full bg-verm-deep px-2.5 py-0.5 text-xs text-white">Selected</span>
-                  ) : (
-                    <span className="text-xs font-normal text-ink/50">{t.layout}</span>
-                  )}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+          </Gallery>
         </div>
       </section>
 
@@ -328,32 +222,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* shortcut: footer entries are plain text until their pages exist, then they become links */}
-      <footer className="mx-auto max-w-6xl px-4 pb-10 pt-20 text-sm sm:px-6">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.6fr_repeat(4,1fr)]">
-          <div className="col-span-2 md:col-span-1">
-            <span className="inline-flex items-center gap-2">
-              <Mark className="h-6 w-auto" />
-              <span className={`${serif} text-[22px] leading-none`}>Rayume</span>
-            </span>
-            <p className="mt-4 max-w-60 leading-relaxed text-ink/60">Your day to day tool to jobhunt.</p>
-          </div>
-          {footer.map(([title, items]) => (
-            <div key={title}>
-              <h3 className="font-medium">{title}</h3>
-              <ul className="mt-4 space-y-3 text-ink/60">
-                {items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div className="mt-16 flex flex-col gap-3 border-t border-ink/10 pt-6 text-ink/50 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Rayume. Made by three students at PUCTech.</p>
-          <p>English  |  Português</p>
-        </div>
-      </footer>
+      <Footer serif={serif} />
     </div>
   );
 }

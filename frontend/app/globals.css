@@ -59,16 +59,41 @@ body {
     z-index: -1;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(
-      135deg,
-      rgb(255 255 255 / 0.95),
-      rgb(255 255 255 / 0.1) 35%,
-      rgb(255 255 255 / 0) 60%,
-      rgb(255 255 255 / 0.55)
-    );
+    /* the rim also catches the cursor's light (--mx/--my/--glow are set by <Refraction />) */
+    background:
+      radial-gradient(
+        140px circle at var(--mx, 50%) var(--my, 0%),
+        rgb(255 255 255 / calc(var(--glow, 0) * 1)),
+        transparent 70%
+      ),
+      linear-gradient(
+        135deg,
+        rgb(255 255 255 / 0.95),
+        rgb(255 255 255 / 0.1) 35%,
+        rgb(255 255 255 / 0) 60%,
+        rgb(255 255 255 / 0.55)
+      );
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+  }
+
+  /* a soft light that sits under the cursor while hovering, below the content */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(
+      260px circle at var(--mx, 50%) var(--my, 0%),
+      rgb(255 255 255 / 0.55),
+      transparent 65%
+    );
+    mix-blend-mode: soft-light;
+    opacity: var(--glow, 0);
+    transition: opacity 0.35s ease-out;
     pointer-events: none;
   }
 }

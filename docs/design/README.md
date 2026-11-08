@@ -33,7 +33,7 @@
 | 2 | **One loud thing per screen** | Each section has a single star: the lens in the hero, the glass cards in the band, the PDF in the steps. Everything around it stays quiet. |
 | 3 | **Glass needs something to bend** | Liquid glass only goes over colour or content (the nav while scrolling, cards on vermilion). Glass on flat cream is just a grey box. |
 | 4 | **Show the real thing** | Resumes are real LaTeX renders of a real (fictional) person, never lorem ipsum or grey bars. |
-| 5 | **Calm motion** | Motion answers the user (the lens follows the cursor, the nav reacts to scrolling). Nothing loops for attention. |
+| 5 | **Alive, but calm** | Motion answers the user (the lens follows the cursor, the nav reacts to scrolling, demos play when they scroll into view). The only ambient loop is the ocean in the vermilion band: slow, low contrast, behind glass. |
 | 6 | **Accessible by default** | Every text pairing passes WCAG AA. Every effect has a reduced-motion fallback. |
 
 ---
@@ -115,8 +115,8 @@ Rules:
 flowchart TB
   nav["Glass nav (sticky, floating pill)"]
   hero["Hero · paper · text left, lens right"]
-  band["Vermilion band · navy text · glass cards over static manta marks"]
-  how["How it works · paper · sticky heading left, mist step cards right"]
+  band["Vermilion band · navy text · glass cards over an animated ocean"]
+  how["How it works · paper · heading row, three mist step cards that play when seen"]
   tpl["Templates · mist · real LaTeX renders in glass frames"]
   why["Comparison · paper · table, Rayume row first"]
   cta["Closing panel · ink · vermilion glow from below"]
@@ -139,7 +139,7 @@ flowchart TB
 | Gutter | `px-4 sm:px-6` | 16 px on phones, 24 px from `sm` |
 | Section rhythm | `py-28 lg:py-36` | 112 px, 144 px on desktop |
 | Hero grid | `lg:grid-cols-[1.08fr_0.92fr]` | Text slightly wider than the visual |
-| Split sections | `lg:grid-cols-[0.8fr_1.2fr]` | Heading column + content column; the heading is `lg:sticky lg:top-28` |
+| Section header | `grid lg:grid-cols-2 lg:items-end` | Heading left, short intro right (`lg:justify-self-end`). Content goes full width below, so no column is left empty |
 | Card grids | `md:grid-cols-2`, `lg:grid-cols-3` | Grids always start at `grid-cols-1` so they shrink on phones |
 
 Alignment is **left** everywhere except the closing panel, which is centred because it is a single call to action. Backgrounds alternate paper, vermilion, paper, mist, paper, ink, paper, so each section reads as its own sheet.
@@ -148,7 +148,7 @@ Alignment is **left** everywhere except the closing panel, which is centred beca
 
 ## Surfaces: liquid glass
 
-![Glass cards on the vermilion band, with the compact nav bending the headline behind it](images/band.png)
+![Glass cards on the vermilion band over the animated ocean, with the compact nav bending the headline behind it](images/band.png)
 
 Two Tailwind utilities, defined with `@utility` in `globals.css`:
 
@@ -244,7 +244,7 @@ flowchart TD
 
 | Card | Classes | Use |
 |---|---|---|
-| **Step card** | `rounded-[28px] bg-mist p-5 sm:p-6` | Numbered sequences on paper. Numeral in Geist Serif `text-3xl text-verm`, inline with the title. |
+| **Step card** | `flex flex-col rounded-[28px] bg-mist p-5 sm:p-6` | Numbered sequences on paper, three in a row (`lg:grid-cols-3`). A thin vermilion bar on top fills in turn, the numeral (Geist Serif `text-3xl text-verm`) sits inline with the title, and the demo is pinned to the bottom (`mt-auto`). |
 | **Glass card** | `glass rounded-[28px] p-6 sm:p-7` | On the vermilion band. Serif quote, navy chips. |
 | **Demo panel** | `rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgb(22_27_34/0.08)]` | Small fake UI inside a card (chat, job post, PDF row). |
 | **Gallery card** | `glass rounded-[26px] p-3` + `ring-2 ring-verm` when selected | Frames a resume thumbnail. |
@@ -282,6 +282,10 @@ flowchart TB
 
 Every thumbnail is a real compile of the same person (see [Assets](#assets)): the team's template plus Jake's Resume, Awesome CV, AltaCV and moderncv from Overleaf.
 
+- The filter tabs (`gallery.tsx`) filter by layout; each card is a button (`aria-pressed`) that moves the **Selected** badge.
+- Filtering animates with the View Transitions API (`document.startViewTransition`, one `view-transition-name` per card) where the browser has it; elsewhere, and with reduced motion, it switches instantly.
+- Cards lift 4 px on hover and the thumbnail zooms 2%.
+
 ### Comparison table
 
 ![Comparison table with Rayume first](images/table.png)
@@ -303,12 +307,18 @@ Brand column (mark, wordmark, tagline) plus four columns. Entries are plain text
 
 | Moment | What moves | Timing | Reduced motion |
 |---|---|---|---|
+| Ocean (`ocean.tsx`) | Mantas glide and beat their wings, a fish school passes, god rays sway, caustics shimmer, seagrass bends, specks drift and bubbles rise | SVG + SMIL only (no per-frame JS), loops of 20 to 90 s with negative `begin` so it never visibly restarts; paused while off screen | Frozen on a calm frame |
+| Steps (`steps.tsx`) | Progress bars fill in turn, the note types out, keywords light up, the PDF compiles and prints | Once, when 35% of the row is visible; CSS transitions staggered by `--d` (0.9 s per card) | Final state, no transitions |
 | Lens drift | Lens wanders over the page until the visitor moves the mouse | `requestAnimationFrame`, slow sine path | Static |
 | Lens toggle | Radius and zoom open to the full page | 700 ms `cubic-bezier(0.2,0.8,0.2,1)` | Instant |
 | Nav compact | Width, wordmark and "Sign in" collapse | 300 ms `ease-out` | Instant (no transition needed) |
+| Gallery | Grid re-flows when filtering; cards lift on hover | View Transitions; `hover:-translate-y-1` | Instant, no lift |
 | Buttons | Press shrinks to 97% | `active:scale-[0.97]` | Kept (it is feedback) |
 
-Rules: one orchestrated moment per page (the lens). No entrance animations on scroll, no looping decoration. The manta marks in the band are **static** on purpose.
+Rules:
+- Every moving thing either answers the user or tells part of the story (the ocean sets the mood of the band, the step demos explain the product). No generic fade-in-on-scroll on every section.
+- Ambient motion stays in the ocean: monochrome vermilion shades, low contrast, dark creatures kept to open space or behind glass so navy text stays readable.
+- Everything animated checks `prefers-reduced-motion` and pauses when off screen.
 
 ---
 
@@ -342,6 +352,7 @@ Written for an English-speaking Gen Z developer hunting their first tech job.
 | Manta mark | `logo.tsx` (`MARK_D`, `<Mark />`) | Traced from the README banner. Uses `currentColor`. Eyes are holes (`fill-rule: evenodd`). |
 | Competitor marks | `brands.tsx` | Simple Icons (CC0). The Word tile is hand-drawn because Simple Icons dropped Microsoft marks. |
 | Resumes | `frontend/resumes/` → `public/resumes/` | Lucas Mendes, a fictional full-stack dev. Companies are invented. |
+| Ocean creatures | `ocean.tsx` | Drawn from scratch (mantas, fish, seagrass), not the brand mark. Manta wings are 12 precomputed path frames morphed with `<animate attributeName="d">`. |
 
 ### Resume pipeline
 
@@ -379,11 +390,14 @@ flowchart TB
   TW --> LN["lens.tsx · Lens, Refraction"]
   TW --> BR["brands.tsx · BrandMark"]
   TW --> LG["logo.tsx · Mark"]
+  TW --> ST["steps.tsx · Steps"]
+  TW --> GA["gallery.tsx · Gallery"]
+  TW --> OC["ocean.tsx · OceanScene"]
   X --> LN
 ```
 
 - **Tailwind first.** Plain CSS is only for what Tailwind can't express: the glass utilities, the Chromium refraction rule and the registered `@property` values the lens animates.
-- **Server by default.** Only `nav.tsx` and `lens.tsx` are client components (scroll and pointer state).
+- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `gallery.tsx` (filter and selection), `ocean.tsx` (pause off screen and for reduced motion).
 - New pages reuse the tokens, the `glass` utilities and the component class strings above; they don't add new colours, fonts or radii.
 
 ---
@@ -397,5 +411,5 @@ flowchart TB
 | Set headlines in one colour, Geist Serif, tight tracking | Colour or italicise one word for emphasis |
 | Use real renders and real-sounding data | Use lorem ipsum or grey placeholder bars |
 | Keep one star per section | Stack glows, glass and badges in the same spot |
-| Let motion respond to the user | Loop animations for attention |
+| Let motion respond to the user or tell the story | Loop flashy animations for attention, or add ambient motion outside the ocean band |
 | Start grids at `grid-cols-1` | Let a desktop grid overflow on phones |
