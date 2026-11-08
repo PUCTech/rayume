@@ -67,8 +67,9 @@ If a task drifts toward any of these, flag it instead of implementing it.
 | [`database/README.md`](database/README.md) | accepted | Tables, auth rules, versioning, renders, logs |
 | [`endpoints/README.md`](endpoints/README.md) | draft | Every API route, parameters, errors |
 | [`design/README.md`](design/README.md) | accepted | Colours, type, glass, components; the style for every page |
+| [`security/README.md`](security/README.md) | draft | Threat model: LaTeX injection, prompt injection, review checklists |
 
-Building a backend feature: read the schema, then its endpoint file. Building a page: read the design system first.
+Building a backend feature: read the schema, then its endpoint file. Building a page: read the design system first. Touching rendering or AI calls: read the threat model.
 
 ## Current stack (as of November 2026)
 
