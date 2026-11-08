@@ -111,12 +111,15 @@ function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
   );
 }
 
-// Real renders of Lucas's resume, compiled from resumes/*.tex (variants of the team's template).
+// Real renders of Lucas's resume, compiled from resumes/*.tex: the team's template, four of the
+// most used resume templates on Overleaf, and a vermilion variant of ours.
 const templates = [
-  { name: "Classic", file: "classic", style: "Serif" },
-  { name: "Modern", file: "modern", style: "Sans" },
-  { name: "Elegant", file: "elegant", style: "Serif" },
-  { name: "Academic", file: "academic", style: "Serif" },
+  { name: "Classic", file: "classic", layout: "One column" },
+  { name: "Jake's Resume", file: "jake", layout: "One column" },
+  { name: "Awesome CV", file: "awesome", layout: "One column" },
+  { name: "AltaCV", file: "altacv", layout: "Two column" },
+  { name: "moderncv", file: "moderncv", layout: "One column" },
+  { name: "Modern", file: "modern", layout: "One column" },
 ] as const;
 
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
@@ -215,11 +218,11 @@ export default function Landing() {
                 Every template, already filled in with you.
               </h2>
               <p className="mt-5 max-w-md text-lg leading-relaxed text-ink/65">
-                No lorem ipsum. Compare layouts with your real name, projects and skills, then switch with one tap.
+                The Overleaf favorites, filled in with your real name, projects and skills. Compare, then switch with one tap.
               </p>
             </div>
             <div role="tablist" aria-label="Filter templates" className="glass flex max-w-full gap-1 self-start overflow-x-auto rounded-full p-1 text-sm md:self-auto">
-              {["All", "Serif", "Sans"].map((t, i) => (
+              {["All", "One column", "Two column"].map((t, i) => (
                 <button
                   key={t}
                   role="tab"
@@ -231,7 +234,7 @@ export default function Landing() {
               ))}
             </div>
           </div>
-          <div className="mt-14 grid grid-cols-2 gap-5 lg:grid-cols-4">
+          <div className="mt-14 grid grid-cols-2 gap-5 lg:grid-cols-3">
             {templates.map((t, i) => (
               <figure key={t.file} className={`glass rounded-[26px] p-3 ${i === 1 ? "ring-2 ring-verm" : ""}`}>
                 <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]">
@@ -239,7 +242,7 @@ export default function Landing() {
                     src={`/resumes/${t.file}.png`}
                     alt={`Lucas Mendes's resume in the ${t.name} template`}
                     fill
-                    sizes="(min-width: 1024px) 270px, 45vw"
+                    sizes="(min-width: 1024px) 360px, 45vw"
                     className="object-cover"
                   />
                 </div>
@@ -248,7 +251,7 @@ export default function Landing() {
                   {i === 1 ? (
                     <span className="rounded-full bg-verm-deep px-2.5 py-0.5 text-xs text-white">Selected</span>
                   ) : (
-                    <span className="text-xs font-normal text-ink/50">{t.style}</span>
+                    <span className="text-xs font-normal text-ink/50">{t.layout}</span>
                   )}
                 </figcaption>
               </figure>

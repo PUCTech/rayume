@@ -1,0 +1,43 @@
+% moderncv (CTAN, LPPL, one of Overleaf's most used CV classes), banking style, filled with Lucas Mendes.
+\documentclass[10pt,letterpaper,sans]{moderncv}
+\moderncvstyle{banking}
+\moderncvcolor{black}
+\usepackage[scale=0.88,top=1.4cm,bottom=1.2cm]{geometry}
+\name{Lucas}{Mendes}
+\title{Full Stack Developer}
+\address{São Paulo, Brazil}{}{}
+\phone[mobile]{+55 11 98765-4321}
+\email{lucas@lucasmendes.dev}
+\social[github]{lucasmendes}
+\social[linkedin]{lucasmendes}
+\begin{document}
+\makecvtitle
+\section{Experience}
+\cventry{2025--now}{Junior Full Stack Engineer}{Lumen Labs}{São Paulo}{}{%
+\begin{itemize}
+\item Ship features end to end for a B2B scheduling platform used by 1,200 clinics (PostgreSQL, Node.js, React).
+\item Cut dashboard load time from 3.8\,s to 1.1\,s with cursor pagination, Redis caching and lazy charts.
+\item Built the Stripe billing integration, processing over R\$\,2M a month with zero double charges.
+\end{itemize}}
+\cventry{2024--2025}{Software Engineering Intern}{Trilha}{São Paulo}{}{%
+\begin{itemize}
+\item Built the course progress API in TypeScript and NestJS for 30,000 students.
+\item Rewrote the quiz editor in React with drag-and-drop and autosave, cutting content errors by 35\%.
+\end{itemize}}
+\cventry{2024}{Frontend Developer Intern}{Quintal Logística}{São Paulo}{}{%
+\begin{itemize}
+\item Developed a real-time delivery tracking map with Next.js and WebSockets for 400 daily routes.
+\item Built a library of 40+ accessible React components shared across three internal apps.
+\end{itemize}}
+\section{Projects}
+\cventry{2024}{Bandejão PUC}{Next.js, Supabase, PWA}{}{}{Cafeteria menu and live queue app used by about 2,000 PUC-SP students a month.}
+\cventry{2023}{Rota Segura}{React Native, FastAPI, PostGIS}{2nd place, HackPUC}{}{Led a team of four to build a safe walking-route app in 36 hours.}
+\cventry{2023}{pix-kit}{TypeScript}{open source}{}{npm library for Pix payment QR codes, 300+ GitHub stars.}
+\section{Education}
+\cventry{2022--2026}{B.S. in Computer Science}{PUC-SP}{São Paulo}{}{Teaching Assistant, Data Structures. Member, PUC Tech League.}
+\section{Skills}
+\cvitem{Languages}{TypeScript, JavaScript, Python, SQL}
+\cvitem{Frameworks}{React, Next.js, NestJS, FastAPI, TailwindCSS}
+\cvitem{Infrastructure}{PostgreSQL, Redis, Docker, AWS, GitHub Actions}
+\cvitem{Spoken}{Portuguese (native), English (fluent, C1)}
+\end{document}

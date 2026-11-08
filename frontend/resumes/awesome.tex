@@ -1,0 +1,60 @@
+% Awesome CV (github.com/posquit0/Awesome-CV, LPPL, popular on Overleaf), filled with Lucas Mendes.
+\documentclass[10pt, letterpaper]{rayume-awesome-cv}
+\geometry{left=1.4cm, top=.8cm, right=1.4cm, bottom=1.2cm, footskip=.5cm}
+\colorlet{awesome}{awesome-red}
+\setbool{acvSectionColorHighlight}{true}
+\renewcommand{\acvHeaderSocialSep}{\quad\textbar\quad}
+\name{Lucas}{Mendes}
+\position{Full Stack Developer{\enskip\cdotp\enskip}Computer Science at PUC-SP}
+\address{São Paulo, Brazil}
+\mobile{+55 11 98765-4321}
+\email{lucas@lucasmendes.dev}
+\github{lucasmendes}
+\linkedin{lucasmendes}
+\begin{document}
+\makecvheader[C]
+\cvsection{Experience}
+\begin{cventries}
+  \cventry{Junior Full Stack Engineer}{Lumen Labs}{São Paulo, Brazil}{Feb. 2025 - Present}{
+    \begin{cvitems}
+      \item {Ship features end to end for a B2B scheduling platform used by 1,200 clinics, from PostgreSQL migrations and Node.js APIs to React interfaces.}
+      \item {Cut the main dashboard's median load time from 3.8\,s to 1.1\,s with cursor pagination, Redis caching and lazy-loaded charts.}
+      \item {Built the Stripe billing integration, now processing over R\$\,2M per month with zero double charges.}
+    \end{cvitems}}
+  \cventry{Software Engineering Intern}{Trilha}{São Paulo, Brazil}{Jul. 2024 - Jan. 2025}{
+    \begin{cvitems}
+      \item {Built the course progress API in TypeScript and NestJS for 30,000 students, with role-based access.}
+      \item {Rewrote the quiz editor in React with drag-and-drop and autosave, cutting content errors by 35\%.}
+    \end{cvitems}}
+  \cventry{Frontend Developer Intern}{Quintal Logística}{São Paulo, Brazil}{Jan. 2024 - Jun. 2024}{
+    \begin{cvitems}
+      \item {Developed a real-time delivery tracking map with Next.js and WebSockets covering 400 daily routes.}
+      \item {Turned Figma designs into a library of 40+ accessible React components shared across three apps.}
+    \end{cvitems}}
+\end{cventries}
+\cvsection{Projects}
+\begin{cventries}
+  \cventry{Next.js, Supabase, PostgreSQL, PWA}{Bandejão PUC}{}{2024}{
+    \begin{cvitems}
+      \item {Progressive web app with the PUC-SP cafeteria menu and live queue estimates, used by about 2,000 students a month.}
+    \end{cvitems}}
+  \cventry{React Native, FastAPI, PostGIS}{Rota Segura}{2nd place, HackPUC}{2023}{
+    \begin{cvitems}
+      \item {Led a team of four to build, in 36 hours, an app that suggests well-lit walking routes from open city data.}
+    \end{cvitems}}
+\end{cventries}
+\cvsection{Education}
+\begin{cventries}
+  \cventry{B.S. in Computer Science}{Pontifical Catholic University of São Paulo}{São Paulo, Brazil}{2022 - 2026}{
+    \begin{cvitems}
+      \item {Teaching Assistant, Data Structures. Member, PUC Tech League.}
+    \end{cvitems}}
+\end{cventries}
+\cvsection{Skills}
+\begin{cvskills}
+  \cvskill{Languages}{TypeScript, JavaScript, Python, SQL}
+  \cvskill{Frameworks}{React, Next.js, NestJS, FastAPI, TailwindCSS}
+  \cvskill{Infrastructure}{PostgreSQL, Redis, Docker, AWS, GitHub Actions}
+  \cvskill{Spoken}{Portuguese (Native), English (Fluent, C1)}
+\end{cvskills}
+\end{document}

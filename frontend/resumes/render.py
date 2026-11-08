@@ -3,7 +3,7 @@
 # Usage: uv run --with pymupdf python render.py
 import sys, pymupdf
 out = "../public/resumes"
-for name, width in [("classic", 2000), ("modern", 1000), ("elegant", 1000), ("academic", 1000)]:
+for name, width in [("classic", 2000), ("modern", 1000), ("jake", 1000), ("awesome", 1000), ("moderncv", 1000), ("altacv", 1000)]:
     doc = pymupdf.open(f"{out}/{name}.pdf")
     assert doc.page_count == 1, f"{name} spills onto {doc.page_count} pages"
     page = doc[0]
@@ -12,4 +12,4 @@ for name, width in [("classic", 2000), ("modern", 1000), ("elegant", 1000), ("ac
     page.get_pixmap(matrix=pymupdf.Matrix(width / page.rect.width, width / page.rect.width)).save(f"{out}/{name}.png")
     if "-v" in sys.argv:
         h = page.rect.height
-        print(name, {s: round(page.search_for(s)[0].y0 / h, 3) for s in ["Experience", "Projects", "Education", "Technical Skills"]})
+        print(name, {s: round(r[0].y0 / h, 3) for s in ["Experience", "Projects", "Education", "Technical Skills"] if (r := page.search_for(s))})

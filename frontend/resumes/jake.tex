@@ -1,0 +1,179 @@
+% Jake's Resume (github.com/jakegut/resume, MIT, popular on Overleaf), filled with Lucas Mendes.
+% Only change to the preamble: the two pdfTeX-only lines are guarded so Tectonic (XeTeX) can build it.
+
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{iftex}
+\ifPDFTeX\input{glyphtounicode}\fi
+
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\ifPDFTeX\pdfgentounicode=1\fi
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+\begin{center}
+    \textbf{\Huge \scshape Lucas Mendes} \\ \vspace{1pt}
+    \small +55 11 98765-4321 $|$ \underline{lucas@lucasmendes.dev} $|$
+    \underline{linkedin.com/in/lucasmendes} $|$ \underline{github.com/lucasmendes}
+\end{center}
+
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Pontifical Catholic University of São Paulo (PUC-SP)}{São Paulo, Brazil}
+      {Bachelor of Science in Computer Science}{Feb. 2022 -- Dec. 2026}
+  \resumeSubHeadingListEnd
+
+\section{Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Junior Full Stack Engineer}{Feb. 2025 -- Present}
+      {Lumen Labs}{São Paulo, Brazil}
+      \resumeItemListStart
+        \resumeItem{Ship features end to end for a B2B scheduling platform used by 1,200 clinics, from \textbf{PostgreSQL} migrations and \textbf{Node.js} APIs to \textbf{React} interfaces}
+        \resumeItem{Cut the main dashboard's median load time from 3.8\,s to 1.1\,s with cursor pagination, \textbf{Redis} caching and lazy-loaded charts}
+        \resumeItem{Built the \textbf{Stripe} billing integration (subscriptions, webhooks, idempotent retries), processing over R\$\,2M per month}
+        \resumeItem{Mentor two interns on testing; raised backend test coverage from 41\% to 78\%}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Software Engineering Intern}{Jul. 2024 -- Jan. 2025}
+      {Trilha}{São Paulo, Brazil (Hybrid)}
+      \resumeItemListStart
+        \resumeItem{Built the course progress API in \textbf{TypeScript} and \textbf{NestJS} for 30,000 students, with role-based access}
+        \resumeItem{Rewrote the quiz editor in React with drag-and-drop and autosave, cutting content errors by 35\%}
+        \resumeItem{Set up \textbf{GitHub Actions} pipelines with linting, tests and preview deployments}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Frontend Developer Intern}{Jan. 2024 -- Jun. 2024}
+      {Quintal Logística}{São Paulo, Brazil}
+      \resumeItemListStart
+        \resumeItem{Developed a real-time delivery tracking map with \textbf{Next.js} and WebSockets covering 400 daily routes}
+        \resumeItem{Turned Figma designs into a library of 40+ accessible React components shared across three apps}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+\section{Projects}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading
+          {\textbf{Bandejão PUC} $|$ \emph{Next.js, Supabase, PostgreSQL, PWA}}{2024 -- Present}
+          \resumeItemListStart
+            \resumeItem{Progressive web app with the PUC-SP cafeteria menu and live queue estimates, used by 2,000 students a month}
+            \resumeItem{Scraped and normalized weekly menus with a scheduled Python job; modeled allergens and ratings in PostgreSQL}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Rota Segura} $|$ \emph{React Native, FastAPI, PostGIS}}{2nd place, HackPUC 2023}
+          \resumeItemListStart
+            \resumeItem{Led a team of four to build, in 36 hours, an app that suggests well-lit walking routes from open city data}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{pix-kit} $|$ \emph{TypeScript, open source}}{2023}
+          \resumeItemListStart
+            \resumeItem{npm library that generates and validates Pix payment QR codes, with full test coverage and 300+ GitHub stars}
+          \resumeItemListEnd
+    \resumeSubHeadingListEnd
+
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: TypeScript, JavaScript, Python, SQL, HTML/CSS} \\
+     \textbf{Frameworks}{: React, Next.js, NestJS, FastAPI, TailwindCSS, React Native} \\
+     \textbf{Developer Tools}{: Git, Docker, GitHub Actions, AWS (ECS, S3, RDS), Vercel, Figma} \\
+     \textbf{Data}{: PostgreSQL, Redis, Prisma, Supabase}
+    }}
+ \end{itemize}
+
+\end{document}
