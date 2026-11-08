@@ -4,6 +4,7 @@ import { BrandMark, type Brand } from "./brands";
 import { Mark } from "./logo";
 import { Lens, Refraction } from "./lens";
 import { Nav } from "./nav";
+import { OceanScene } from "./ocean";
 import { Steps } from "./steps";
 import { Gallery } from "./gallery";
 
@@ -104,8 +105,7 @@ export default function Landing() {
 
       {/* vermilion band: what counts as experience */}
       <section aria-labelledby="sources" className="relative overflow-hidden bg-verm py-24 text-ink sm:py-32">
-        <Mark className="pointer-events-none absolute -left-40 top-56 h-[34rem] w-auto -rotate-12 text-[#FF7A4D]" />
-        <Mark className="pointer-events-none absolute -right-20 bottom-[-6rem] h-[30rem] w-auto rotate-[160deg] text-[#C73A17]" />
+        <OceanScene />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <h2 id="sources" className={`${serif} max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1] tracking-[-0.03em]`}>
             Entry level doesn&apos;t mean an empty page.
