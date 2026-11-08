@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import Image from "next/image";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { BrandMark, type Brand } from "./brands";
-import { Mark, SwimmingRay } from "./logo";
+import { Mark } from "./logo";
 import { Lens, Refraction } from "./lens";
 import { Nav } from "./nav";
 
@@ -78,13 +78,13 @@ const steps: { title: string; body: string; demo: ReactNode }[] = [
 type Mark3 = "yes" | "part" | "no";
 // cells: reads well in ATS, writes it with you, tailors to each job, no code
 const compare: { name: string; brand?: Brand; cells: Mark3[]; note: string }[] = [
-  { name: "Canva", brand: "canva", cells: ["part", "part", "no", "yes"], note: "Pretty, but ATS often scrambles the layout" },
-  { name: "Word", brand: "word", cells: ["yes", "part", "no", "yes"], note: "Reliable, but every edit is manual formatting" },
-  { name: "Google Docs", brand: "docs", cells: ["yes", "part", "no", "yes"], note: "Free and easy, and looks like everyone else's" },
-  { name: "Notion", brand: "notion", cells: ["no", "part", "no", "yes"], note: "Great as a page, messy as a PDF" },
-  { name: "Overleaf", brand: "overleaf", cells: ["yes", "no", "no", "no"], note: "Beautiful, if you want to learn LaTeX" },
-  { name: "ChatGPT", brand: "openai", cells: ["no", "yes", "part", "yes"], note: "Writes text, you still format it all" },
-  { name: "Rayume", cells: ["yes", "yes", "yes", "yes"], note: "All of it, in one place" },
+  { name: "Rayume", cells: ["yes", "yes", "yes", "yes"], note: "Writes it, tailors it, typesets it. You just hit send." },
+  { name: "Canva", brand: "canva", cells: ["part", "part", "no", "yes"], note: "Gorgeous, until the ATS reads it as alphabet soup." },
+  { name: "Word", brand: "word", cells: ["yes", "part", "no", "yes"], note: "Move one bullet and a mystery page two appears." },
+  { name: "Google Docs", brand: "docs", cells: ["yes", "part", "no", "yes"], note: "Free, fine, and identical to the other 400 applicants." },
+  { name: "Notion", brand: "notion", cells: ["no", "part", "no", "yes"], note: "Cute as a link. Exports like a ransom note." },
+  { name: "Overleaf", brand: "overleaf", cells: ["yes", "no", "no", "no"], note: "Stunning, right after you spend a weekend learning LaTeX." },
+  { name: "ChatGPT", brand: "openai", cells: ["no", "yes", "part", "yes"], note: "Calls you “synergy-driven.” Formatting not included." },
 ];
 
 const footer: [string, string[]][] = [
@@ -94,14 +94,14 @@ const footer: [string, string[]][] = [
   ["Legal", ["Privacy", "Terms", "Cookies"]],
 ];
 
-function Tick({ v }: { v: Mark3 }) {
+function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
   const label = { yes: "Yes", part: "Partly", no: "No" }[v];
   return (
     <span className="inline-flex items-center gap-2">
       <span
         aria-hidden
         className={`grid size-6 place-items-center rounded-full text-[13px] ${
-          v === "yes" ? "bg-ink text-white" : v === "part" ? "bg-ink/10 text-ink/70" : "text-ink/30"
+          v === "yes" ? (accent ? "bg-verm-deep text-white" : "bg-ink text-white") : v === "part" ? "bg-ink/10 text-ink/70" : "text-ink/30"
         }`}
       >
         {v === "yes" ? "✓" : v === "part" ? "~" : "–"}
@@ -153,10 +153,8 @@ export default function Landing() {
 
       {/* vermilion band: what counts as experience */}
       <section aria-labelledby="sources" className="relative overflow-hidden bg-verm py-24 text-ink sm:py-32">
-        {/* three rays at different depths; negative delays start them mid-swim */}
-        <SwimmingRay className="left-full top-[78%] h-40 text-[#E5471F] [animation-delay:-22s] [animation-duration:44s]" />
-        <SwimmingRay className="left-full top-[95%] h-[30rem] text-[#FF7A4D] [animation-delay:-38s] [animation-duration:70s]" />
-        <SwimmingRay className="left-full top-[60%] h-64 text-[#C73A17] [animation-delay:-6s] [animation-duration:54s]" />
+        <Mark className="pointer-events-none absolute -left-40 top-56 h-[34rem] w-auto -rotate-12 text-[#FF7A4D]" />
+        <Mark className="pointer-events-none absolute -right-20 bottom-[-6rem] h-[30rem] w-auto rotate-[160deg] text-[#C73A17]" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <h2 id="sources" className={`${serif} max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1] tracking-[-0.03em]`}>
             Entry level doesn&apos;t mean an empty page.
@@ -265,7 +263,12 @@ export default function Landing() {
           Why not just use what you already have?
         </h2>
         <div className="relative mt-12 overflow-x-auto">
-          <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-left text-[15px]">
+          <table className="w-full min-w-[52rem] table-fixed border-separate border-spacing-0 text-left text-[15px]">
+            <colgroup>
+              <col className="w-40" />
+              <col className="w-32" span={4} />
+              <col />
+            </colgroup>
             <thead>
               <tr className="text-sm text-ink/55">
                 <th scope="col" className="pb-4 font-normal"><span className="sr-only">Tool</span></th>
@@ -278,21 +281,25 @@ export default function Landing() {
             </thead>
             <tbody>
               {compare.map((r) => {
-                const us = r.name === "Rayume";
-                const cell = `py-5 ${us ? "" : "border-t border-ink/10"}`;
+                const us = !r.brand;
+                // our row: a vermilion outline drawn on the cells (rows can't take a border radius)
+                const cell = us ? "border-y-2 border-verm bg-white py-[18px]" : "border-t border-ink/10 py-5";
                 return (
-                  <tr key={r.name} className={us ? "bg-white shadow-[0_12px_40px_-20px_rgb(242_84_45/0.6)] [&>*:first-child]:rounded-l-2xl [&>*:last-child]:rounded-r-2xl" : ""}>
-                    <th scope="row" className={`${cell} pl-4 font-medium`}>
-                      <span className="inline-flex items-center gap-2.5">
-                        {r.brand ? <BrandMark brand={r.brand} className="size-4 text-ink/70" /> : <Mark className="h-5 w-auto text-verm" />}
-                        {r.name}
-                      </span>
-                    </th>
-                    {r.cells.map((c, i) => (
-                      <td key={i} className={cell}><Tick v={c} /></td>
-                    ))}
-                    <td className={`${cell} pr-4 text-ink/60`}>{r.note}</td>
-                  </tr>
+                  <Fragment key={r.name}>
+                    <tr className={us ? "shadow-[0_18px_44px_-22px_rgb(242_84_45/0.75)]" : ""}>
+                      <th scope="row" className={`${cell} pl-4 ${us ? "rounded-l-2xl border-l-2" : ""} font-medium`}>
+                        <span className="inline-flex items-center gap-2.5">
+                          {r.brand ? <BrandMark brand={r.brand} className="size-4 text-ink/70" /> : <Mark className="h-5 w-auto text-verm" />}
+                          {r.name}
+                        </span>
+                      </th>
+                      {r.cells.map((c, i) => (
+                        <td key={i} className={cell}><Tick v={c} accent={us} /></td>
+                      ))}
+                      <td className={`${cell} pr-4 ${us ? "rounded-r-2xl border-r-2 font-medium text-ink" : "text-ink/60"}`}>{r.note}</td>
+                    </tr>
+                    {us && <tr aria-hidden><td colSpan={6} className="h-4" /></tr>}
+                  </Fragment>
                 );
               })}
             </tbody>

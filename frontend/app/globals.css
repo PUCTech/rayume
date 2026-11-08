@@ -21,38 +21,6 @@
   /* deeper shades keep AA contrast: white text on verm-deep, verm-text on paper */
   --color-verm-deep: #d63c16;
   --color-verm-text: #b8330f;
-
-  /* swimming ray: glide across (head first, up-left), bob, and beat the wings */
-  --animate-swim: swim 60s linear infinite;
-  --animate-bob: bob 7s ease-in-out infinite;
-  --animate-flap: flap 3.4s ease-in-out infinite;
-
-  @keyframes swim {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: calc(-100vw - 100%) -40vh;
-    }
-  }
-  @keyframes bob {
-    0%,
-    100% {
-      translate: 0 0;
-    }
-    50% {
-      translate: 0 -28px;
-    }
-  }
-  @keyframes flap {
-    0%,
-    100% {
-      transform: rotate(-3deg) scale(1, 1);
-    }
-    50% {
-      transform: rotate(3deg) scale(1.03, 0.82) skewY(-5deg);
-    }
-  }
 }
 
 html,
