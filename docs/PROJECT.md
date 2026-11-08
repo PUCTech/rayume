@@ -84,6 +84,16 @@ Monorepo:
 
 Local dev: Next on `:3000`, FastAPI on `:8000` (CORS is already configured for this).
 
+## How we work
+
+- **`main` is protected** (a requirement from the directors) by the `main-ruleset` repository ruleset:
+  - every change goes through a **pull request with 1 approval**; approvals are dismissed when new commits are pushed, and review conversations must be resolved;
+  - **force pushes and deleting `main` are blocked**;
+  - only merge commits are allowed.
+  - A direct push to `main` is rejected ("Changes must be made through a pull request"). Branch first, then open a PR.
+  - Organization admins can still bypass the approval inside a PR.
+- **Weekly report:** at the end of each week, a GitHub issue in **pt-BR** summarizes what reached `main` (merged PRs, key diagrams and designs, next steps). The first one is [#6](https://github.com/PUCTech/rayume/issues/6) (2 to 8 November 2026).
+
 ## Current state
 
 - **Decided:** the database schema, the API surface (draft) and the visual design.
