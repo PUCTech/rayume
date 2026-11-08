@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import textLayer from "../resumes/classic-text.json";
 
 // SVG displacement filter used by `.lg` as a backdrop-filter. Only Chromium renders url() in
 // backdrop-filter; userAgentData is Chromium-only, so it doubles as the feature check.
@@ -117,6 +118,18 @@ export function Lens() {
               unoptimized
               className="object-contain"
             />
+            {/* invisible copy of the PDF's text, in PDF points, so the page can be selected and copied */}
+            <svg
+              aria-hidden
+              viewBox="0 0 612 792"
+              className="pointer-events-none absolute inset-0 size-full select-none font-serif selection:bg-verm/25 group-data-full:pointer-events-auto group-data-full:select-text"
+            >
+              {textLayer.map(([x, y, size, width, text], i) => (
+                <text key={i} x={x} y={y} fontSize={size} textLength={width} lengthAdjust="spacingAndGlyphs" fill="transparent">
+                  {text}
+                </text>
+              ))}
+            </svg>
           </div>
           {/* the ring only magnifies: noise refraction here would garble the text */}
           <div
