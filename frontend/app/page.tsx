@@ -4,6 +4,7 @@ import { BrandMark, type Brand } from "./brands";
 import { Mark } from "./logo";
 import { Lens, Refraction } from "./lens";
 import { Nav } from "./nav";
+import { Footer } from "./footer";
 import { OceanScene } from "./ocean";
 import { Steps } from "./steps";
 import { Gallery } from "./gallery";
@@ -44,13 +45,6 @@ const compare: { name: string; brand?: Brand; cells: Mark3[]; note: string }[] =
   { name: "Notion", brand: "notion", cells: ["no", "part", "no", "yes"], note: "Cute as a link. Exports like a ransom note." },
   { name: "Overleaf", brand: "overleaf", cells: ["yes", "no", "no", "no"], note: "Stunning, right after you spend a weekend learning LaTeX." },
   { name: "ChatGPT", brand: "openai", cells: ["no", "yes", "part", "yes"], note: "Calls you “synergy-driven.” Formatting not included." },
-];
-
-const footer: [string, string[]][] = [
-  ["Product", ["How it works", "Templates", "Browser extension", "Job tailoring"]],
-  ["Resources", ["Resume guide", "ATS checklist", "Interview prep", "Blog"]],
-  ["Company", ["About", "Team", "Contact", "GitHub"]],
-  ["Legal", ["Privacy", "Terms", "Cookies"]],
 ];
 
 function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
@@ -228,32 +222,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* shortcut: footer entries are plain text until their pages exist, then they become links */}
-      <footer className="mx-auto max-w-6xl px-4 pb-10 pt-20 text-sm sm:px-6">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.6fr_repeat(4,1fr)]">
-          <div className="col-span-2 md:col-span-1">
-            <span className="inline-flex items-center gap-2">
-              <Mark className="h-6 w-auto" />
-              <span className={`${serif} text-[22px] leading-none`}>Rayume</span>
-            </span>
-            <p className="mt-4 max-w-60 leading-relaxed text-ink/60">Your day to day tool to jobhunt.</p>
-          </div>
-          {footer.map(([title, items]) => (
-            <div key={title}>
-              <h3 className="font-medium">{title}</h3>
-              <ul className="mt-4 space-y-3 text-ink/60">
-                {items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div className="mt-16 flex flex-col gap-3 border-t border-ink/10 pt-6 text-ink/50 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Rayume. Made by three students at PUCTech.</p>
-          <p>English  |  Português</p>
-        </div>
-      </footer>
+      <Footer serif={serif} />
     </div>
   );
 }

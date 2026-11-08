@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Mark } from "./logo";
 
 const links = [
-  ["How it works", "#how"],
-  ["Templates", "#templates"],
-  ["Why Rayume", "#why"],
+  ["How it works", "/#how"],
+  ["Templates", "/#templates"],
+  ["Why Rayume", "/#why"],
 ];
 
 const ease = "duration-300 ease-out";
@@ -42,7 +43,7 @@ export function Nav({ serif }: { serif: string }) {
           compact ? "max-w-44 bg-paper/75! pl-4 md:max-w-[33rem]" : "max-w-6xl pl-5"
         }`}
       >
-        <a href="#" className="inline-flex items-center" aria-label="Rayume home">
+        <Link href="/" className="inline-flex items-center" aria-label="Rayume home">
           <Mark className="h-6 w-auto" />
           <span
             className={`${serif} overflow-hidden whitespace-nowrap text-[22px] leading-none transition-all ${ease} ${
@@ -51,7 +52,7 @@ export function Nav({ serif }: { serif: string }) {
           >
             Rayume
           </span>
-        </a>
+        </Link>
         <div className="hidden items-center text-sm md:flex">
           {links.map(([label, href]) => (
             <a key={label} href={href} className="rounded-full px-4 py-2 text-ink/70 transition hover:bg-white/50 hover:text-ink">
