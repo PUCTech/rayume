@@ -67,7 +67,7 @@ Monorepo:
 | `backend/` | Python ≥3.14, FastAPI, SQLAlchemy 2, psycopg 3 (PostgreSQL), pydantic-settings, `google-genai` (Gemini as the LLM provider). Managed with `uv`. Tests: pytest. |
 | `frontend/` | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4. |
 | `postman/` | API collection plus local environment. |
-| `docs/` | Agent-facing docs: this file, the [design system](design/README.md) and the [database schema](database/README.md). |
+| `docs/` | Agent-facing docs: this file, the [design system](design/README.md), the [database schema](database/README.md) and the [API endpoints](endpoints/README.md). |
 
 Local dev: Next on `:3000`, FastAPI on `:8000` (CORS is already configured for this).
 
