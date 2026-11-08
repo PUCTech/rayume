@@ -67,8 +67,8 @@ Monorepo:
 | `backend/` | Python ≥3.14, FastAPI, SQLAlchemy 2, psycopg 3 (PostgreSQL), pydantic-settings, `google-genai` (Gemini as the LLM provider). Managed with `uv`. Tests: pytest. |
 | `frontend/` | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4. |
 | `postman/` | API collection plus local environment. |
-| `docs/` | Agent-facing docs: this file, and later design patterns and conventions. |
+| `docs/` | Agent-facing docs: this file, the [design system](design/README.md), the [database schema](database/README.md) and the [API endpoints](endpoints/README.md). |
 
 Local dev: Next on `:3000`, FastAPI on `:8000` (CORS is already configured for this).
 
-The project is at an early stage: only a `/health` endpoint and the default Next page exist. Most of the features above are still to be built.
+The project is at an early stage: the backend has only a `/health` endpoint; the frontend has the landing page, which defines the visual style for the rest of the site ([`design/README.md`](design/README.md)). Most of the features above are still to be built.

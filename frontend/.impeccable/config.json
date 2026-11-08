@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "createdAt": "2026-11-08T16:21:55.015Z",
+        "reason": "user confirmed: asked to use Geist Sans and Geist Serif (vercel.com/font) for Rayume"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "app/page.tsx"
+        ],
+        "createdAt": "2026-11-08T17:09:42.393Z",
+        "reason": "Claude: border-l-2/border-r-2 close a full 2px outline drawn on the Rayume table row's cells (rows can't take a border radius); not a one-sided tab. User asked for the row highlight."
+      }
+    ]
+  }
+}

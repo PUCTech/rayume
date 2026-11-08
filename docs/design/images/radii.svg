@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="200" viewBox="0 0 960 200" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="960" height="200" rx="24" fill="#F4F0EA"/>
+<rect x="24" y="24" width="112" height="80" rx="40" fill="#FFFFFF" stroke="#161B22" stroke-opacity="0.15"/>
+<text x="26" y="128" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#B8330F">rounded-full</text>
+<text x="26" y="150" font-size="12.5" fill="#161B22" fill-opacity="0.7">chips, pills,</text>
+<text x="26" y="167" font-size="12.5" fill="#161B22" fill-opacity="0.7">buttons, nav</text>
+<rect x="156" y="24" width="112" height="80" rx="34" fill="#FFFFFF" stroke="#161B22" stroke-opacity="0.15"/>
+<text x="158" y="128" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#B8330F">rounded-[34px]</text>
+<text x="158" y="150" font-size="12.5" fill="#161B22" fill-opacity="0.7">lens bezel</text>
+<rect x="288" y="24" width="112" height="80" rx="36" fill="#FFFFFF" stroke="#161B22" stroke-opacity="0.15"/>
+<text x="290" y="128" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#B8330F">rounded-[36px]</text>
+<text x="290" y="150" font-size="12.5" fill="#161B22" fill-opacity="0.7">dark CTA panel</text>
+<rect x="420" y="24" width="112" height="80" rx="28" fill="#FFFFFF" stroke="#161B22" stroke-opacity="0.15"/>
+<text x="422" y="128" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#B8330F">rounded-[28px]</text>
+<text x="422" y="150" font-size="12.5" fill="#161B22" fill-opacity="0.7">glass + step</text>
+<text x="422" y="167" font-size="12.5" fill="#161B22" fill-opacity="0.7">cards</text>
+<rect x="552" y="24" width="112" height="80" rx="26" fill="#FFFFFF" stroke="#161B22" stroke-opacity="0.15"/>
+<text x="554" y="128" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#B8330F">rounded-[26px]</text>
+<text x="554" y="150" font-size="12.5" fill="#161B22" fill-opacity="0.7">gallery cards</text>
+<rect x="684" y="24" width="112" height="80" rx="16" fill="#FFFFFF" stroke="#161B22" stroke-opacity="0.15"/>
+<text x="686" y="128" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#B8330F">rounded-2xl</text>
+<text x="686" y="150" font-size="12.5" fill="#161B22" fill-opacity="0.7">inner page / demo</text>
+<rect x="816" y="24" width="112" height="80" rx="12" fill="#FFFFFF" stroke="#161B22" stroke-opacity="0.15"/>
+<text x="818" y="128" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#B8330F">rounded-xl</text>
+<text x="818" y="150" font-size="12.5" fill="#161B22" fill-opacity="0.7">resume thumbnails</text>
+</svg>
