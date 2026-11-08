@@ -65,6 +65,7 @@ export function Gallery({ children }: { children: ReactNode }) {
                     src={`/resumes/${t.file}.png`}
                     alt={`Lucas Mendes's resume in the ${t.name} template`}
                     fill
+                    draggable={false}
                     sizes="(min-width: 1024px) 360px, 45vw"
                     className="object-cover transition duration-500 group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
                   />

@@ -53,6 +53,7 @@ const steps = [
             src="/resumes/classic.png"
             alt=""
             fill
+          draggable={false}
             sizes="320px"
             className={`${anim} object-cover object-top duration-[1100ms] ease-linear [clip-path:inset(0_0_100%_0)] delay-[calc(var(--d)_+_0.5s)] group-data-seen:[clip-path:inset(0_0_0_0)]`}
           />

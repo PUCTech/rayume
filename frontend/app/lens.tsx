@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import textLayer from "../resumes/classic-text.json";
 
 // SVG displacement filter used by `.lg` as a backdrop-filter. Only Chromium renders url() in
 // backdrop-filter; userAgentData is Chromium-only, so it doubles as the feature check.
@@ -103,7 +102,7 @@ export function Lens() {
           data-full={full ? "" : undefined}
           onPointerMove={follow}
           onPointerLeave={() => (userMoved.current = false)}
-          className="group relative aspect-[8.5/11] overflow-hidden rounded-[24px] shadow-[0_1px_2px_rgb(22_27_34/0.1)] [--r:84px] [--x:62%] [--y:38%] [--zoom:2] transition-[--r,--zoom] duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] data-full:[--r:900px] data-full:[--zoom:1] motion-reduce:transition-none"
+          className="group relative aspect-[8.5/11] select-none overflow-hidden rounded-[24px] shadow-[0_1px_2px_rgb(22_27_34/0.1)] [--r:84px] [--x:62%] [--y:38%] [--zoom:2] transition-[--r,--zoom] duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] data-full:[--r:900px] data-full:[--zoom:1] motion-reduce:transition-none"
         >
           <div aria-hidden>
             <Notes />
@@ -116,20 +115,9 @@ export function Lens() {
               fill
               priority
               unoptimized
+              draggable={false}
               className="object-contain"
             />
-            {/* invisible copy of the PDF's text, in PDF points, so the page can be selected and copied */}
-            <svg
-              aria-hidden
-              viewBox="0 0 612 792"
-              className="pointer-events-none absolute inset-0 size-full select-none font-serif selection:bg-verm/25 group-data-full:pointer-events-auto group-data-full:select-text"
-            >
-              {textLayer.map(([x, y, size, width, text], i) => (
-                <text key={i} x={x} y={y} fontSize={size} textLength={width} lengthAdjust="spacingAndGlyphs" fill="transparent">
-                  {text}
-                </text>
-              ))}
-            </svg>
           </div>
           {/* the ring only magnifies: noise refraction here would garble the text */}
           <div
