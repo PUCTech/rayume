@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Image from "next/image";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { BrandMark, type Brand } from "./brands";
 import { Mark } from "./logo";
@@ -36,6 +37,12 @@ const sources = [
 
 
 type Mark3 = "yes" | "part" | "no";
+const criteria = [
+  ["Reads well in ATS", "ATS"],
+  ["Writes it with you", "Writes"],
+  ["Tailors to each job", "Tailors"],
+  ["No code", "No code"],
+];
 // cells: reads well in ATS, writes it with you, tailors to each job, no code
 const compare: { name: string; brand?: Brand; cells: Mark3[]; note: string }[] = [
   { name: "Rayume", cells: ["yes", "yes", "yes", "yes"], note: "Writes it, tailors it, typesets it. You just hit send." },
@@ -47,13 +54,13 @@ const compare: { name: string; brand?: Brand; cells: Mark3[]; note: string }[] =
   { name: "ChatGPT", brand: "openai", cells: ["no", "yes", "part", "yes"], note: "Calls you “synergy-driven.” Formatting not included." },
 ];
 
-function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
+function Tick({ v, accent = false, small = false }: { v: Mark3; accent?: boolean; small?: boolean }) {
   const label = { yes: "Yes", part: "Partly", no: "No" }[v];
   return (
     <span className="inline-flex items-center gap-2">
       <span
         aria-hidden
-        className={`grid size-6 place-items-center rounded-full text-[13px] ${
+        className={`grid place-items-center rounded-full ${small ? "size-5 text-[11px]" : "size-6 text-[13px]"} ${
           v === "yes" ? (accent ? "bg-accent-deep text-white" : "bg-ink text-white") : v === "part" ? "bg-ink/10 text-ink/70" : "text-ink/30"
         }`}
       >
@@ -64,6 +71,95 @@ function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
   );
 }
 
+
+// Phones and tablets: the hero's lens is desktop only, so a small before/after sits between the pitch
+// and the buttons instead, sized off the screen height so the whole hero fits the first screen.
+function MobileHero() {
+  return (
+    // the height tracks the screen steeply: ~88px on a 568px-tall phone, ~200px on 844px, capped at 14rem
+    <div aria-hidden className="relative mx-auto mt-6 h-[clamp(5.5rem,41.7svh-9.3rem,14rem)] w-full max-w-sm lg:hidden">
+      {/* the note fills the box and fades its text out at the bottom when a short screen squeezes it */}
+      <div className="absolute bottom-0 left-0 top-3 w-[58%] -rotate-3 overflow-hidden rounded-2xl bg-white p-3.5 text-[11px] leading-snug text-ink/55 shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]">
+        <div className="h-full [mask-image:linear-gradient(to_bottom,black_75%,transparent)]">
+          <p className="text-ink/35">work??</p>
+          <p className="mt-1">junior dev at lumen labs, front + back, made the dashboard faster</p>
+          <p className="mt-2 text-ink/35">projects??</p>
+          <p className="mt-1">puc cafeteria app, like 2k students use it</p>
+        </div>
+      </div>
+      <div className="glass absolute right-0 top-0 h-full w-[56%] rotate-2 rounded-[22px] p-2 transition duration-700 ease-out starting:translate-y-3 starting:opacity-0 motion-reduce:transition-none">
+        <div className="relative h-full overflow-hidden rounded-xl bg-white">
+          <Image src="/resumes/classic.png" alt="" fill priority sizes="(min-width: 640px) 220px, 56vw" className="object-cover object-top" />
+        </div>
+      </div>
+      <span className="absolute bottom-0 left-[44%] grid size-9 -translate-x-1/2 place-items-center rounded-full bg-accent-deep text-white shadow-[0_8px_20px_-8px_color-mix(in_srgb,var(--color-accent)_80%,transparent)]">
+        <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 10h11m-4-4 4 4-4 4" />
+        </svg>
+      </span>
+    </div>
+  );
+}
+
+// Phones and tablets: the wide comparison table becomes our card plus a scoreboard of the rest, with the
+// four criteria as short headings over small marks and each tool's line underneath. No sideways scroll.
+function PhoneCompare() {
+  const [us, ...rest] = compare;
+  return (
+    <div className="mt-10 lg:hidden">
+      <div className="rounded-3xl border-2 border-accent bg-white p-5 shadow-[0_18px_44px_-22px_color-mix(in_srgb,var(--color-accent)_75%,transparent)]">
+        <p className="flex items-center gap-2.5 font-medium">
+          <Mark className="h-5 w-auto text-accent" />
+          {us.name}
+        </p>
+        <p className="mt-2 text-[17px] font-medium leading-snug">{us.note}</p>
+        <ul className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2.5 text-sm">
+          {criteria.map(([label]) => (
+            <li key={label} className="flex items-center gap-2">
+              <Tick v="yes" accent small />
+              {label}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <table className="mt-8 w-full table-fixed border-separate border-spacing-0 text-left">
+        <caption className="sr-only">How other tools compare</caption>
+        <colgroup>
+          <col />
+          <col className="w-11" span={4} />
+        </colgroup>
+        <thead>
+          <tr className="text-[11px] text-ink/50">
+            <th scope="col" className="pb-2 font-normal"><span className="sr-only">Tool</span></th>
+            {criteria.map(([label, short]) => (
+              <th key={label} scope="col" className="pb-2 text-center font-normal leading-tight">
+                <abbr title={label} className="no-underline">{short}</abbr>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {rest.map((r) => (
+          <tbody key={r.name}>
+            <tr>
+              <th scope="row" className="border-t border-ink/10 pt-3.5 font-medium">
+                <span className="inline-flex items-center gap-2.5">
+                  <BrandMark brand={r.brand!} className="size-4 shrink-0 text-ink/70" />
+                  {r.name}
+                </span>
+              </th>
+              {r.cells.map((c, i) => (
+                <td key={i} className="border-t border-ink/10 pt-3.5 text-center"><Tick v={c} small /></td>
+              ))}
+            </tr>
+            <tr>
+              <td colSpan={5} className="pb-3.5 pt-1 text-sm leading-snug text-ink/60">{r.note}</td>
+            </tr>
+          </tbody>
+        ))}
+      </table>
+    </div>
+  );
+}
 
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
 const primary = `${btn} bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`;
@@ -76,23 +172,25 @@ export default function Landing() {
       <Nav serif={serif} />
 
       {/* hero */}
-      <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:pt-24">
+      <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pb-24 pt-8 sm:px-6 sm:pt-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:pt-24">
         <div aria-hidden className="pointer-events-none absolute right-[-10%] top-16 -z-0 size-[34rem] rounded-full bg-accent/35 blur-[110px] max-lg:hidden" />
         <div className="relative">
-          <h1 className={`${serif} text-[clamp(3.1rem,7.4vw,6.4rem)] leading-[1.04] tracking-[-0.035em]`}>
+          <h1 className={`${serif} text-[clamp(2.5rem,7.4vw,6.4rem)] leading-[1.04] tracking-[-0.035em]`}>
             Your day to day tool to jobhunt.
           </h1>
-          <p className="mt-7 max-w-[34rem] text-[19px] leading-[1.55] text-ink/70">
+          <p className="mt-5 max-w-[34rem] text-[17px] leading-[1.55] text-ink/70 sm:mt-7 sm:text-[19px]">
             Turn class projects, hackathons and internships into a resume recruiters actually read. Rayume
             writes it with you, tailors it to every posting and typesets it in LaTeX.
           </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <a href="#" className={primary}>Build my resume</a>
-            <a href="#templates" className={`glass ${btn} text-ink hover:bg-white/40`}>See the templates</a>
+          <MobileHero />
+          {/* side by side from 360px so the whole hero fits the first screen of a phone */}
+          <div className="mt-6 flex flex-col gap-3 min-[360px]:flex-row lg:mt-9">
+            <a href="#" className={`${primary} max-sm:flex-1 max-sm:px-4`}>Build my resume</a>
+            <a href="#templates" className={`glass ${btn} text-ink hover:bg-white/40 max-sm:flex-1 max-sm:px-4`}>See the templates</a>
           </div>
           <p className="mt-5 text-sm text-ink/50">Free while in beta. Sign in with GitHub or Google.</p>
         </div>
-        <div className="relative mx-auto w-full max-w-[29rem]">
+        <div className="relative mx-auto w-full max-w-[29rem] max-lg:hidden">
           <Lens />
         </div>
       </section>
@@ -159,21 +257,20 @@ export default function Landing() {
         <h2 id="why-h" className={`${serif} max-w-2xl text-[clamp(2.4rem,4.6vw,3.8rem)] leading-[1] tracking-[-0.03em]`}>
           Why not just use what you already have?
         </h2>
-        {/* scrolls sideways on phones; the tool column stays pinned so every row keeps its name */}
-        <div role="region" aria-labelledby="why-h" tabIndex={0} className="relative mt-12 overflow-x-auto">
+        <PhoneCompare />
+        <div className="relative mt-12 overflow-x-auto max-lg:hidden">
           <table className="w-full min-w-[52rem] table-fixed border-separate border-spacing-0 text-left text-[15px]">
             <colgroup>
-              <col className="w-36 sm:w-40" />
+              <col className="w-40" />
               <col className="w-32" span={4} />
               <col />
             </colgroup>
             <thead>
               <tr className="text-sm text-ink/55">
-                <th scope="col" className="sticky left-0 z-10 bg-paper pb-4 font-normal"><span className="sr-only">Tool</span></th>
-                <th scope="col" className="pb-4 font-normal">Reads well in ATS</th>
-                <th scope="col" className="pb-4 font-normal">Writes it with you</th>
-                <th scope="col" className="pb-4 font-normal">Tailors to each job</th>
-                <th scope="col" className="pb-4 font-normal">No code</th>
+                <th scope="col" className="pb-4 font-normal"><span className="sr-only">Tool</span></th>
+                {criteria.map(([label]) => (
+                  <th key={label} scope="col" className="pb-4 font-normal">{label}</th>
+                ))}
                 <th scope="col" className="pb-4 font-normal"><span className="sr-only">Note</span></th>
               </tr>
             </thead>
@@ -185,7 +282,7 @@ export default function Landing() {
                 return (
                   <Fragment key={r.name}>
                     <tr className={us ? "shadow-[0_18px_44px_-22px_color-mix(in_srgb,var(--color-accent)_75%,transparent)]" : ""}>
-                      <th scope="row" className={`${cell} sticky left-0 z-10 pl-4 ${us ? "rounded-l-2xl border-l-2" : "bg-paper"} font-medium`}>
+                      <th scope="row" className={`${cell} pl-4 ${us ? "rounded-l-2xl border-l-2" : ""} font-medium`}>
                         <span className="inline-flex items-center gap-2.5">
                           {r.brand ? <BrandMark brand={r.brand} className="size-4 text-ink/70" /> : <Mark className="h-5 w-auto text-accent" />}
                           {r.name}
