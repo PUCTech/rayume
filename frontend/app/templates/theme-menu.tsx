@@ -106,10 +106,11 @@ export function ThemeMenu<T extends string>({
               setOpen(true);
             }
           }}
-          className="flex items-center gap-2 whitespace-nowrap rounded-full py-1.5 pl-1.5 pr-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink focus-visible:outline-offset-[-2px] aria-expanded:bg-ink/5 aria-expanded:text-ink"
+          className="flex items-center gap-2 whitespace-nowrap rounded-full py-1.5 pl-1.5 pr-2.5 text-sm pointer-coarse:py-2.5 font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink focus-visible:outline-offset-[-2px] aria-expanded:bg-ink/5 aria-expanded:text-ink"
         >
           <Swatch p={themes[value]} />
-          {value}
+          {/* swatch only on phones, so the pill fits; the aria-label still names the theme */}
+          <span className="hidden sm:inline">{value}</span>
           <svg aria-hidden viewBox="0 0 20 20" className={`size-4 text-ink/50 transition-transform duration-300 ease-out ${shown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="m6 8 4 4 4-4" />
           </svg>

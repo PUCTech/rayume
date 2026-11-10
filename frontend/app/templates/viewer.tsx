@@ -36,8 +36,9 @@ function highlight(code: string) {
   return out;
 }
 
+// 16px on phones: iOS zooms the page into any field set smaller
 const editor =
-  "absolute inset-0 m-0 overflow-y-scroll whitespace-pre-wrap break-words px-6 pb-6 pt-18 font-mono text-[13px] leading-relaxed [tab-size:2]";
+  "absolute inset-0 m-0 overflow-y-scroll whitespace-pre-wrap break-words px-4 pb-6 pt-18 font-mono text-base sm:px-6 sm:text-[13px] leading-relaxed [tab-size:2]";
 
 export function Viewer({ file, name, tex }: { file: string; name: string; tex: string }) {
   const [mode, setMode] = useState<"pdf" | "code">("pdf");
@@ -79,7 +80,7 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
       type="button"
       aria-pressed={mode === m}
       onClick={() => setMode(m)}
-      className={`relative w-16 rounded-full py-1.5 text-sm font-medium transition-colors duration-300 ${mode === m ? "text-white" : "text-ink/70 hover:text-ink"}`}
+      className={`relative w-14 rounded-full py-1.5 text-sm pointer-coarse:py-2.5 sm:w-16 font-medium transition-colors duration-300 ${mode === m ? "text-white" : "text-ink/70 hover:text-ink"}`}
     >
       {label}
     </button>
@@ -88,14 +89,14 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
   return (
     <div className="relative flex min-h-[75vh] flex-1 flex-col bg-mist lg:min-h-0">
       {/* anchored right with the extras on the left, so PDF/Code never move out from under the cursor */}
-      <div role="group" aria-label="View" className="glass absolute right-4 top-4 z-10 flex items-center rounded-full p-1">
+      <div role="group" aria-label="View" className="glass absolute right-3 top-3 z-10 sm:right-4 sm:top-4 flex items-center rounded-full p-1">
         <ThemeMenu themes={themes} value={theme} onChange={setTheme} hidden={mode !== "code"} />
         <Reveal show={mode === "code"}>
           <button
             type="button"
             aria-pressed={preview}
             onClick={() => setPreview((p) => !p)}
-            className="whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink aria-pressed:bg-ink/10 aria-pressed:text-ink"
+            className="whitespace-nowrap rounded-full px-2.5 py-1.5 text-sm pointer-coarse:py-2.5 sm:px-3.5 font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink aria-pressed:bg-ink/10 aria-pressed:text-ink"
           >
             Preview
           </button>
@@ -152,7 +153,7 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
                 Reset
               </button>
             )}
-            {!canRender && <span className="text-ink/55">Rendering edits is coming soon.</span>}
+            {!canRender && <span className="text-right text-ink/55">Rendering edits is coming soon.</span>}
             <button
               type="button"
               onClick={render}

@@ -101,7 +101,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
                     type="button"
                     aria-pressed={on}
                     onClick={() => toggle(key, v)}
-                    className={`rounded-full px-3.5 py-1.5 text-sm transition ${on ? "bg-ink text-white" : "bg-white/50 text-ink/70 hover:bg-white/80 hover:text-ink"}`}
+                    className={`rounded-full px-3.5 py-1.5 text-sm transition pointer-coarse:py-3 ${on ? "bg-ink text-white" : "bg-white/50 text-ink/70 hover:bg-white/80 hover:text-ink"}`}
                   >
                     {v}
                   </button>
@@ -139,7 +139,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
                   className="group block rounded-[26px]"
                 >
                   {/* name and details first, so they stay readable when the preview runs off screen */}
-                  <div className="mb-3 flex items-baseline justify-between gap-3 px-2">
+                  <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-2">
                     <h2 className="font-medium">{t.name}</h2>
                     <p className="text-sm text-ink/50">
                       {t.layout} · {t.source}
