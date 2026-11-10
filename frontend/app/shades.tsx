@@ -1,30 +1,34 @@
 "use client";
 
 import { useEffect, useSyncExternalStore, type CSSProperties } from "react";
-import { accent, shades } from "./palette";
+import { accents } from "./palette";
 
-const KEY = `rayume-shade-${accent}`;
+const KEY = "rayume-accent";
 
-// the picked shade lives in a module-level store backed by localStorage (which may be blocked)
-let picked: number | null = null;
+// the pick ("accent,shade") lives in a module-level store backed by localStorage (which may be blocked)
+let picked: string | null = null;
 const listeners = new Set<() => void>();
+
+function parse(v: string | null): [number, number] {
+  const [a, s] = (v ?? "").split(",").map(Number);
+  return accents[a]?.shades[s] ? [a, s] : [0, 0];
+}
 
 function read() {
   if (picked === null) {
     try {
-      const n = Number(localStorage.getItem(KEY));
-      picked = shades[n] ? n : 0;
+      picked = parse(localStorage.getItem(KEY)).join(",");
     } catch {
-      picked = 0;
+      picked = "0,0";
     }
   }
   return picked;
 }
 
-function pick(n: number) {
-  picked = n;
+function pick(a: number, s: number) {
+  picked = `${a},${s}`;
   try {
-    localStorage.setItem(KEY, String(n));
+    localStorage.setItem(KEY, picked);
   } catch {}
   listeners.forEach((l) => l());
 }
@@ -34,38 +38,58 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l);
 }
 
-// shortcut: test-branch tool for picking an accent shade; delete it once the colour is decided
+const swatch =
+  "size-7 cursor-pointer rounded-full ring-2 ring-offset-2 ring-offset-paper transition hover:scale-110 active:scale-95 motion-reduce:transition-none";
+const ring = (on: boolean, color: string) => ({ "--tw-ring-color": on ? color : "transparent" }) as CSSProperties;
+
+// shortcut: test-branch tool for picking an accent colour; delete it once the colour is decided
 export function ShadeToggle() {
-  const i = useSyncExternalStore(subscribe, read, () => 0);
+  const [a, s] = parse(useSyncExternalStore(subscribe, read, () => "0,0"));
+  const accent = accents[a];
 
   useEffect(() => {
-    const s = shades[i];
+    const c = accents[a].shades[s];
     const root = document.documentElement.style;
-    root.setProperty("--color-verm", s.base);
-    root.setProperty("--color-verm-deep", s.deep);
-    root.setProperty("--color-verm-text", s.text);
-  }, [i]);
+    root.setProperty("--color-verm", c.base);
+    root.setProperty("--color-verm-deep", c.deep);
+    root.setProperty("--color-verm-text", c.text);
+  }, [a, s]);
 
   return (
-    <div
-      role="group"
-      aria-label={`${accent} shades`}
-      className="glass fixed! bottom-4 right-4 z-50 flex items-center gap-2 rounded-full p-2 pr-4 text-[13px] font-medium"
-    >
-      {shades.map((s, n) => (
-        <button
-          key={s.name}
-          type="button"
-          title={s.name}
-          aria-pressed={n === i}
-          onClick={() => pick(n)}
-          style={{ background: s.base, "--tw-ring-color": n === i ? s.text : "transparent" } as CSSProperties}
-          className="size-7 cursor-pointer rounded-full ring-2 ring-offset-2 ring-offset-paper transition hover:scale-110 active:scale-95 motion-reduce:transition-none"
-        >
-          <span className="sr-only">{s.name}</span>
-        </button>
-      ))}
-      <span className="ml-1 w-24 text-ink/70">{shades[i].name}</span>
+    <div className="glass fixed! bottom-4 right-4 z-50 flex flex-col gap-2.5 rounded-[26px] p-3 text-[13px] font-medium">
+      <div role="group" aria-label="Accent colour" className="flex items-center gap-2">
+        {accents.map((x, n) => (
+          <button
+            key={x.name}
+            type="button"
+            title={x.name}
+            aria-pressed={n === a}
+            onClick={() => pick(n, 0)}
+            style={{ background: x.shades[0].base, ...ring(n === a, "var(--color-ink)") }}
+            className={swatch}
+          >
+            <span className="sr-only">{x.name}</span>
+          </button>
+        ))}
+      </div>
+      <div role="group" aria-label={`${accent.name} shades`} className="flex items-center gap-2 border-t border-ink/10 pt-2.5">
+        {accent.shades.map((x, n) => (
+          <button
+            key={x.name}
+            type="button"
+            title={x.name}
+            aria-pressed={n === s}
+            onClick={() => pick(a, n)}
+            style={{ background: x.base, ...ring(n === s, x.text) }}
+            className={swatch}
+          >
+            <span className="sr-only">{x.name}</span>
+          </button>
+        ))}
+        <span className="ml-1 text-ink/70">
+          {accent.name} · {accent.shades[s].name}
+        </span>
+      </div>
     </div>
   );
 }
