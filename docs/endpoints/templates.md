@@ -10,12 +10,14 @@ Table: `templates`. Written by the team, read-only through the API (seeded by mi
   "name": "Classic ATS",
   "preview_url": "https://storage.../signed",
   "tags": ["ats", "one-column", "minimal"],
+  "author": "Rayume",
+  "license": "MIT",
   "created_at": "2026-11-06T18:25:00Z",
   "updated_at": "2026-11-06T18:25:00Z"
 }
 ```
 
-`tex_source` is never returned: it's our IP and of no use to the client. `preview_url` is the generic sample preview; previews with the user's data come from [`renders.md`](renders.md).
+Every template is open source (ours are MIT, the Overleaf ones keep their own licenses), so `GET /templates/{slug}` includes `tex_source`: the template page shows it and lets people edit and re-render it. `preview_url` is the generic sample preview; previews with the user's data come from [`renders.md`](renders.md).
 
 ### GET /templates
 
