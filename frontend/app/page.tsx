@@ -66,7 +66,7 @@ function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
 
 
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
-const primary = `${btn} bg-verm-deep text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[#E5471F]`;
+const primary = `${btn} bg-verm-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-verm)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-verm)_45%,var(--color-verm-deep))]`;
 
 export default function Landing() {
   return (
@@ -183,7 +183,7 @@ export default function Landing() {
                 const cell = us ? "border-y-2 border-verm bg-white py-[18px]" : "border-t border-ink/10 py-5";
                 return (
                   <Fragment key={r.name}>
-                    <tr className={us ? "shadow-[0_18px_44px_-22px_rgb(242_84_45/0.75)]" : ""}>
+                    <tr className={us ? "shadow-[0_18px_44px_-22px_color-mix(in_srgb,var(--color-verm)_75%,transparent)]" : ""}>
                       <th scope="row" className={`${cell} pl-4 ${us ? "rounded-l-2xl border-l-2" : ""} font-medium`}>
                         <span className="inline-flex items-center gap-2.5">
                           {r.brand ? <BrandMark brand={r.brand} className="size-4 text-ink/70" /> : <Mark className="h-5 w-auto text-verm" />}

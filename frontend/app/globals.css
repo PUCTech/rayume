@@ -23,6 +23,13 @@
   --color-verm-text: #b8330f;
 }
 
+:root {
+  --ocean-deep: var(--color-verm-text);
+  --ocean-shade: color-mix(in oklab, var(--color-verm-text), var(--color-verm-deep));
+  --ocean-mid: color-mix(in oklab, var(--color-verm-deep) 80%, var(--color-verm));
+  --ocean-light: color-mix(in oklab, var(--color-verm) 60%, white);
+}
+
 html,
 body {
   background: var(--background);
