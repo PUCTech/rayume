@@ -3,22 +3,12 @@
 import { useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import Image from "next/image";
-
-// Real renders of Lucas's resume, compiled from resumes/*.tex: the team's template, four of the
-// most used resume templates on Overleaf, and a vermilion variant of ours.
-const templates = [
-  { name: "Classic", file: "classic", layout: "One column" },
-  { name: "Jake's Resume", file: "jake", layout: "One column" },
-  { name: "Awesome CV", file: "awesome", layout: "One column" },
-  { name: "AltaCV", file: "altacv", layout: "Two column" },
-  { name: "moderncv", file: "moderncv", layout: "One column" },
-  { name: "Modern", file: "modern", layout: "One column" },
-];
+import { templates } from "./templates/data";
 
 const filters = ["All", "One column", "Two column"];
 
 // Animate the grid between states where the View Transitions API exists; elsewhere just update.
-function transition(update: () => void) {
+export function transition(update: () => void) {
   if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return update();
   document.startViewTransition(() => flushSync(update));
 }
