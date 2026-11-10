@@ -10,8 +10,7 @@ export function Drawer({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
-  // fade out first, then go back; a DOM flag rather than state, because Next keeps the closed drawer
-  // mounted but hidden and a forward navigation shows it again, effects re-run, state doesn't reset
+  // fade out first, then go back in history, which unmounts the drawer
   const close = () => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return router.back();
     root.current?.setAttribute("data-closing", "");
@@ -19,7 +18,6 @@ export function Drawer({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    root.current?.removeAttribute("data-closing");
     panel.current?.focus();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";

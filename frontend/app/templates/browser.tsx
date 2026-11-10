@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Drawer } from "./drawer";
+import { Detail } from "./panel";
 import { transition } from "../gallery";
 import { templates, type Template } from "./data";
 
@@ -17,10 +20,15 @@ const none: Record<Key, string[]> = { layout: [], source: [] };
 
 const noop = () => () => {};
 
-export function Browser() {
+// Opening a card pushes /templates/{id} onto the history and shows it in a drawer over the grid; Back
+// or closing pops it. A direct visit or refresh renders [id]/page.tsx. This replaced an intercepting
+// route, because next dev 16.4 re-adds interception rewrites on every rebuild until the click 404s.
+export function Browser({ tex }: { tex: Record<string, string> }) {
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState(none);
   const search = useRef<HTMLInputElement>(null);
+  const pathname = usePathname();
+  const open = templates.find((t) => pathname === `/templates/${t.file}`);
   // the server renders the Mac hint; other platforms swap to Ctrl after hydration
   const mod = useSyncExternalStore(noop, () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl "), () => "⌘");
 
@@ -112,8 +120,16 @@ export function Browser() {
         <ul className="mt-8 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((t, i) => (
             <li key={t.file} style={{ viewTransitionName: `tpl-${t.file}` }}>
-              {/* intercepted by @modal: opens the drawer over the grid, keeping its scroll and filters */}
-              <Link href={`/templates/${t.file}`} scroll={false} className="group block rounded-[26px]">
+              {/* a plain click opens the drawer; modifier clicks still open the full page in a new tab */}
+              <Link
+                href={`/templates/${t.file}`}
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                  e.preventDefault();
+                  history.pushState(null, "", `/templates/${t.file}`);
+                }}
+                className="group block rounded-[26px]"
+              >
                 <div className="glass rounded-[26px] p-3 transition duration-300 group-hover:-translate-y-1 motion-reduce:group-hover:translate-y-0">
                   <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]">
                     <Image
@@ -144,6 +160,12 @@ export function Browser() {
             Clear search and filters
           </button>
         </div>
+      )}
+
+      {open && (
+        <Drawer key={open.file}>
+          <Detail t={open} tex={tex[open.file]} />
+        </Drawer>
       )}
     </>
   );
