@@ -39,13 +39,16 @@ function Google() {
 const provider =
   "flex w-full items-center justify-center gap-2.5 rounded-full bg-white px-5 py-3 text-[15px] font-medium ring-1 ring-ink/10 transition hover:ring-ink/25 active:scale-[0.98]";
 
-// Email and password fields from docs/endpoints/auth.md, plus GitHub and Google.
-// shortcut: nothing is sent until the API has /auth; submitting shows a note instead. Wire the form to
-// POST /auth/register or /auth/login and the provider buttons to GET /auth/{github,google} then.
-export function AuthForm({ kind }: { kind: "login" | "signup" }) {
+const submit =
+  "mt-2 inline-flex w-full items-center justify-center rounded-full bg-verm-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[#E5471F] active:scale-[0.97]";
+const pendingNote = "Accounts aren't open yet. We'll switch this on with the API.";
+
+// Fields from docs/endpoints/auth.md.
+// shortcut: nothing is sent until the API has /auth; submitting shows a note instead. Wire the forms to
+// POST /auth/login and /auth/register and the provider buttons to GET /auth/{github,google} then.
+export function LoginForm() {
   const [note, setNote] = useState("");
-  const pending = () => setNote("Accounts aren't open yet. We'll switch this on with the API.");
-  const signup = kind === "signup";
+  const pending = () => setNote(pendingNote);
 
   return (
     <>
@@ -73,70 +76,104 @@ export function AuthForm({ kind }: { kind: "login" | "signup" }) {
         }}
         className="grid gap-4"
       >
-        {signup && (
-          <>
-            <Field label="Name" name="name" autoComplete="name" maxLength={100} placeholder="Lucas Mendes" />
-            <Field
-              label="Username"
-              name="username"
-              autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
-              pattern="[a-z0-9_\-]{3,30}"
-              placeholder="lucasmendes"
-              hint="3 to 30 characters: lowercase letters, numbers, - and _."
-            />
-          </>
-        )}
+        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
+        <Field label="Password" name="password" type="password" autoComplete="current-password" maxLength={128} />
+        <button type="submit" className={submit}>
+          Sign in
+        </button>
+      </form>
+      {/* outside the form's grid and empty until a note arrives, so it takes no room meanwhile */}
+      <p role="status" className="mt-3 text-center text-sm text-ink/65 empty:mt-0">
+        {note}
+      </p>
+
+      <p className="mt-6 text-sm text-ink/65">
+        New to Rayume?{" "}
+        <Link href="/signup" className="font-medium text-verm-text">
+          Create an account
+        </Link>
+      </p>
+    </>
+  );
+}
+
+const valid = (f: HTMLFormElement, name: string) => (f.elements.namedItem(name) as HTMLInputElement).validity.valid;
+
+// Signup asks for email and username first; once both are valid, name and password unfold below
+// them. Until then those two are disabled, so the browser doesn't demand them on submit.
+export function SignupForm() {
+  const [note, setNote] = useState("");
+  const [more, setMore] = useState(false);
+  const step = (on: boolean, delay: number) => ({
+    style: { transitionDelay: on ? `${delay}ms` : "0ms" },
+    className: `transition duration-500 ease-out motion-reduce:transition-none ${on ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"}`,
+  });
+
+  return (
+    <>
+      <form
+        // once shown they stay, so editing the email later doesn't fold the form back up
+        onInput={(e) => more || setMore(valid(e.currentTarget, "email") && valid(e.currentTarget, "username"))}
+        onSubmit={(e) => {
+          e.preventDefault();
+          // reaching here means email and username passed the browser's checks (autofill may skip onInput)
+          if (!more) setMore(true);
+          else setNote(pendingNote);
+        }}
+        className="mt-8 grid gap-4"
+      >
         <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
         <Field
-          label="Password"
-          name="password"
-          type="password"
-          autoComplete={signup ? "new-password" : "current-password"}
-          minLength={signup ? 8 : undefined}
-          maxLength={128}
-          hint={signup ? "At least 8 characters." : undefined}
+          label="Username"
+          name="username"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          pattern="[a-z0-9_\-]{3,30}"
+          placeholder="lucasmendes"
+          hint="3 to 30 characters: lowercase letters, numbers, - and _."
         />
-        <button
-          type="submit"
-          className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-verm-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[#E5471F] active:scale-[0.97]"
+        {/* grid rows 0fr to 1fr animates to the fields' real height; the padding keeps focus rings unclipped */}
+        <div
+          className={`grid transition-[grid-template-rows,margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${more ? "grid-rows-[1fr]" : "-mt-4 grid-rows-[0fr]"}`}
         >
-          {signup ? "Create account" : "Sign in"}
+          <fieldset disabled={!more} inert={!more} className="-mx-1 min-h-0 overflow-hidden px-1 pb-1">
+            <div className="grid gap-4">
+              <div {...step(more, 60)}>
+                <Field label="Name" name="name" autoComplete="name" maxLength={100} placeholder="Lucas Mendes" />
+              </div>
+              <div {...step(more, 160)}>
+                <Field label="Password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={128} hint="At least 8 characters." />
+              </div>
+            </div>
+          </fieldset>
+        </div>
+        <button type="submit" className={submit}>
+          {more ? "Create account" : "Continue"}
         </button>
-        <p role="status" className="min-h-5 text-center text-sm text-ink/65">
-          {note}
-        </p>
       </form>
+      {/* outside the form's grid and empty until a note arrives, so it takes no room meanwhile */}
+      <p role="status" className="mt-3 text-center text-sm text-ink/65 empty:mt-0">
+        {note}
+      </p>
 
-      {signup ? (
-        <>
-          <p className="text-xs leading-relaxed text-ink/55">
-            By creating an account you agree to our{" "}
-            <Link href="/legal/terms" className="underline underline-offset-2 hover:text-ink">
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link href="/legal/privacy" className="underline underline-offset-2 hover:text-ink">
-              Privacy Policy
-            </Link>
-            .
-          </p>
-          <p className="mt-8 text-sm text-ink/65">
-            Already have an account?{" "}
-            <Link href="/login" className="font-medium text-verm-text">
-              Sign in
-            </Link>
-          </p>
-        </>
-      ) : (
-        <p className="mt-6 text-sm text-ink/65">
-          New to Rayume?{" "}
-          <Link href="/signup" className="font-medium text-verm-text">
-            Create an account
-          </Link>
-        </p>
-      )}
+      <p className="mt-4 text-xs leading-relaxed text-ink/55">
+        By creating an account you agree to our{" "}
+        <Link href="/legal/terms" className="underline underline-offset-2 hover:text-ink">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/legal/privacy" className="underline underline-offset-2 hover:text-ink">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+      <p className="mt-6 text-sm text-ink/65">
+        Already have an account?{" "}
+        <Link href="/login" className="font-medium text-verm-text">
+          Sign in
+        </Link>
+      </p>
     </>
   );
 }

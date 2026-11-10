@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { GeistSerifRegular } from "geist/font/serif/regular";
-import { AuthForm } from "../form";
+import { LoginForm } from "../form";
 
 const serif = GeistSerifRegular.className;
 
@@ -14,7 +14,7 @@ export default function Login() {
     <>
       <h1 className={`${serif} text-[2.6rem] leading-[1.05] tracking-[-0.03em]`}>Welcome back</h1>
       <p className="mt-3 text-ink/65">Sign in to pick up your resumes where you left them.</p>
-      <AuthForm kind="login" />
+      <LoginForm />
     </>
   );
 }
