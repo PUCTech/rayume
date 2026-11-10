@@ -17,22 +17,22 @@
 <text x="338" y="222" font-size="13" fill="#161B22" fill-opacity="0.6" font-family="ui-monospace, Menlo, monospace">#E9E3D9</text>
 <text x="338" y="246" font-size="12.5" fill="#161B22" fill-opacity="0.7">Alternate sections,</text>
 <text x="338" y="263" font-size="12.5" fill="#161B22" fill-opacity="0.7">step cards</text>
-<rect x="492" y="24" width="140" height="150" rx="18" fill="#F2542D" stroke="#161B22" stroke-opacity="0.08"/>
-<text x="506" y="160" font-size="12" fill="#161B22" fill-opacity="0.85">ink 5.0:1</text>
-<text x="494" y="202" font-size="15" font-weight="600" fill="#161B22">verm</text>
-<text x="494" y="222" font-size="13" fill="#161B22" fill-opacity="0.6" font-family="ui-monospace, Menlo, monospace">#F2542D</text>
+<rect x="492" y="24" width="140" height="150" rx="18" fill="#4338F5" stroke="#161B22" stroke-opacity="0.08"/>
+<text x="506" y="160" font-size="12" fill="#FFFFFF" fill-opacity="0.85">white 6.7:1</text>
+<text x="494" y="202" font-size="15" font-weight="600" fill="#161B22">accent</text>
+<text x="494" y="222" font-size="13" fill="#161B22" fill-opacity="0.6" font-family="ui-monospace, Menlo, monospace">#4338F5</text>
 <text x="494" y="246" font-size="12.5" fill="#161B22" fill-opacity="0.7">Big fields, glow,</text>
 <text x="494" y="263" font-size="12.5" fill="#161B22" fill-opacity="0.7">lens, numbers</text>
-<rect x="648" y="24" width="140" height="150" rx="18" fill="#D63C16" stroke="#161B22" stroke-opacity="0.08"/>
-<text x="662" y="160" font-size="12" fill="#FFFFFF" fill-opacity="0.85">white 4.7:1</text>
-<text x="650" y="202" font-size="15" font-weight="600" fill="#161B22">verm-deep</text>
-<text x="650" y="222" font-size="13" fill="#161B22" fill-opacity="0.6" font-family="ui-monospace, Menlo, monospace">#D63C16</text>
+<rect x="648" y="24" width="140" height="150" rx="18" fill="#271BF4" stroke="#161B22" stroke-opacity="0.08"/>
+<text x="662" y="160" font-size="12" fill="#FFFFFF" fill-opacity="0.85">white 8.2:1</text>
+<text x="650" y="202" font-size="15" font-weight="600" fill="#161B22">accent-deep</text>
+<text x="650" y="222" font-size="13" fill="#161B22" fill-opacity="0.6" font-family="ui-monospace, Menlo, monospace">#271BF4</text>
 <text x="650" y="246" font-size="12.5" fill="#161B22" fill-opacity="0.7">Buttons and badges</text>
 <text x="650" y="263" font-size="12.5" fill="#161B22" fill-opacity="0.7">with white text</text>
-<rect x="804" y="24" width="140" height="150" rx="18" fill="#B8330F" stroke="#161B22" stroke-opacity="0.08"/>
-<text x="818" y="160" font-size="12" fill="#FFFFFF" fill-opacity="0.85">on paper 5.3:1</text>
-<text x="806" y="202" font-size="15" font-weight="600" fill="#161B22">verm-text</text>
-<text x="806" y="222" font-size="13" fill="#161B22" fill-opacity="0.6" font-family="ui-monospace, Menlo, monospace">#B8330F</text>
+<rect x="804" y="24" width="140" height="150" rx="18" fill="#180BEA" stroke="#161B22" stroke-opacity="0.08"/>
+<text x="818" y="160" font-size="12" fill="#FFFFFF" fill-opacity="0.85">on paper 8.1:1</text>
+<text x="806" y="202" font-size="15" font-weight="600" fill="#161B22">accent-text</text>
+<text x="806" y="222" font-size="13" fill="#161B22" fill-opacity="0.6" font-family="ui-monospace, Menlo, monospace">#180BEA</text>
 <text x="806" y="246" font-size="12.5" fill="#161B22" fill-opacity="0.7">Small accent text on</text>
 <text x="806" y="263" font-size="12.5" fill="#161B22" fill-opacity="0.7">paper</text>
 </svg>

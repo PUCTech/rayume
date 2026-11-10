@@ -138,7 +138,7 @@ export function ThemeMenu<T extends string>({
             <Swatch p={themes[t]} />
             <span className="flex-1">{t}</span>
             {t === value && (
-              <svg aria-hidden viewBox="0 0 20 20" className="size-4 text-verm-text" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg aria-hidden viewBox="0 0 20 20" className="size-4 text-accent-text" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m5 10.5 3.2 3L15 7" />
               </svg>
             )}

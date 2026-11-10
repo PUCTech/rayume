@@ -45,7 +45,7 @@ export function Pdf({ src, title }: { src: string; title: string }) {
     return (
       <p className="m-auto p-6 text-sm text-ink/60">
         Couldn&apos;t draw this PDF.{" "}
-        <a href={src} target="_blank" rel="noreferrer" className="font-medium text-verm-text underline underline-offset-2">
+        <a href={src} target="_blank" rel="noreferrer" className="font-medium text-accent-text underline underline-offset-2">
           Open it
         </a>
       </p>

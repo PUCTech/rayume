@@ -54,7 +54,7 @@ function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
       <span
         aria-hidden
         className={`grid size-6 place-items-center rounded-full text-[13px] ${
-          v === "yes" ? (accent ? "bg-verm-deep text-white" : "bg-ink text-white") : v === "part" ? "bg-ink/10 text-ink/70" : "text-ink/30"
+          v === "yes" ? (accent ? "bg-accent-deep text-white" : "bg-ink text-white") : v === "part" ? "bg-ink/10 text-ink/70" : "text-ink/30"
         }`}
       >
         {v === "yes" ? "✓" : v === "part" ? "~" : "–"}
@@ -66,7 +66,7 @@ function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
 
 
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
-const primary = `${btn} bg-verm-deep text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[#E5471F]`;
+const primary = `${btn} bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`;
 
 export default function Landing() {
   return (
@@ -77,7 +77,7 @@ export default function Landing() {
 
       {/* hero */}
       <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:pt-24">
-        <div aria-hidden className="pointer-events-none absolute right-[-10%] top-16 -z-0 size-[34rem] rounded-full bg-verm/35 blur-[110px] max-lg:hidden" />
+        <div aria-hidden className="pointer-events-none absolute right-[-10%] top-16 -z-0 size-[34rem] rounded-full bg-accent/35 blur-[110px] max-lg:hidden" />
         <div className="relative">
           <h1 className={`${serif} text-[clamp(3.1rem,7.4vw,6.4rem)] leading-[1.04] tracking-[-0.035em]`}>
             Your day to day tool to jobhunt.
@@ -97,8 +97,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* vermilion band: what counts as experience */}
-      <section aria-labelledby="sources" className="relative overflow-hidden bg-verm py-24 text-ink sm:py-32">
+      {/* accent band: what counts as experience. White text: navy on ultramarine is only 2.6:1 */}
+      <section aria-labelledby="sources" className="relative overflow-hidden bg-accent py-24 text-white sm:py-32">
         <OceanScene />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <h2 id="sources" className={`${serif} max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1] tracking-[-0.03em]`}>
@@ -110,7 +110,7 @@ export default function Landing() {
           </p>
           <div className="mt-14 grid gap-4 md:grid-cols-2">
             {sources.map((s, i) => (
-              <article key={s.from} className={`glass rounded-[28px] p-6 sm:p-7 ${i % 2 ? "md:translate-y-10" : ""}`}>
+              <article key={s.from} className={`glass glass-dark rounded-[28px] p-6 sm:p-7 ${i % 2 ? "md:translate-y-10" : ""}`}>
                 <p className="text-sm">{s.from}</p>
                 <p className={`${serif} mt-3 text-[22px] leading-snug sm:text-2xl`}>{s.line}</p>
                 <ul className="mt-5 flex flex-wrap gap-2" aria-label="Skills found">
@@ -139,7 +139,7 @@ export default function Landing() {
 
       {/* templates */}
       <section id="templates" aria-labelledby="tpl-h" className="relative overflow-hidden bg-mist py-28 lg:py-36">
-        <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-verm/25 blur-[120px]" />
+        <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/25 blur-[120px]" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <Gallery>
             <div>
@@ -179,14 +179,14 @@ export default function Landing() {
             <tbody>
               {compare.map((r) => {
                 const us = !r.brand;
-                // our row: a vermilion outline drawn on the cells (rows can't take a border radius)
-                const cell = us ? "border-y-2 border-verm bg-white py-[18px]" : "border-t border-ink/10 py-5";
+                // our row: an accent outline drawn on the cells (rows can't take a border radius)
+                const cell = us ? "border-y-2 border-accent bg-white py-[18px]" : "border-t border-ink/10 py-5";
                 return (
                   <Fragment key={r.name}>
-                    <tr className={us ? "shadow-[0_18px_44px_-22px_rgb(242_84_45/0.75)]" : ""}>
+                    <tr className={us ? "shadow-[0_18px_44px_-22px_color-mix(in_srgb,var(--color-accent)_75%,transparent)]" : ""}>
                       <th scope="row" className={`${cell} pl-4 ${us ? "rounded-l-2xl border-l-2" : ""} font-medium`}>
                         <span className="inline-flex items-center gap-2.5">
-                          {r.brand ? <BrandMark brand={r.brand} className="size-4 text-ink/70" /> : <Mark className="h-5 w-auto text-verm" />}
+                          {r.brand ? <BrandMark brand={r.brand} className="size-4 text-ink/70" /> : <Mark className="h-5 w-auto text-accent" />}
                           {r.name}
                         </span>
                       </th>
@@ -207,7 +207,7 @@ export default function Landing() {
       {/* final call */}
       <section className="px-4 pb-6 sm:px-6">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[36px] bg-ink px-6 py-24 text-center text-white sm:py-32">
-          <div aria-hidden className="pointer-events-none absolute left-1/2 top-[150%] size-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-verm/70 blur-[100px]" />
+          <div aria-hidden className="pointer-events-none absolute left-1/2 top-[150%] size-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/70 blur-[100px]" />
           <Mark className="relative mx-auto h-14 w-auto text-paper" />
           <h2 className={`${serif} relative mx-auto mt-8 max-w-3xl text-[clamp(2.4rem,5.4vw,4.6rem)] leading-[1] tracking-[-0.03em]`}>
             Your first tech job starts with one good page.

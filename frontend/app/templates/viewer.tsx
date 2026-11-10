@@ -142,7 +142,7 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
             </div>
           </div>
           {error && (
-            <pre role="alert" className="max-h-40 overflow-auto border-t border-verm/30 bg-verm/10 px-6 py-3 font-mono text-xs whitespace-pre-wrap text-verm-text">
+            <pre role="alert" className="max-h-40 overflow-auto border-t border-accent/30 bg-accent/10 px-6 py-3 font-mono text-xs whitespace-pre-wrap text-accent-text">
               {error}
             </pre>
           )}
@@ -157,7 +157,7 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
               type="button"
               onClick={render}
               disabled={!canRender || busy}
-              className="rounded-full bg-verm-deep px-5 py-2 font-medium text-white transition hover:bg-verm-text disabled:opacity-50"
+              className="rounded-full bg-accent-deep px-5 py-2 font-medium text-white transition hover:bg-accent-text disabled:opacity-50"
             >
               {busy ? "Rendering…" : "Render"}
             </button>

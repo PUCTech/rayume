@@ -9,7 +9,7 @@ export type Section = { id: string; title: string; body: ReactNode };
 
 // Long-form styles for legal text, kept in one place so all three documents read the same.
 const prose =
-  "text-[15px] leading-[1.75] text-ink/80 [&_a]:font-medium [&_a]:text-verm-text [&_a]:underline [&_a]:underline-offset-2 [&_h3]:mt-8 [&_h3]:text-base [&_h3]:font-medium [&_h3]:text-ink [&_li]:mt-2 [&_ol]:mt-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-4 [&_strong]:font-medium [&_strong]:text-ink [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-5";
+  "text-[15px] leading-[1.75] text-ink/80 [&_a]:font-medium [&_a]:text-accent-text [&_a]:underline [&_a]:underline-offset-2 [&_h3]:mt-8 [&_h3]:text-base [&_h3]:font-medium [&_h3]:text-ink [&_li]:mt-2 [&_ol]:mt-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-4 [&_strong]:font-medium [&_strong]:text-ink [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-5";
 
 export function LegalDoc({
   title,
@@ -32,7 +32,7 @@ export function LegalDoc({
           <ol className="mt-4 space-y-2 border-l border-ink/10 text-sm">
             {sections.map((s, i) => (
               <li key={s.id}>
-                <a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-0.5 pl-4 text-ink/60 transition hover:border-verm hover:text-ink">
+                <a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-0.5 pl-4 text-ink/60 transition hover:border-accent hover:text-ink">
                   {i + 1}. {s.title}
                 </a>
               </li>
@@ -51,7 +51,7 @@ export function LegalDoc({
           <ul className="mt-4 space-y-3 text-[15px] leading-relaxed text-ink/80">
             {summary.map((line) => (
               <li key={line} className="flex gap-3">
-                <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-verm" />
+                <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-accent" />
                 {line}
               </li>
             ))}
@@ -61,7 +61,7 @@ export function LegalDoc({
         {sections.map((s, i) => (
           <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-14 scroll-mt-28">
             <h2 id={`${s.id}-h`} className={`${serif} text-[1.75rem] leading-tight tracking-[-0.02em]`}>
-              <span className="mr-3 text-verm">{i + 1}</span>
+              <span className="mr-3 text-accent">{i + 1}</span>
               {s.title}
             </h2>
             <div className={prose}>{s.body}</div>

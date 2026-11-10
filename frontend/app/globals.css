@@ -17,10 +17,18 @@
   --color-paper: #f4f0ea;
   --color-ink: #161b22;
   --color-mist: #e9e3d9;
-  --color-verm: #f2542d;
-  /* deeper shades keep AA contrast: white text on verm-deep, verm-text on paper */
-  --color-verm-deep: #d63c16;
-  --color-verm-text: #b8330f;
+  /* ultramarine; deeper shades keep AA contrast: white text on accent-deep, accent-text on paper */
+  --color-accent: #4338f5;
+  --color-accent-deep: #271bf4;
+  --color-accent-text: #180bea;
+}
+
+/* the ocean in the accent band: shades derived from the accent, so it follows the colour */
+:root {
+  --ocean-deep: var(--color-accent-text);
+  --ocean-shade: color-mix(in oklab, var(--color-accent-text), var(--color-accent-deep));
+  --ocean-mid: color-mix(in oklab, var(--color-accent-deep) 80%, var(--color-accent));
+  --ocean-light: color-mix(in oklab, var(--color-accent) 60%, white);
 }
 
 html,
@@ -32,7 +40,7 @@ body {
 
 @layer base {
   :focus-visible {
-    outline: 2px solid var(--color-verm-text);
+    outline: 2px solid var(--color-accent-text);
     outline-offset: 3px;
   }
 }

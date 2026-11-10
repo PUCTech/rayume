@@ -5,7 +5,7 @@
 
 ![The landing page hero: serif headline on cream, vermilion button, a glass-bezel resume with the lens](images/hero.png)
 
-**The idea in one line:** warm paper, navy ink and one loud vermilion, with Apple-style liquid glass where there is colour behind it to bend. Sophisticated enough to trust with your career, modern enough for a Gen Z job hunter.
+**The idea in one line:** warm paper, navy ink and one loud ultramarine, with Apple-style liquid glass where there is colour behind it to bend. Sophisticated enough to trust with your career, modern enough for a Gen Z job hunter.
 
 ## Contents
 
@@ -29,11 +29,11 @@
 
 | | Principle | In practice |
 |---|---|---|
-| 1 | **Paper first** | The page is cream paper (`paper`). Navy (`ink`) does the talking. Vermilion is a highlighter, not a wallpaper, except in the one band built to show it off. |
+| 1 | **Paper first** | The page is cream paper (`paper`). Navy (`ink`) does the talking. Ultramarine is a highlighter, not a wallpaper, except in the one band built to show it off. |
 | 2 | **One loud thing per screen** | Each section has a single star: the lens in the hero, the glass cards in the band, the PDF in the steps. Everything around it stays quiet. |
-| 3 | **Glass needs something to bend** | Liquid glass only goes over colour or content (the nav while scrolling, cards on vermilion). Glass on flat cream is just a grey box. |
+| 3 | **Glass needs something to bend** | Liquid glass only goes over colour or content (the nav while scrolling, cards on ultramarine). Glass on flat cream is just a grey box. |
 | 4 | **Show the real thing** | Resumes are real LaTeX renders of a real (fictional) person, never lorem ipsum or grey bars. |
-| 5 | **Alive, but calm** | Motion answers the user (the lens follows the cursor, the nav reacts to scrolling, demos play when they scroll into view). The only ambient loop is the ocean in the vermilion band: slow, low contrast, behind glass. |
+| 5 | **Alive, but calm** | Motion answers the user (the lens follows the cursor, the nav reacts to scrolling, demos play when they scroll into view). The only ambient loop is the ocean in the ultramarine band: slow, low contrast, behind glass. |
 | 6 | **Accessible by default** | Every text pairing passes WCAG AA. Every effect has a reduced-motion fallback. |
 
 ---
@@ -42,30 +42,35 @@
 
 ![The six colour tokens with their contrast ratios](images/palette.svg)
 
-All colours are Tailwind theme tokens in `frontend/app/globals.css` (`@theme`). Use the token names, never raw hex: `bg-paper`, `text-ink`, `bg-mist`, `bg-verm`, `bg-verm-deep`, `text-verm-text`. Opacity modifiers work as usual (`text-ink/60`, `bg-verm/15`).
+All colours are Tailwind theme tokens in `frontend/app/globals.css` (`@theme`). Use the token names, never raw hex: `bg-paper`, `text-ink`, `bg-mist`, `bg-accent`, `bg-accent-deep`, `text-accent-text`. Opacity modifiers work as usual (`text-ink/60`, `bg-accent/15`).
+
+The accent is **ultramarine**, picked in November 2026 over vermilion, cobalt, violet, emerald and magenta. It replaced vermilion, so older screenshots in this doc still show the vermilion version; the layout and rules are the same.
 
 | Token | Hex | Use it for | Never use it for |
 |---|---|---|---|
 | `paper` | `#F4F0EA` | Page background, light text on `ink` | Cards on paper (no contrast) |
-| `ink` | `#161B22` | All body text, headings, dark panels, ticks, secondary buttons | Large decorative fields |
+| `ink` | `#161B22` | All body text, headings, dark panels, ticks, secondary buttons | Large decorative fields, text on `accent` (2.6:1 fails) |
 | `mist` | `#E9E3D9` | Alternate sections (templates), step cards | Text |
-| `verm` | `#F2542D` | The vermilion band, glows, the lens, large numerals, outlines | Small text, white text on top (3.4:1 fails) |
-| `verm-deep` | `#D63C16` | Primary buttons, badges, accent ticks, anything with **white text on it** | Large areas (looks muddy) |
-| `verm-text` | `#B8330F` | Small accent text on paper (labels, skill names), focus rings | Backgrounds |
+| `accent` | `#4338F5` | The accent band, glows, the lens, large numerals, outlines | Navy text on top (2.6:1 fails); use white |
+| `accent-deep` | `#271BF4` | Primary buttons, badges, accent ticks, anything with **white text on it** | Large areas (looks heavy) |
+| `accent-text` | `#180BEA` | Small accent text on paper (labels, links, skill names), focus rings | Backgrounds |
 
-### Why three vermilions
+The ocean in the band reads four shades derived from these tokens (`--ocean-deep`, `--ocean-shade`, `--ocean-mid`, `--ocean-light` in `globals.css`), so changing the three hex values above recolours the whole site.
 
-Pure vermilion is the brand, but it is too light for small text and too light under white text. The two deeper shades exist purely for contrast:
+### Why three ultramarines
+
+The base shade is the brand. The two deeper ones keep contrast for small text and for white text on solid fills:
 
 | Pair | Ratio | Passes AA for |
 |---|---|---|
 | `ink` on `paper` | 15.2 : 1 | All text |
 | `ink` on `mist` | 13.6 : 1 | All text |
-| `ink` on `verm` | 5.0 : 1 | All text (that is why the vermilion band uses navy text) |
-| white on `verm-deep` | 4.7 : 1 | All text (buttons) |
-| `verm-text` on `paper` | 5.3 : 1 | All text |
-| white on `verm` | 3.4 : 1 | Large text only, avoid |
-| `verm` on `paper` | 3.0 : 1 | Large text only (headline numerals) |
+| white on `accent` | 6.7 : 1 | All text (that is why the accent band uses white text) |
+| `ink` on `accent` | 2.6 : 1 | Fails, never use |
+| white on `accent-deep` | 8.2 : 1 | All text (buttons) |
+| `accent-text` on `paper` | 8.1 : 1 | All text |
+| `accent` on `paper` | 5.9 : 1 | All text |
+| white on dark glass over `accent` | 5.9 : 1 | All text (the band's cards) |
 
 ### Proportions
 
@@ -74,7 +79,7 @@ pie showData
   title Rough share of the screen
   "paper (background)" : 60
   "ink + mist (text, panels, sections)" : 30
-  "vermilion (accents, one band)" : 10
+  "ultramarine (accents, one band)" : 10
 ```
 
 ---
@@ -115,15 +120,15 @@ Rules:
 flowchart TB
   nav["Glass nav (sticky, floating pill)"]
   hero["Hero · paper · text left, lens right"]
-  band["Vermilion band · navy text · glass cards over an animated ocean"]
+  band["Ultramarine band · white text · dark glass cards over an animated ocean"]
   how["How it works · paper · heading row, three mist step cards that play when seen"]
   tpl["Templates · mist · real LaTeX renders in glass frames"]
   why["Comparison · paper · table, Rayume row first"]
-  cta["Closing panel · ink · vermilion glow from below"]
+  cta["Closing panel · ink · ultramarine glow from below"]
   foot["Footer · paper · brand + four columns"]
   nav --> hero --> band --> how --> tpl --> why --> cta --> foot
 
-  style band fill:#F2542D,color:#161B22,stroke:#F2542D
+  style band fill:#4338F5,color:#FFFFFF,stroke:#4338F5
   style tpl fill:#E9E3D9,color:#161B22,stroke:#E9E3D9
   style cta fill:#161B22,color:#F4F0EA,stroke:#161B22
   style hero fill:#F4F0EA,color:#161B22
@@ -142,7 +147,7 @@ flowchart TB
 | Section header | `grid lg:grid-cols-2 lg:items-end` | Heading left, short intro right (`lg:justify-self-end`). Content goes full width below, so no column is left empty |
 | Card grids | `md:grid-cols-2`, `lg:grid-cols-3` | Grids always start at `grid-cols-1` so they shrink on phones |
 
-Alignment is **left** everywhere except the closing panel, which is centred because it is a single call to action. Backgrounds alternate paper, vermilion, paper, mist, paper, ink, paper, so each section reads as its own sheet.
+Alignment is **left** everywhere except the closing panel, which is centred because it is a single call to action. Backgrounds alternate paper, ultramarine, paper, mist, paper, ink, paper, so each section reads as its own sheet.
 
 ---
 
@@ -170,12 +175,12 @@ flowchart LR
 ```
 
 - **Refraction** comes from `<Refraction />` in `lens.tsx`: it injects the SVG filter `#lg-refract` and sets `data-refract` on `<html>` in Chromium, where `backdrop-filter: url()` works. Safari and Firefox keep the plain blur instead of losing the backdrop.
-- **Readability over busy colour:** when glass carries text over vermilion or ink (the compact nav), raise the tint: `bg-paper/75!`.
+- **Readability over busy colour:** when glass carries text over ultramarine or ink (the compact nav), raise the tint: `bg-paper/75!`.
 
 | Use glass | Don't use glass |
 |---|---|
 | The nav (content scrolls under it) | Cards on flat paper (use `bg-mist` or white) |
-| Cards and chips on the vermilion band | Body text containers on paper |
+| Cards and chips on the ultramarine band | Body text containers on paper |
 | Frames around real content (the lens bezel, gallery cards) | Stacked glass on glass |
 | Secondary buttons over colour (`glass glass-dark` on ink) | Anything that needs to be read at small size over a busy image |
 
@@ -187,8 +192,8 @@ flowchart LR
 
 - **Everything interactive is a pill** (`rounded-full`): buttons, chips, filter tabs, the nav.
 - Radius grows with size: thumbnails `rounded-xl`, inner panels `rounded-2xl`, cards `rounded-[26px]`/`rounded-[28px]`, big frames `rounded-[34px]`/`rounded-[36px]`.
-- **Shadows are tinted, never grey.** Navy shadows for objects on paper (`shadow-[0_12px_32px_-16px_rgb(22_27_34/0.3)]`), vermilion glow for the primary button and the highlighted table row (`shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7)]`).
-- Big soft colour glows (`bg-verm/25 blur-[120px]`) sit behind the hero visual, the gallery and the closing panel so the glass has colour to pick up.
+- **Shadows are tinted, never grey.** Navy shadows for objects on paper (`shadow-[0_12px_32px_-16px_rgb(22_27_34/0.3)]`), ultramarine glow for the primary button and the highlighted table row (`shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent)]`).
+- Big soft colour glows (`bg-accent/25 blur-[120px]`) sit behind the hero visual, the gallery and the closing panel so the glass has colour to pick up.
 
 ---
 
@@ -222,7 +227,7 @@ The hysteresis (32 px down, 120 px up) is deliberate: small trackpad flicks neve
 
 | Variant | When | Classes |
 |---|---|---|
-| **Primary** | The one action per section ("Build my resume") | `btn` + `bg-verm-deep text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[#E5471F]` |
+| **Primary** | The one action per section ("Build my resume") | `btn` + `bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]` |
 | **Glass** | Secondary action on paper or colour | `glass` + `btn` + `text-ink hover:bg-white/40` |
 | **Dark glass** | Secondary action on `ink` | `glass glass-dark` + `btn` + `text-white hover:bg-white/15` |
 | **Ink** | Compact actions in chrome ("Start free" in the nav) | `rounded-full bg-ink px-4 py-2 font-medium text-white hover:bg-ink/85` |
@@ -231,9 +236,9 @@ Base: `btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 t
 
 ```mermaid
 flowchart TD
-  Q{"Is it the main action<br/>of this section?"} -->|yes| P["Primary · bg-verm-deep"]
+  Q{"Is it the main action<br/>of this section?"} -->|yes| P["Primary · bg-accent-deep"]
   Q -->|no| S{"What is behind it?"}
-  S -->|paper or vermilion| G["Glass"]
+  S -->|paper or ultramarine| G["Glass"]
   S -->|ink panel| D["Dark glass"]
   S -->|inside the nav| I["Ink pill"]
 ```
@@ -244,18 +249,18 @@ flowchart TD
 
 | Card | Classes | Use |
 |---|---|---|
-| **Step card** | `flex flex-col rounded-[28px] bg-mist p-5 sm:p-6` | Numbered sequences on paper, three in a row (`lg:grid-cols-3`). A thin vermilion bar on top fills in turn, the numeral (Geist Serif `text-3xl text-verm`) sits inline with the title, and the demo is pinned to the bottom (`mt-auto`). |
-| **Glass card** | `glass rounded-[28px] p-6 sm:p-7` | On the vermilion band. Serif quote, navy chips. |
+| **Step card** | `flex flex-col rounded-[28px] bg-mist p-5 sm:p-6` | Numbered sequences on paper, three in a row (`lg:grid-cols-3`). A thin ultramarine bar on top fills in turn, the numeral (Geist Serif `text-3xl text-accent`) sits inline with the title, and the demo is pinned to the bottom (`mt-auto`). |
+| **Glass card** | `glass glass-dark rounded-[28px] p-6 sm:p-7` | On the accent band, white text. Serif quote, navy chips. |
 | **Demo panel** | `rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgb(22_27_34/0.08)]` | Small fake UI inside a card (chat, job post, PDF row). |
-| **Gallery card** | `glass rounded-[26px] p-3` + `ring-2 ring-verm` when selected | Frames a resume thumbnail. |
+| **Gallery card** | `glass rounded-[26px] p-3` + `ring-2 ring-accent` when selected | Frames a resume thumbnail. |
 
 Numbering (1, 2, 3) is only for real sequences.
 
 ### Chips and badges
 
-- Skill chip on vermilion: `rounded-full bg-ink px-3 py-1 text-[13px] font-medium text-white`
-- Keyword highlight in text: `<mark class="rounded bg-verm/15 px-1 text-verm-text">`
-- Status badge ("Selected", "New"): `rounded-full bg-verm-deep px-2.5 py-0.5 text-xs text-white`
+- Skill chip on the accent band: `rounded-full bg-ink px-3 py-1 text-[13px] font-medium text-white`
+- Keyword highlight in text: `<mark class="rounded bg-accent/15 px-1 text-accent-text">`
+- Status badge ("Selected", "New"): `rounded-full bg-accent-deep px-2.5 py-0.5 text-xs text-white`
 - Filter tabs: a `glass rounded-full p-1` track; active tab `bg-ink text-white`, others `text-ink/70 hover:bg-white/50`
 
 ### Hero lens (`lens.tsx`)
@@ -290,7 +295,7 @@ Every thumbnail is a real compile of the same person (see [Assets](#assets)): th
 
 ![Comparison table with Rayume first](images/table.png)
 
-- Rayume row first, outlined in `border-verm` on its cells (rows can't take a radius), accent ticks `bg-verm-deep`, same height as the rest.
+- Rayume row first, outlined in `border-accent` on its cells (rows can't take a radius), accent ticks `bg-accent-deep`, same height as the rest.
 - Competitor logos at `size-4 text-ink/70` (`brands.tsx`, Simple Icons, CC0).
 - Fixed columns: `table-fixed` with a `<colgroup>`, so headers sit over their ticks.
 - Ticks: yes = filled `ink` circle, partly = `ink/10` circle with `~`, no = a faint dash. Each has an `sr-only` label.
@@ -317,7 +322,7 @@ Brand column (mark, wordmark, tagline) plus four columns. Entries are plain text
 
 Rules:
 - Every moving thing either answers the user or tells part of the story (the ocean sets the mood of the band, the step demos explain the product). No generic fade-in-on-scroll on every section.
-- Ambient motion stays in the ocean: monochrome vermilion shades, low contrast, dark creatures kept to open space or behind glass so navy text stays readable.
+- Ambient motion stays in the ocean: monochrome ultramarine shades, low contrast, dark creatures kept to open space or behind glass so the white text stays readable.
 - Everything animated checks `prefers-reduced-motion` and pauses when off screen.
 
 ---
@@ -337,7 +342,7 @@ Written for an English-speaking Gen Z developer hunting their first tech job.
 ## Accessibility
 
 - Contrast: every pairing in [Colour](#colour) is AA; don't introduce new ones without checking.
-- Focus: a global `:focus-visible` ring, 2 px `verm-text`, offset 3 px (`globals.css`, `@layer base`).
+- Focus: a global `:focus-visible` ring, 2 px `accent-text`, offset 3 px (`globals.css`, `@layer base`).
 - Motion: everything animated checks `prefers-reduced-motion`.
 - Semantics: landmarks (`header`, `nav`, `section` with `aria-labelledby`, `footer`), table headers with `scope`, decorative SVGs `aria-hidden`.
 - The lens content is reachable without a mouse: the "Show the PDF" toggle (`aria-pressed`) reveals the whole page, and the image has a full `alt`.
@@ -379,11 +384,11 @@ Rebuild everything with `frontend/resumes/build.sh` (needs `brew install tectoni
 ```mermaid
 flowchart TB
   subgraph css["globals.css"]
-    T["@theme<br/>paper ink mist verm verm-deep verm-text"]
+    T["@theme<br/>paper ink mist accent accent-deep accent-text"]
     U["@utility glass / glass-dark"]
     X["[data-refract] .glass<br/>@property --r --zoom<br/>:focus-visible"]
   end
-  T --> TW["Tailwind classes<br/>bg-paper, text-ink/60, ring-verm …"]
+  T --> TW["Tailwind classes<br/>bg-paper, text-ink/60, ring-accent …"]
   U --> TW
   TW --> PG["page.tsx · sections"]
   TW --> NV["nav.tsx · Nav"]
@@ -406,7 +411,7 @@ flowchart TB
 
 | Do | Don't |
 |---|---|
-| Use `bg-verm-deep` for buttons with white text | Put white text on `bg-verm` |
+| Use `bg-accent-deep` for buttons with white text | Put white text on `bg-accent` |
 | Put glass over colour or moving content | Put glass on flat paper |
 | Set headlines in one colour, Geist Serif, tight tracking | Colour or italicise one word for emphasis |
 | Use real renders and real-sounding data | Use lorem ipsum or grey placeholder bars |
