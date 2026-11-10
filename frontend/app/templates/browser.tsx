@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Drawer } from "./drawer";
 import { Detail } from "./panel";
 import { transition } from "../gallery";
+import { resetSearch, setSearch, useSearch } from "../search";
 import { templates, type Template } from "./data";
 
 // each group lists the values present in the data; nothing ticked in a group means it doesn't filter
@@ -24,26 +25,25 @@ const noop = () => () => {};
 // or closing pops it. A direct visit or refresh renders [id]/page.tsx. This replaced an intercepting
 // route, because next dev 16.4 re-adds interception rewrites on every rebuild until the click 404s.
 export function Browser({ tex }: { tex: Record<string, string> }) {
-  const [query, setQuery] = useState("");
+  // the query lives in the shared search store, so the nav's Cmd/Ctrl+K field filters this grid too
+  const { query, open: navSearch } = useSearch();
+  const setQuery = (q: string) => setSearch({ query: q });
   const [picked, setPicked] = useState(none);
-  const search = useRef<HTMLInputElement>(null);
+  const results = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const open = templates.find((t) => pathname === `/templates/${t.file}`);
   // the server renders the Mac hint; other platforms swap to Ctrl after hydration
   const mod = useSyncExternalStore(noop, () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl "), () => "⌘");
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // an open template drawer owns the keyboard
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !document.querySelector("[aria-modal=true]")) {
-        e.preventDefault();
-        search.current?.focus();
-        search.current?.select();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    setSearch({ enabled: true });
+    return resetSearch;
   }, []);
+
+  // typing in the nav while scrolled past the results brings them back into view
+  useEffect(() => {
+    if (navSearch && (results.current?.getBoundingClientRect().top ?? 0) < 0) results.current?.scrollIntoView({ behavior: "smooth" });
+  }, [query, navSearch]);
 
   const q = query.trim().toLowerCase();
   const matches = (t: Template) =>
@@ -61,15 +61,13 @@ export function Browser({ tex }: { tex: Record<string, string> }) {
 
   return (
     <>
-      {/* a direct child of the page wrapper, so it stays stuck under the nav for the whole grid */}
-      <div role="search" className="glass sticky top-20 z-30 mx-auto mt-12 flex max-w-2xl items-center gap-3 rounded-full px-5 focus-within:outline-2 focus-within:outline-offset-3 focus-within:outline-verm-text">
+      <div role="search" className="glass mx-auto mt-12 flex max-w-2xl items-center gap-3 rounded-full px-5 focus-within:outline-2 focus-within:outline-offset-3 focus-within:outline-verm-text">
         <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 text-ink/45" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <circle cx="8.5" cy="8.5" r="5.5" />
           <path d="m13 13 4 4" />
         </svg>
         <label htmlFor="tpl-search" className="sr-only">Search templates</label>
         <input
-          ref={search}
           id="tpl-search"
           type="search"
           value={query}
@@ -105,7 +103,7 @@ export function Browser({ tex }: { tex: Record<string, string> }) {
         ))}
       </div>
 
-      <div className="mt-14 flex items-baseline justify-between border-b border-ink/10 pb-4 text-sm">
+      <div ref={results} className="mt-14 flex scroll-mt-28 items-baseline justify-between border-b border-ink/10 pb-4 text-sm">
         <p aria-live="polite" className="text-ink/60">
           {filtered ? `${shown.length} of ${templates.length} templates` : `${templates.length} templates`}
         </p>
