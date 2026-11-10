@@ -65,10 +65,10 @@ function Notes() {
   return (
     <div className="absolute inset-0 bg-white px-[7%] text-ink/45">
       {notes.map((n) => (
-        <div key={n.top} className="absolute inset-x-[7%] text-[12.5px] leading-[18px]" style={{ top: n.top }}>
-          {n.label && <p className="mb-1 text-[11px] text-ink/30">{n.label}</p>}
+        <div key={n.top} className="absolute inset-x-[7%] text-[min(12.5px,2.7cqw)] leading-[min(18px,3.88cqw)]" style={{ top: n.top }}>
+          {n.label && <p className="mb-1 text-[min(11px,2.37cqw)] text-ink/30">{n.label}</p>}
           {n.lines.map((l, i) => (
-            <p key={l} className={i === 0 && !n.label ? "text-[17px] leading-6" : "mt-1.5"}>
+            <p key={l} className={i === 0 && !n.label ? "text-[min(17px,3.66cqw)] leading-[min(24px,5.17cqw)]" : "mt-1.5"}>
               {l}
             </p>
           ))}
@@ -112,13 +112,14 @@ export function Lens() {
   return (
     <figure className="relative">
       {/* liquid-glass bezel around the page */}
-      <div className="glass rounded-[34px] p-3">
+      {/* container: the notes and the lens shrink with the page below its 29rem desktop size */}
+      <div className="glass @container rounded-[34px] p-3">
         <div
           ref={stage}
           data-full={full ? "" : undefined}
           onPointerMove={follow}
           onPointerLeave={() => (userMoved.current = false)}
-          className="group relative aspect-[8.5/11] select-none overflow-hidden rounded-[24px] shadow-[0_1px_2px_rgb(22_27_34/0.1)] [--r:84px] [--x:62%] [--y:38%] [--zoom:2] transition-[--r,--zoom] duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] data-full:[--r:900px] data-full:[--zoom:1] motion-reduce:transition-none"
+          className="group relative aspect-[8.5/11] select-none overflow-hidden rounded-[24px] shadow-[0_1px_2px_rgb(22_27_34/0.1)] [--r:min(84px,18.1cqw)] [--x:62%] [--y:38%] [--zoom:2] transition-[--r,--zoom] duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] data-full:[--r:900px] data-full:[--zoom:1] motion-reduce:transition-none"
         >
           <div aria-hidden>
             <Notes />

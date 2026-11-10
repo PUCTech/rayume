@@ -39,7 +39,7 @@ export function Gallery({ children }: { children: ReactNode }) {
           ))}
         </div>
       </div>
-      <ul id="template-grid" className="mt-14 grid grid-cols-2 gap-5 lg:grid-cols-3">
+      <ul id="template-grid" className="mt-14 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
         {shown.map((t) => {
           const on = t.file === selected;
           return (
@@ -60,7 +60,7 @@ export function Gallery({ children }: { children: ReactNode }) {
                     className="object-cover transition duration-500 group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
                   />
                 </span>
-                <span className="flex items-center justify-between px-1.5 pb-1 pt-3 text-sm font-medium">
+                <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1.5 pb-1 pt-3 text-sm font-medium">
                   {t.name}
                   {on ? (
                     <span className="rounded-full bg-accent-deep px-2.5 py-0.5 text-xs text-white">Selected</span>

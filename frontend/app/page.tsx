@@ -159,16 +159,17 @@ export default function Landing() {
         <h2 id="why-h" className={`${serif} max-w-2xl text-[clamp(2.4rem,4.6vw,3.8rem)] leading-[1] tracking-[-0.03em]`}>
           Why not just use what you already have?
         </h2>
-        <div className="relative mt-12 overflow-x-auto">
+        {/* scrolls sideways on phones; the tool column stays pinned so every row keeps its name */}
+        <div role="region" aria-labelledby="why-h" tabIndex={0} className="relative mt-12 overflow-x-auto">
           <table className="w-full min-w-[52rem] table-fixed border-separate border-spacing-0 text-left text-[15px]">
             <colgroup>
-              <col className="w-40" />
+              <col className="w-36 sm:w-40" />
               <col className="w-32" span={4} />
               <col />
             </colgroup>
             <thead>
               <tr className="text-sm text-ink/55">
-                <th scope="col" className="pb-4 font-normal"><span className="sr-only">Tool</span></th>
+                <th scope="col" className="sticky left-0 z-10 bg-paper pb-4 font-normal"><span className="sr-only">Tool</span></th>
                 <th scope="col" className="pb-4 font-normal">Reads well in ATS</th>
                 <th scope="col" className="pb-4 font-normal">Writes it with you</th>
                 <th scope="col" className="pb-4 font-normal">Tailors to each job</th>
@@ -184,7 +185,7 @@ export default function Landing() {
                 return (
                   <Fragment key={r.name}>
                     <tr className={us ? "shadow-[0_18px_44px_-22px_color-mix(in_srgb,var(--color-accent)_75%,transparent)]" : ""}>
-                      <th scope="row" className={`${cell} pl-4 ${us ? "rounded-l-2xl border-l-2" : ""} font-medium`}>
+                      <th scope="row" className={`${cell} sticky left-0 z-10 pl-4 ${us ? "rounded-l-2xl border-l-2" : "bg-paper"} font-medium`}>
                         <span className="inline-flex items-center gap-2.5">
                           {r.brand ? <BrandMark brand={r.brand} className="size-4 text-ink/70" /> : <Mark className="h-5 w-auto text-accent" />}
                           {r.name}

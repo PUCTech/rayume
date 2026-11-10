@@ -54,7 +54,7 @@ const steps = [
             alt=""
             fill
           draggable={false}
-            sizes="320px"
+            sizes="(min-width: 1024px) 320px, 100vw"
             className={`${anim} object-cover object-top duration-[1100ms] ease-linear [clip-path:inset(0_0_100%_0)] delay-[calc(var(--d)_+_0.5s)] group-data-seen:[clip-path:inset(0_0_0_0)]`}
           />
         </div>
@@ -110,7 +110,8 @@ export function Steps({ serif }: { serif: string }) {
         setSeen(true);
         io.disconnect();
       },
-      { threshold: 0.35 },
+      // a margin, not a ratio: stacked on a short phone the list is taller than 35% of any viewport
+      { rootMargin: "0px 0px -35% 0px" },
     );
     io.observe(ref.current!);
     return () => io.disconnect();

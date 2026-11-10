@@ -12,8 +12,8 @@ const columns: [string, [string, string?][]][] = [
 export function Footer({ serif }: { serif: string }) {
   return (
     <footer className="mx-auto max-w-6xl px-4 pb-10 pt-20 text-sm sm:px-6">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.6fr_repeat(4,1fr)]">
-        <div className="col-span-2 md:col-span-1">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 lg:grid-cols-[1.6fr_repeat(4,1fr)]">
+        <div className="col-span-2 sm:col-span-4 lg:col-span-1">
           <Link href="/" className="inline-flex items-center gap-2" aria-label="Rayume home">
             <Mark className="h-6 w-auto" />
             <span className={`${serif} text-[22px] leading-none`}>Rayume</span>
