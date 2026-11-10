@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type ComponentProps } from "react";
+import { useState, useSyncExternalStore, type ChangeEvent, type ComponentProps } from "react";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import Link from "next/link";
 
@@ -70,6 +70,21 @@ function Providers() {
 // Fields from docs/endpoints/auth.md.
 // shortcut: nothing is sent until the API has /auth, so submitting does nothing yet. Wire the forms to
 // POST /auth/login and /auth/register and the provider buttons to GET /auth/{github,google} then.
+// The email typed on login, carried to signup when someone switches over. It lives in this module, so
+// it survives the client-side move between the two pages and not a reload; it never goes in the URL.
+// Only the browser writes it (in onChange), so the copy on the server stays empty. Signup subscribes
+// rather than copying once: Next keeps a visited page mounted, so a copy would go stale.
+let loginEmail = "";
+const emailListeners = new Set<() => void>();
+const setLoginEmail = (e: string) => {
+  loginEmail = e;
+  emailListeners.forEach((l) => l());
+};
+const subscribeEmail = (l: () => void) => {
+  emailListeners.add(l);
+  return () => emailListeners.delete(l);
+};
+
 export function LoginForm() {
   return (
     <>
@@ -78,7 +93,7 @@ export function LoginForm() {
       <form onSubmit={(e) => e.preventDefault()}
         className="mt-7 grid gap-4"
       >
-        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
+        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" onChange={(e) => setLoginEmail(e.target.value)} />
         <Field label="Password" name="password" type="password" autoComplete="current-password" maxLength={128} />
         <button type="submit" className={`${submit} mt-2`}>
           Sign in
@@ -95,7 +110,7 @@ export function LoginForm() {
 }
 
 const steps = ["Account", "Password", "Name"];
-type Values = { email: string; username: string; password: string; name: string };
+type Values = { username: string; password: string; name: string };
 
 // Signup starts like login. Continuing with email and username folds GitHub and Google away and turns
 // the form into three steps under a progress bar: email + username, then password, then name. Only the
@@ -104,7 +119,10 @@ export function SignupForm() {
   const [email, setEmail] = useState(false);
   const [step, setStep] = useState(0);
   const [back, setBack] = useState(false);
-  const [v, setV] = useState<Values>({ email: "", username: "", password: "", name: "" });
+  const [v, setV] = useState<Values>({ username: "", password: "", name: "" });
+  // the login email until the person types their own here
+  const fromLogin = useSyncExternalStore(subscribeEmail, () => loginEmail, () => "");
+  const [ownEmail, setOwnEmail] = useState<string | null>(null);
   const bind = (k: keyof Values) => ({
     name: k,
     value: v[k],
@@ -156,7 +174,15 @@ export function SignupForm() {
       >
         {step === 0 && (
           <div key="account" className={enter}>
-            <Field label="Email" type="email" autoComplete="email" placeholder="you@example.com" {...bind("email")} />
+            <Field
+              label="Email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={ownEmail ?? fromLogin}
+              onChange={(e) => setOwnEmail(e.target.value)}
+            />
             <Field
               label="Username"
               autoComplete="username"
