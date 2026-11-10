@@ -6,7 +6,7 @@ import { Mark } from "./logo";
 
 const links = [
   ["How it works", "/#how"],
-  ["Templates", "/#templates"],
+  ["Templates", "/templates"],
   ["Why Rayume", "/#why"],
 ];
 

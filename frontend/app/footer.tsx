@@ -3,7 +3,7 @@ import { Mark } from "./logo";
 
 // shortcut: entries without an href are plain text until their pages exist, then they become links
 const columns: [string, [string, string?][]][] = [
-  ["Product", [["How it works", "/#how"], ["Templates", "/#templates"], ["Browser extension"], ["Job tailoring"]]],
+  ["Product", [["How it works", "/#how"], ["Templates", "/templates"], ["Browser extension"], ["Job tailoring"]]],
   ["Resources", [["Resume guide"], ["ATS checklist"], ["Interview prep"], ["Blog"]]],
   ["Company", [["About"], ["Team"], ["Contact"], ["GitHub"]]],
   ["Legal", [["Privacy", "/legal/privacy"], ["Terms", "/legal/terms"], ["Cookies", "/legal/cookies"]]],
