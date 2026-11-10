@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mark } from "./logo";
-import { setSearch, useSearch } from "./search";
+import { getSearch, setSearch, useSearch } from "./search";
 
 const links = [
   ["How it works", "/#how"],
@@ -27,8 +27,8 @@ export function Nav({ serif }: { serif: string }) {
   useEffect(() => {
     if (!search.enabled) return;
     const onKey = (e: KeyboardEvent) => {
-      // an open template drawer owns the keyboard
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !document.querySelector("[aria-modal=true]")) {
+      // an open template drawer owns the keyboard, and a search bar in view takes it over
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !document.querySelector("[aria-modal=true]") && !getSearch().barVisible) {
         e.preventDefault();
         setSearch({ open: true });
       }
@@ -44,6 +44,11 @@ export function Nav({ serif }: { serif: string }) {
     const onScroll = () => {
       const y = window.scrollY;
       if (y === last) return;
+      // the open search holds its size: the jump to its results scrolls up, but nobody asked to expand
+      if (getSearch().open) {
+        last = anchor = y;
+        return;
+      }
       if ((y > last) !== (last > anchor)) anchor = last; // direction flipped
       last = y;
       // hysteresis: small flicks either way don't toggle it
