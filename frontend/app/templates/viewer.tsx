@@ -6,11 +6,14 @@ import { Pdf } from "./pdf";
 // rendering edits needs a TeX engine; only the dev server has one until the compile worker exists
 const canRender = process.env.NODE_ENV === "development";
 
-// code themes, set as CSS variables on the editor; Light is the default
+// popular light code themes, from each theme's published palette, set as CSS variables on the editor;
+// the first is the default. shortcut: light only for now, add dark ones once the site has dark mode
 const themes = {
-  Light: { bg: "#ffffff", text: "#24292f", command: "#cf222e", brace: "#8250df", comment: "#6e7781", selection: "#0969da33" },
-  Dark: { bg: "#161b22", text: "#e6edf3", command: "#ff7b72", brace: "#d2a8ff", comment: "#8b949e", selection: "#388bfd55" },
-  Paper: { bg: "#f4f0ea", text: "#161b22", command: "#b8330f", brace: "#5b4bff", comment: "#8a8178", selection: "#f2542d33" },
+  "GitHub Light": { bg: "#ffffff", text: "#24292f", command: "#cf222e", brace: "#8250df", comment: "#6e7781", selection: "#0969da33" },
+  "One Light": { bg: "#fafafa", text: "#383a42", command: "#a626a4", brace: "#4078f2", comment: "#a0a1a7", selection: "#e5e5e6" },
+  "Solarized Light": { bg: "#fdf6e3", text: "#657b83", command: "#268bd2", brace: "#d33682", comment: "#93a1a1", selection: "#eee8d5" },
+  "Catppuccin Latte": { bg: "#eff1f5", text: "#4c4f69", command: "#8839ef", brace: "#1e66f5", comment: "#7c7f93", selection: "#acb0be66" },
+  "Gruvbox Light": { bg: "#fbf1c7", text: "#3c3836", command: "#9d0006", brace: "#8f3f71", comment: "#928374", selection: "#ebdbb2" },
 };
 type Theme = keyof typeof themes;
 const vars = (t: Theme) => Object.fromEntries(Object.entries(themes[t]).map(([k, v]) => [`--c-${k}`, v])) as CSSProperties;
@@ -41,7 +44,7 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
   const [pdf, setPdf] = useState(`/resumes/${file}.pdf`);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [theme, setTheme] = useState<Theme>("Light");
+  const [theme, setTheme] = useState<Theme>("GitHub Light");
   const shadow = useRef<HTMLPreElement>(null);
 
   // free each rendered PDF once a newer one replaces it or the viewer closes
@@ -82,23 +85,25 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
       <div role="group" aria-label="View" className="glass absolute right-4 top-4 z-10 flex gap-1 rounded-full p-1">
         {tab("pdf", "PDF")}
         {tab("code", "Code")}
-        {mode === "code" && (
-          <label className="relative flex items-center border-l border-ink/10 pl-1">
-            <span className="sr-only">Code theme</span>
-            <select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as Theme)}
-              className="cursor-pointer appearance-none rounded-full py-1.5 pl-3 pr-8 text-sm font-medium text-ink/70 hover:text-ink"
-            >
-              {Object.keys(themes).map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-            <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute right-2.5 size-4 text-ink/50" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m6 8 4 4 4-4" />
-            </svg>
-          </label>
-        )}
+        {/* always mounted so it can slide open beside Code and closed again; inert while hidden */}
+        <label
+          inert={mode !== "code"}
+          className={`relative flex items-center overflow-hidden transition-[max-width,margin,opacity] duration-300 ease-out motion-reduce:transition-none ${mode === "code" ? "max-w-40 opacity-100" : "-ml-1 max-w-0 opacity-0"}`}
+        >
+          <span className="sr-only">Code theme</span>
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as Theme)}
+            className="cursor-pointer appearance-none whitespace-nowrap rounded-full py-1.5 pl-3 pr-8 text-sm font-medium text-ink/70 hover:text-ink"
+          >
+            {Object.keys(themes).map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+          <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute right-2.5 size-4 text-ink/50" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 8 4 4 4-4" />
+          </svg>
+        </label>
       </div>
 
       {mode === "pdf" ? (
@@ -109,8 +114,8 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
             {name} LaTeX source
           </label>
           {/* the colors live on a <pre> behind a transparent textarea; both must wrap and scroll identically */}
-          <div style={vars(theme)} className="relative min-h-0 flex-1 bg-(--c-bg)">
-            <pre ref={shadow} aria-hidden className={`${editor} text-(--c-text)`}>
+          <div style={vars(theme)} className="relative min-h-0 flex-1 bg-(--c-bg) transition-colors duration-300">
+            <pre ref={shadow} aria-hidden className={`${editor} text-(--c-text) transition-colors duration-300 [&_span]:transition-colors [&_span]:duration-300`}>
               {highlight(code)}
             </pre>
             <textarea
