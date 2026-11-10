@@ -15,13 +15,11 @@ const ease = "duration-300 ease-out";
 
 // Floating glass nav. A sustained scroll down shrinks it to the mark, the links and "Start free";
 // a deliberate scroll back up (or reaching the top) brings back the wordmark and "Sign in".
-// On a page with a search (the templates grid), Cmd/Ctrl+K turns the whole pill into that search.
+// On a page with a search (the templates grid), Cmd/Ctrl+K turns the pill, at its current size, into that search.
 export function Nav({ serif }: { serif: string }) {
-  const [scrolledDown, setScrolledDown] = useState(false);
+  const [compact, setCompact] = useState(false);
   const search = useSearch();
   const searching = search.enabled && search.open;
-  // the search takes the full-size pill, even mid-scroll
-  const compact = scrolledDown && !searching;
   const close = () => setSearch({ open: false });
   // the nav's own content fades out under the search; inert so Tab can't reach it meanwhile
   const hide = searching ? "pointer-events-none opacity-0" : "opacity-100";
@@ -51,7 +49,7 @@ export function Nav({ serif }: { serif: string }) {
       // hysteresis: small flicks either way don't toggle it
       if (!compacted && y > 160 && y - anchor > 32) compacted = true;
       else if (compacted && (y < 80 || anchor - y > 120)) compacted = false;
-      setScrolledDown(compacted);
+      setCompact(compacted);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);

@@ -26,10 +26,11 @@ const noop = () => () => {};
 // route, because next dev 16.4 re-adds interception rewrites on every rebuild until the click 404s.
 export function Browser({ tex }: { tex: Record<string, string> }) {
   // the query lives in the shared search store, so the nav's Cmd/Ctrl+K field filters this grid too
-  const { query, open: navSearch } = useSearch();
+  const { query } = useSearch();
   const setQuery = (q: string) => setSearch({ query: q });
   const [picked, setPicked] = useState(none);
-  const results = useRef<HTMLDivElement>(null);
+  const grid = useRef<HTMLDivElement>(null);
+  const [fullHeight, setFullHeight] = useState<number>();
   const pathname = usePathname();
   const open = templates.find((t) => pathname === `/templates/${t.file}`);
   // the server renders the Mac hint; other platforms swap to Ctrl after hydration
@@ -40,16 +41,22 @@ export function Browser({ tex }: { tex: Record<string, string> }) {
     return resetSearch;
   }, []);
 
-  // typing in the nav while scrolled past the results brings them back into view
-  useEffect(() => {
-    if (navSearch && (results.current?.getBoundingClientRect().top ?? 0) < 0) results.current?.scrollIntoView({ behavior: "smooth" });
-  }, [query, navSearch]);
-
   const q = query.trim().toLowerCase();
   const matches = (t: Template) =>
     t.name.toLowerCase().includes(q) && groups.every(({ key }) => !picked[key].length || picked[key].includes(t[key]));
   const shown = templates.filter(matches);
   const filtered = q || groups.some(({ key }) => picked[key].length);
+
+  // Filtering mustn't move the page. Hold the unfiltered grid's height (a shorter page would pull the
+  // scroll up to its new bottom) and turn off scroll anchoring on the grid (when the card in view
+  // disappears, Chrome scrolls to keep another one in place, a full row up).
+  useEffect(() => {
+    const el = grid.current;
+    if (filtered || !el) return;
+    const ro = new ResizeObserver(() => setFullHeight(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [filtered]);
 
   const toggle = (k: Key, v: string) =>
     transition(() => setPicked((p) => ({ ...p, [k]: p[k].includes(v) ? p[k].filter((x) => x !== v) : [...p[k], v] })));
@@ -103,7 +110,7 @@ export function Browser({ tex }: { tex: Record<string, string> }) {
         ))}
       </div>
 
-      <div ref={results} className="mt-14 flex scroll-mt-28 items-baseline justify-between border-b border-ink/10 pb-4 text-sm">
+      <div className="mt-14 flex items-baseline justify-between border-b border-ink/10 pb-4 text-sm">
         <p aria-live="polite" className="text-ink/60">
           {filtered ? `${shown.length} of ${templates.length} templates` : `${templates.length} templates`}
         </p>
@@ -114,51 +121,53 @@ export function Browser({ tex }: { tex: Record<string, string> }) {
         )}
       </div>
 
-      {shown.length ? (
-        <ul className="mt-8 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          {shown.map((t, i) => (
-            <li key={t.file} style={{ viewTransitionName: `tpl-${t.file}` }}>
-              {/* a plain click opens the drawer; modifier clicks still open the full page in a new tab */}
-              <Link
-                href={`/templates/${t.file}`}
-                onClick={(e) => {
-                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                  e.preventDefault();
-                  history.pushState(null, "", `/templates/${t.file}`);
-                }}
-                className="group block rounded-[26px]"
-              >
-                <div className="glass rounded-[26px] p-3 transition duration-300 group-hover:-translate-y-1 motion-reduce:group-hover:translate-y-0">
-                  <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]">
-                    <Image
-                      src={`/resumes/${t.file}.png`}
-                      alt={`Lucas Mendes's resume in the ${t.name} template`}
-                      fill
-                      draggable={false}
-                      loading={i < 3 ? "eager" : undefined}
-                      sizes="(min-width: 1024px) 370px, (min-width: 640px) 50vw, 100vw"
-                      className="object-cover transition duration-500 group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
-                    />
+      <div ref={grid} style={{ minHeight: filtered ? fullHeight : undefined }} className="[overflow-anchor:none]">
+        {shown.length ? (
+          <ul className="mt-8 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {shown.map((t, i) => (
+              <li key={t.file} style={{ viewTransitionName: `tpl-${t.file}` }}>
+                {/* a plain click opens the drawer; modifier clicks still open the full page in a new tab */}
+                <Link
+                  href={`/templates/${t.file}`}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    e.preventDefault();
+                    history.pushState(null, "", `/templates/${t.file}`);
+                  }}
+                  className="group block rounded-[26px]"
+                >
+                  <div className="glass rounded-[26px] p-3 transition duration-300 group-hover:-translate-y-1 motion-reduce:group-hover:translate-y-0">
+                    <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]">
+                      <Image
+                        src={`/resumes/${t.file}.png`}
+                        alt={`Lucas Mendes's resume in the ${t.name} template`}
+                        fill
+                        draggable={false}
+                        loading={i < 3 ? "eager" : undefined}
+                        sizes="(min-width: 1024px) 370px, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover transition duration-500 group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="mt-4 flex items-baseline justify-between gap-3 px-2">
-                  <h2 className="font-medium">{t.name}</h2>
-                  <p className="text-sm text-ink/50">
-                    {t.layout} · {t.source}
-                  </p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="mt-8 rounded-[28px] bg-mist px-6 py-20 text-center">
-          <p className="font-medium">No templates match.</p>
-          <button type="button" onClick={clear} className="mt-3 text-sm font-medium text-verm-text">
-            Clear search and filters
-          </button>
-        </div>
-      )}
+                  <div className="mt-4 flex items-baseline justify-between gap-3 px-2">
+                    <h2 className="font-medium">{t.name}</h2>
+                    <p className="text-sm text-ink/50">
+                      {t.layout} · {t.source}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="mt-8 rounded-[28px] bg-mist px-6 py-20 text-center">
+            <p className="font-medium">No templates match.</p>
+            <button type="button" onClick={clear} className="mt-3 text-sm font-medium text-verm-text">
+              Clear search and filters
+            </button>
+          </div>
+        )}
+      </div>
 
       {open && (
         <Drawer key={open.file}>
