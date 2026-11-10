@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Pdf } from "./pdf";
+import { ThemeMenu } from "./theme-menu";
 
 // rendering edits needs a TeX engine; only the dev server has one until the compile worker exists
 const canRender = process.env.NODE_ENV === "development";
@@ -85,25 +86,7 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
       <div role="group" aria-label="View" className="glass absolute right-4 top-4 z-10 flex gap-1 rounded-full p-1">
         {tab("pdf", "PDF")}
         {tab("code", "Code")}
-        {/* always mounted so it can slide open beside Code and closed again; inert while hidden */}
-        <label
-          inert={mode !== "code"}
-          className={`relative flex items-center overflow-hidden transition-[max-width,margin,opacity] duration-300 ease-out motion-reduce:transition-none ${mode === "code" ? "max-w-40 opacity-100" : "-ml-1 max-w-0 opacity-0"}`}
-        >
-          <span className="sr-only">Code theme</span>
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as Theme)}
-            className="cursor-pointer appearance-none whitespace-nowrap rounded-full py-1.5 pl-3 pr-8 text-sm font-medium text-ink/70 hover:text-ink"
-          >
-            {Object.keys(themes).map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
-          <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute right-2.5 size-4 text-ink/50" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m6 8 4 4 4-4" />
-          </svg>
-        </label>
+        <ThemeMenu themes={themes} value={theme} onChange={setTheme} hidden={mode !== "code"} />
       </div>
 
       {mode === "pdf" ? (
