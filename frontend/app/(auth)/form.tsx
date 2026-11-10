@@ -42,19 +42,18 @@ const provider =
 
 const submit =
   "inline-flex w-full items-center justify-center rounded-full bg-verm-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[#E5471F] active:scale-[0.97]";
-const pendingNote = "Accounts aren't open yet. We'll switch this on with the API.";
 
 const serif = GeistSerifRegular.className;
 
-function Providers({ onClick }: { onClick: () => void }) {
+function Providers() {
   return (
     <>
       <div className="mt-8 grid gap-3">
-        <button type="button" onClick={onClick} className={provider}>
+        <button type="button" className={provider}>
           <GitHub />
           Continue with GitHub
         </button>
-        <button type="button" onClick={onClick} className={provider}>
+        <button type="button" className={provider}>
           <Google />
           Continue with Google
         </button>
@@ -68,30 +67,15 @@ function Providers({ onClick }: { onClick: () => void }) {
   );
 }
 
-function Status({ note }: { note: string }) {
-  // empty until a note arrives, so it takes no room meanwhile
-  return (
-    <p role="status" className="mt-3 text-center text-sm text-ink/65 empty:mt-0">
-      {note}
-    </p>
-  );
-}
-
 // Fields from docs/endpoints/auth.md.
-// shortcut: nothing is sent until the API has /auth; submitting shows a note instead. Wire the forms to
+// shortcut: nothing is sent until the API has /auth, so submitting does nothing yet. Wire the forms to
 // POST /auth/login and /auth/register and the provider buttons to GET /auth/{github,google} then.
 export function LoginForm() {
-  const [note, setNote] = useState("");
-  const pending = () => setNote(pendingNote);
-
   return (
     <>
-      <Providers onClick={pending} />
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          pending();
-        }}
+      <Providers />
+      {/* preventDefault keeps the browser from submitting by GET, which would put the password in the URL */}
+      <form onSubmit={(e) => e.preventDefault()}
         className="mt-7 grid gap-4"
       >
         <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
@@ -100,7 +84,6 @@ export function LoginForm() {
           Sign in
         </button>
       </form>
-      <Status note={note} />
       <p className="mt-6 text-sm text-ink/65">
         New to Rayume?{" "}
         <Link href="/signup" className="font-medium text-verm-text">
@@ -114,11 +97,10 @@ export function LoginForm() {
 const steps = ["Account", "Password", "Name"];
 type Values = { email: string; username: string; password: string; name: string };
 
-// Signup starts like login. Typing in email or username fades GitHub and Google out and turns the
-// form into three steps under a progress bar: email + username, then password, then name. Only the
+// Signup starts like login. Continuing with email and username folds GitHub and Google away and turns
+// the form into three steps under a progress bar: email + username, then password, then name. Only the
 // current step is mounted, so the browser checks just its fields; values live in state between steps.
 export function SignupForm() {
-  const [note, setNote] = useState("");
   const [email, setEmail] = useState(false);
   const [step, setStep] = useState(0);
   const [back, setBack] = useState(false);
@@ -137,7 +119,8 @@ export function SignupForm() {
 
   return (
     <>
-      <div aria-hidden={!email} className={`mb-8 transition-opacity duration-500 ${email ? "opacity-100" : "opacity-0"}`}>
+      {/* mt-auto here and on the terms splits the free height, centring the form above the terms line */}
+      <div aria-hidden={!email} className={`mt-auto mb-8 transition-opacity duration-500 ${email ? "opacity-100" : "opacity-0"}`}>
         <div className="flex gap-1.5">
           {steps.map((s, i) => (
             <span key={s} className="h-1 flex-1 overflow-hidden rounded-full bg-ink/10">
@@ -159,7 +142,7 @@ export function SignupForm() {
         className={`grid transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${email ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`}
       >
         <div className="min-h-0 overflow-hidden">
-          <Providers onClick={() => setNote(pendingNote)} />
+          <Providers />
         </div>
       </div>
 
@@ -168,12 +151,11 @@ export function SignupForm() {
           e.preventDefault();
           setEmail(true);
           if (step < steps.length - 1) go(step + 1);
-          else setNote(pendingNote);
         }}
         className="mt-7 grid gap-4"
       >
         {step === 0 && (
-          <div key="account" className={enter} onInput={() => setEmail(true)}>
+          <div key="account" className={enter}>
             <Field label="Email" type="email" autoComplete="email" placeholder="you@example.com" {...bind("email")} />
             <Field
               label="Username"
@@ -208,9 +190,14 @@ export function SignupForm() {
           </button>
         </div>
       </form>
-      <Status note={note} />
+      <p className="mt-6 text-sm text-ink/65">
+        Already have an account?{" "}
+        <Link href="/login" className="font-medium text-verm-text">
+          Sign in
+        </Link>
+      </p>
 
-      <p className="mt-4 text-xs leading-relaxed text-ink/55">
+      <p className="mt-auto pt-8 text-center text-xs leading-relaxed text-ink/55">
         By creating an account you agree to our{" "}
         <Link href="/legal/terms" className="underline underline-offset-2 hover:text-ink">
           Terms
@@ -220,12 +207,6 @@ export function SignupForm() {
           Privacy Policy
         </Link>
         .
-      </p>
-      <p className="mt-6 text-sm text-ink/65">
-        Already have an account?{" "}
-        <Link href="/login" className="font-medium text-verm-text">
-          Sign in
-        </Link>
       </p>
     </>
   );

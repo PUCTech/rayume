@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <Mark className="h-6 w-auto" />
           <span className={`${serif} text-[22px] leading-none`}>Rayume</span>
         </Link>
-        <div className="m-auto w-full max-w-sm py-6 lg:py-0">{children}</div>
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-6 lg:py-0">{children}</div>
       </main>
     </div>
   );
