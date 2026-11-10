@@ -61,18 +61,18 @@ export function Nav({ serif }: { serif: string }) {
           ))}
         </div>
         <div className="flex items-center text-sm">
-          <a
-            href="#"
+          <Link
+            href="/login"
             tabIndex={compact ? -1 : undefined}
             className={`hidden overflow-hidden whitespace-nowrap rounded-full py-2 transition-all hover:bg-white/50 sm:inline-block ${ease} ${
               compact ? "max-w-0 px-0 opacity-0" : "mr-1 max-w-24 px-4 opacity-100"
             }`}
           >
             Sign in
-          </a>
-          <a href="#" className="whitespace-nowrap rounded-full bg-ink px-4 py-2 font-medium text-white transition hover:bg-ink/85">
+          </Link>
+          <Link href="/signup" className="whitespace-nowrap rounded-full bg-ink px-4 py-2 font-medium text-white transition hover:bg-ink/85">
             Start free
-          </a>
+          </Link>
         </div>
       </nav>
     </header>
