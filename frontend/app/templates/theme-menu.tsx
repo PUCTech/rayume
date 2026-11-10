@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 type Palette = { bg: string; command: string; brace: string };
+
+// Slides its children open beside the PDF/Code switch, to their real width: a grid column from 0fr
+// to 1fr eases all the way, where a max-width guess stops dead partway. Inert while closed.
+export function Reveal({ show, children }: { show: boolean; children: ReactNode }) {
+  return (
+    <div
+      inert={!show}
+      className={`grid transition-[grid-template-columns,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${show ? "grid-cols-[1fr] opacity-100" : "grid-cols-[0fr] opacity-0"}`}
+    >
+      <div className="min-w-0 overflow-hidden pr-1">{children}</div>
+    </div>
+  );
+}
 
 // a theme's background with dots in its command and brace colors
 function Swatch({ p }: { p: Palette }) {
@@ -14,8 +27,8 @@ function Swatch({ p }: { p: Palette }) {
   );
 }
 
-// The code theme picker for the viewer's pill. The trigger slides open beside Code (hidden while the
-// PDF shows); the listbox drops below the pill, outside the trigger's clipping, so it can animate.
+// The code theme picker for the viewer's pill. The trigger slides open left of the PDF/Code switch
+// (hidden while the PDF shows); the listbox drops below the pill, outside the trigger's clipping.
 export function ThemeMenu<T extends string>({
   themes,
   value,
@@ -79,10 +92,7 @@ export function ThemeMenu<T extends string>({
 
   return (
     <>
-      <div
-        inert={hidden}
-        className={`overflow-hidden transition-[max-width,margin,opacity] duration-300 ease-out motion-reduce:transition-none ${hidden ? "-ml-1 max-w-0 opacity-0" : "max-w-52 opacity-100"}`}
-      >
+      <Reveal show={!hidden}>
         <button
           ref={trigger}
           type="button"
@@ -104,7 +114,7 @@ export function ThemeMenu<T extends string>({
             <path d="m6 8 4 4 4-4" />
           </svg>
         </button>
-      </div>
+      </Reveal>
 
       <ul
         ref={list}

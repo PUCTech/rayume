@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Pdf } from "./pdf";
-import { ThemeMenu } from "./theme-menu";
+import { Reveal, ThemeMenu } from "./theme-menu";
 
 // rendering edits needs a TeX engine; only the dev server has one until the compile worker exists
 const canRender = process.env.NODE_ENV === "development";
@@ -46,6 +46,8 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState<Theme>("GitHub Light");
+  // code mode only: split the editor with the PDF underneath
+  const [preview, setPreview] = useState(false);
   const shadow = useRef<HTMLPreElement>(null);
 
   // free each rendered PDF once a newer one replaces it or the viewer closes
@@ -62,7 +64,8 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
       });
       if (!res.ok) return setError((await res.text()) || `Render failed (${res.status}).`);
       setPdf(URL.createObjectURL(await res.blob()));
-      setMode("pdf");
+      // with the preview open the new PDF shows under the code, so stay there
+      if (!preview) setMode("pdf");
     } catch {
       setError("Couldn't reach the renderer.");
     } finally {
@@ -70,12 +73,13 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
     }
   }
 
+  // equal-width tabs, so one thumb can slide between them instead of two backgrounds crossfading
   const tab = (m: typeof mode, label: string) => (
     <button
       type="button"
       aria-pressed={mode === m}
       onClick={() => setMode(m)}
-      className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${mode === m ? "bg-ink text-white" : "text-ink/70 hover:text-ink"}`}
+      className={`relative w-16 rounded-full py-1.5 text-sm font-medium transition-colors duration-300 ${mode === m ? "text-white" : "text-ink/70 hover:text-ink"}`}
     >
       {label}
     </button>
@@ -83,10 +87,27 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
 
   return (
     <div className="relative flex min-h-[75vh] flex-1 flex-col bg-mist lg:min-h-0">
-      <div role="group" aria-label="View" className="glass absolute right-4 top-4 z-10 flex gap-1 rounded-full p-1">
-        {tab("pdf", "PDF")}
-        {tab("code", "Code")}
+      {/* anchored right with the extras on the left, so PDF/Code never move out from under the cursor */}
+      <div role="group" aria-label="View" className="glass absolute right-4 top-4 z-10 flex items-center rounded-full p-1">
         <ThemeMenu themes={themes} value={theme} onChange={setTheme} hidden={mode !== "code"} />
+        <Reveal show={mode === "code"}>
+          <button
+            type="button"
+            aria-pressed={preview}
+            onClick={() => setPreview((p) => !p)}
+            className="whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink aria-pressed:bg-ink/10 aria-pressed:text-ink"
+          >
+            Preview
+          </button>
+        </Reveal>
+        <div className="relative grid grid-cols-2">
+          <span
+            aria-hidden
+            className={`absolute inset-y-0 left-0 w-1/2 rounded-full bg-ink transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${mode === "code" ? "translate-x-full" : ""}`}
+          />
+          {tab("pdf", "PDF")}
+          {tab("code", "Code")}
+        </div>
       </div>
 
       {mode === "pdf" ? (
@@ -96,21 +117,29 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
           <label htmlFor="tpl-code" className="sr-only">
             {name} LaTeX source
           </label>
-          {/* the colors live on a <pre> behind a transparent textarea; both must wrap and scroll identically */}
-          <div style={vars(theme)} className="relative min-h-0 flex-1 bg-(--c-bg) transition-colors duration-300">
-            <pre ref={shadow} aria-hidden className={`${editor} text-(--c-text) transition-colors duration-300 [&_span]:transition-colors [&_span]:duration-300`}>
-              {highlight(code)}
-            </pre>
-            <textarea
-              id="tpl-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onScroll={(e) => shadow.current?.scrollTo(e.currentTarget.scrollLeft, e.currentTarget.scrollTop)}
-              spellCheck={false}
-              autoCapitalize="off"
-              autoCorrect="off"
-              className={`${editor} resize-none bg-transparent text-transparent caret-(--c-text) outline-none selection:bg-(--c-selection)`}
-            />
+          {/* Preview splits the space: rows 1fr 0fr to 1fr 1fr opens the PDF under the code */}
+          <div
+            className={`grid min-h-0 flex-1 transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${preview ? "grid-rows-[1fr_1fr]" : "grid-rows-[1fr_0fr]"}`}
+          >
+            {/* the colors live on a <pre> behind a transparent textarea; both must wrap and scroll identically */}
+            <div style={vars(theme)} className="relative min-h-0 bg-(--c-bg) transition-colors duration-300">
+              <pre ref={shadow} aria-hidden className={`${editor} text-(--c-text) transition-colors duration-300 [&_span]:transition-colors [&_span]:duration-300`}>
+                {highlight(code)}
+              </pre>
+              <textarea
+                id="tpl-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onScroll={(e) => shadow.current?.scrollTo(e.currentTarget.scrollLeft, e.currentTarget.scrollTop)}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                className={`${editor} resize-none bg-transparent text-transparent caret-(--c-text) outline-none selection:bg-(--c-selection)`}
+              />
+            </div>
+            <div className={`flex min-h-0 flex-col overflow-hidden bg-white ${preview ? "border-t border-ink/10" : ""}`}>
+              {preview && <Pdf src={pdf} title={`${name} resume PDF preview`} />}
+            </div>
           </div>
           {error && (
             <pre role="alert" className="max-h-40 overflow-auto border-t border-verm/30 bg-verm/10 px-6 py-3 font-mono text-xs whitespace-pre-wrap text-verm-text">
