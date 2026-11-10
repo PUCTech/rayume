@@ -13,14 +13,13 @@ export const metadata: Metadata = {
 export default async function Templates() {
   const tex = await sources();
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-24 pt-16 sm:px-6 lg:pt-24">
-      <h1 className={`${serif} mx-auto max-w-3xl text-center text-[clamp(2.6rem,5vw,4rem)] leading-[1.02] tracking-[-0.03em]`}>
-        Templates, already filled in.
-      </h1>
-      <p className="mx-auto mt-6 max-w-xl text-center text-lg leading-relaxed text-ink/65">
-        The Overleaf favorites and our own, each shown with the same real resume so you compare layouts, not content.
-      </p>
-      <Browser tex={tex} />
+    <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6 lg:pt-14">
+      <Browser tex={tex}>
+        <div>
+          <h1 className={`${serif} text-[clamp(2.4rem,4.4vw,3.4rem)] leading-none tracking-[-0.03em]`}>Templates</h1>
+          <p className="mt-3 text-lg text-ink/65">The Overleaf favorites and our own, filled in with the same real resume.</p>
+        </div>
+      </Browser>
     </div>
   );
 }
