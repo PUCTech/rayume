@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function Login() {
   return (
     <>
-      <h1 className={`${serif} text-[2.6rem] leading-[1.05] tracking-[-0.03em]`}>Welcome back</h1>
+      <h1 className={`${serif} text-[clamp(2.25rem,10vw,2.6rem)] leading-[1.05] tracking-[-0.03em]`}>Welcome back</h1>
       <p className="mt-3 text-ink/65">Sign in to pick up your resumes where you left them.</p>
       <LoginForm />
     </>

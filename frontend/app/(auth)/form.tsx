@@ -4,8 +4,9 @@ import { useState, useSyncExternalStore, type ChangeEvent, type ComponentProps }
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import Link from "next/link";
 
+// 16px on phones, or iOS Safari zooms the page when an input takes focus
 const input =
-  "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[15px] ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text";
+  "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-base ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text sm:text-[15px]";
 
 function Field({ label, hint, ...props }: { label: string; hint?: string } & ComponentProps<"input">) {
   return (
@@ -151,7 +152,7 @@ export function SignupForm() {
         </p>
       </div>
 
-      <h1 className={`${serif} text-[2.6rem] leading-[1.05] tracking-[-0.03em]`}>Create your account</h1>
+      <h1 className={`${serif} text-[clamp(2.25rem,10vw,2.6rem)] leading-[1.05] tracking-[-0.03em]`}>Create your account</h1>
       <p className="mt-3 text-ink/65">Free while you hunt. It takes a minute.</p>
 
       {/* grid rows 1fr to 0fr folds the providers away to nothing once the email route starts */}
