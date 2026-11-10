@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ComponentProps } from "react";
+import { useState, type ChangeEvent, type ComponentProps } from "react";
+import { GeistSerifRegular } from "geist/font/serif/regular";
 import Link from "next/link";
 
 const input =
@@ -40,8 +41,41 @@ const provider =
   "flex w-full items-center justify-center gap-2.5 rounded-full bg-white px-5 py-3 text-[15px] font-medium ring-1 ring-ink/10 transition hover:ring-ink/25 active:scale-[0.98]";
 
 const submit =
-  "mt-2 inline-flex w-full items-center justify-center rounded-full bg-verm-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[#E5471F] active:scale-[0.97]";
+  "inline-flex w-full items-center justify-center rounded-full bg-verm-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[#E5471F] active:scale-[0.97]";
 const pendingNote = "Accounts aren't open yet. We'll switch this on with the API.";
+
+const serif = GeistSerifRegular.className;
+
+function Providers({ onClick }: { onClick: () => void }) {
+  return (
+    <>
+      <div className="mt-8 grid gap-3">
+        <button type="button" onClick={onClick} className={provider}>
+          <GitHub />
+          Continue with GitHub
+        </button>
+        <button type="button" onClick={onClick} className={provider}>
+          <Google />
+          Continue with Google
+        </button>
+      </div>
+      <div className="mt-7 flex items-center gap-4 text-xs text-ink/45">
+        <span className="h-px flex-1 bg-ink/10" />
+        or with email
+        <span className="h-px flex-1 bg-ink/10" />
+      </div>
+    </>
+  );
+}
+
+function Status({ note }: { note: string }) {
+  // empty until a note arrives, so it takes no room meanwhile
+  return (
+    <p role="status" className="mt-3 text-center text-sm text-ink/65 empty:mt-0">
+      {note}
+    </p>
+  );
+}
 
 // Fields from docs/endpoints/auth.md.
 // shortcut: nothing is sent until the API has /auth; submitting shows a note instead. Wire the forms to
@@ -52,41 +86,21 @@ export function LoginForm() {
 
   return (
     <>
-      <div className="mt-8 grid gap-3">
-        <button type="button" onClick={pending} className={provider}>
-          <GitHub />
-          Continue with GitHub
-        </button>
-        <button type="button" onClick={pending} className={provider}>
-          <Google />
-          Continue with Google
-        </button>
-      </div>
-
-      <div className="my-7 flex items-center gap-4 text-xs text-ink/45">
-        <span className="h-px flex-1 bg-ink/10" />
-        or with email
-        <span className="h-px flex-1 bg-ink/10" />
-      </div>
-
+      <Providers onClick={pending} />
       <form
         onSubmit={(e) => {
           e.preventDefault();
           pending();
         }}
-        className="grid gap-4"
+        className="mt-7 grid gap-4"
       >
         <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
         <Field label="Password" name="password" type="password" autoComplete="current-password" maxLength={128} />
-        <button type="submit" className={submit}>
+        <button type="submit" className={`${submit} mt-2`}>
           Sign in
         </button>
       </form>
-      {/* outside the form's grid and empty until a note arrives, so it takes no room meanwhile */}
-      <p role="status" className="mt-3 text-center text-sm text-ink/65 empty:mt-0">
-        {note}
-      </p>
-
+      <Status note={note} />
       <p className="mt-6 text-sm text-ink/65">
         New to Rayume?{" "}
         <Link href="/signup" className="font-medium text-verm-text">
@@ -97,65 +111,104 @@ export function LoginForm() {
   );
 }
 
-const valid = (f: HTMLFormElement, name: string) => (f.elements.namedItem(name) as HTMLInputElement).validity.valid;
+const steps = ["Account", "Password", "Name"];
+type Values = { email: string; username: string; password: string; name: string };
 
-// Signup asks for email and username first; once both are valid, name and password unfold below
-// them. Until then those two are disabled, so the browser doesn't demand them on submit.
+// Signup starts like login. Typing in email or username fades GitHub and Google out and turns the
+// form into three steps under a progress bar: email + username, then password, then name. Only the
+// current step is mounted, so the browser checks just its fields; values live in state between steps.
 export function SignupForm() {
   const [note, setNote] = useState("");
-  const [more, setMore] = useState(false);
-  const step = (on: boolean, delay: number) => ({
-    style: { transitionDelay: on ? `${delay}ms` : "0ms" },
-    className: `transition duration-500 ease-out motion-reduce:transition-none ${on ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"}`,
+  const [email, setEmail] = useState(false);
+  const [step, setStep] = useState(0);
+  const [back, setBack] = useState(false);
+  const [v, setV] = useState<Values>({ email: "", username: "", password: "", name: "" });
+  const bind = (k: keyof Values) => ({
+    name: k,
+    value: v[k],
+    onChange: (e: ChangeEvent<HTMLInputElement>) => setV((o) => ({ ...o, [k]: e.target.value })),
   });
+  const go = (n: number) => {
+    setBack(n < step);
+    setStep(n);
+  };
+  // each step slides in from the side it's coming from
+  const enter = `grid gap-4 transition duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none starting:opacity-0 ${back ? "starting:-translate-x-6" : "starting:translate-x-6"}`;
 
   return (
     <>
+      <div aria-hidden={!email} className={`mb-8 transition-opacity duration-500 ${email ? "opacity-100" : "opacity-0"}`}>
+        <div className="flex gap-1.5">
+          {steps.map((s, i) => (
+            <span key={s} className="h-1 flex-1 overflow-hidden rounded-full bg-ink/10">
+              <span className={`block h-full rounded-full bg-verm-deep transition-[width] duration-500 ease-out ${i <= step ? "w-full" : "w-0"}`} />
+            </span>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-ink/55">
+          Step {step + 1} of {steps.length}: {steps[step]}
+        </p>
+      </div>
+
+      <h1 className={`${serif} text-[2.6rem] leading-[1.05] tracking-[-0.03em]`}>Create your account</h1>
+      <p className="mt-3 text-ink/65">Free while you hunt. It takes a minute.</p>
+
+      {/* grid rows 1fr to 0fr folds the providers away to nothing once the email route starts */}
+      <div
+        inert={email}
+        className={`grid transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${email ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <Providers onClick={() => setNote(pendingNote)} />
+        </div>
+      </div>
+
       <form
-        // once shown they stay, so editing the email later doesn't fold the form back up
-        onInput={(e) => more || setMore(valid(e.currentTarget, "email") && valid(e.currentTarget, "username"))}
         onSubmit={(e) => {
           e.preventDefault();
-          // reaching here means email and username passed the browser's checks (autofill may skip onInput)
-          if (!more) setMore(true);
+          setEmail(true);
+          if (step < steps.length - 1) go(step + 1);
           else setNote(pendingNote);
         }}
-        className="mt-8 grid gap-4"
+        className="mt-7 grid gap-4"
       >
-        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
-        <Field
-          label="Username"
-          name="username"
-          autoComplete="username"
-          autoCapitalize="none"
-          spellCheck={false}
-          pattern="[a-z0-9_\-]{3,30}"
-          placeholder="lucasmendes"
-          hint="3 to 30 characters: lowercase letters, numbers, - and _."
-        />
-        {/* grid rows 0fr to 1fr animates to the fields' real height; the padding keeps focus rings unclipped */}
-        <div
-          className={`grid transition-[grid-template-rows,margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${more ? "grid-rows-[1fr]" : "-mt-4 grid-rows-[0fr]"}`}
-        >
-          <fieldset disabled={!more} inert={!more} className="-mx-1 min-h-0 overflow-hidden px-1 pb-1">
-            <div className="grid gap-4">
-              <div {...step(more, 60)}>
-                <Field label="Name" name="name" autoComplete="name" maxLength={100} placeholder="Lucas Mendes" />
-              </div>
-              <div {...step(more, 160)}>
-                <Field label="Password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={128} hint="At least 8 characters." />
-              </div>
-            </div>
-          </fieldset>
+        {step === 0 && (
+          <div key="account" className={enter} onInput={() => setEmail(true)}>
+            <Field label="Email" type="email" autoComplete="email" placeholder="you@example.com" {...bind("email")} />
+            <Field
+              label="Username"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              pattern="[a-z0-9_\-]{3,30}"
+              placeholder="lucasmendes"
+              hint="3 to 30 characters: lowercase letters, numbers, - and _."
+              {...bind("username")}
+            />
+          </div>
+        )}
+        {step === 1 && (
+          <div key="password" className={enter}>
+            <Field label="Password" type="password" autoComplete="new-password" minLength={8} maxLength={128} hint="At least 8 characters." autoFocus {...bind("password")} />
+          </div>
+        )}
+        {step === 2 && (
+          <div key="name" className={enter}>
+            <Field label="What should we call you?" autoComplete="name" maxLength={100} placeholder="Lucas" autoFocus {...bind("name")} />
+          </div>
+        )}
+        <div className="mt-2 flex gap-3">
+          {step > 0 && (
+            <button type="button" onClick={() => go(step - 1)} className="rounded-full px-5 py-3.5 text-[15px] font-medium text-ink/70 ring-1 ring-ink/10 transition hover:text-ink hover:ring-ink/25">
+              Back
+            </button>
+          )}
+          <button type="submit" className={`${submit} flex-1`}>
+            {step < steps.length - 1 ? "Continue" : "Create account"}
+          </button>
         </div>
-        <button type="submit" className={submit}>
-          {more ? "Create account" : "Continue"}
-        </button>
       </form>
-      {/* outside the form's grid and empty until a note arrives, so it takes no room meanwhile */}
-      <p role="status" className="mt-3 text-center text-sm text-ink/65 empty:mt-0">
-        {note}
-      </p>
+      <Status note={note} />
 
       <p className="mt-4 text-xs leading-relaxed text-ink/55">
         By creating an account you agree to our{" "}
