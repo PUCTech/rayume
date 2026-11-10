@@ -50,7 +50,7 @@ export function ShadeToggle() {
     <div
       role="group"
       aria-label={`${accent} shades`}
-      className="glass fixed! bottom-4 left-4 z-50 flex items-center gap-2 rounded-full p-2 pr-4 text-[13px] font-medium"
+      className="glass fixed! bottom-4 right-4 z-50 flex items-center gap-2 rounded-full p-2 pr-4 text-[13px] font-medium"
     >
       {shades.map((s, n) => (
         <button
