@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { Drawer } from "./drawer";
 import { Detail } from "./panel";
 import { transition } from "../gallery";
-import { getSearch, resetSearch, setSearch, useSearch } from "../search";
 import { templates, type Template } from "./data";
 
 // each group lists the values present in the data; nothing ticked in a group means it doesn't filter
@@ -24,55 +23,30 @@ const noop = () => () => {};
 // Opening a card pushes /templates/{id} onto the history and shows it in a drawer over the grid; Back
 // or closing pops it. A direct visit or refresh renders [id]/page.tsx. This replaced an intercepting
 // route, because next dev 16.4 re-adds interception rewrites on every rebuild until the click 404s.
-// The heading comes in as children so the search bar can sit beside it.
+// The heading comes in as children; the search bar sits on its own row under it.
 export function Browser({ tex, children }: { tex: Record<string, string>; children: ReactNode }) {
-  // the query lives in the shared search store, so the nav's Cmd/Ctrl+K field filters this grid too
-  const { query, open: navOpen } = useSearch();
-  const setQuery = (q: string) => setSearch({ query: q });
+  const [query, setQuery] = useState("");
   const [picked, setPicked] = useState(none);
   const bar = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const results = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const open = templates.find((t) => pathname === `/templates/${t.file}`);
   // the server renders the Mac hint; other platforms swap to Ctrl after hydration
   const mod = useSyncExternalStore(noop, () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl "), () => "⌘");
 
+  // Cmd/Ctrl+K jumps to the search bar from anywhere on the page; an open template drawer owns the keyboard
   useEffect(() => {
-    setSearch({ enabled: true });
-    return resetSearch;
-  }, []);
-
-  // With this page's bar fully in view below the nav, it owns the search: the nav gives it back (focus
-  // follows if the nav field had it) and Cmd/Ctrl+K focuses the bar. A sliver under the nav doesn't count.
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      ([e]) => {
-        const visible = e.intersectionRatio > 0.99;
-        if (visible && document.activeElement?.id === "nav-search") input.current?.focus();
-        setSearch(visible ? { barVisible: true, open: false } : { barVisible: false });
-      },
-      { rootMargin: "-80px 0px 0px 0px", threshold: [0, 1] },
-    );
-    io.observe(bar.current!);
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !document.querySelector("[aria-modal=true]") && getSearch().barVisible) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !document.querySelector("[aria-modal=true]")) {
         e.preventDefault();
-        input.current?.focus();
+        bar.current?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+        input.current?.focus({ preventScroll: true });
         input.current?.select();
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      io.disconnect();
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  // searching from the nav while scrolled past the results brings them up under it
-  useEffect(() => {
-    if (navOpen && (results.current?.getBoundingClientRect().top ?? 0) < 80) results.current?.scrollIntoView({ behavior: "smooth" });
-  }, [query, navOpen]);
 
   const q = query.trim().toLowerCase();
   const matches = (t: Template) =>
@@ -90,32 +64,30 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
 
   return (
     <>
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        {children}
-        <div ref={bar} role="search" className="glass flex w-full items-center gap-3 rounded-full px-5 focus-within:outline-2 focus-within:outline-offset-3 focus-within:outline-verm-text md:w-96 md:shrink-0">
-          <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 text-ink/45" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <circle cx="8.5" cy="8.5" r="5.5" />
-            <path d="m13 13 4 4" />
-          </svg>
-          <label htmlFor="tpl-search" className="sr-only">Search templates</label>
-          <input
-            ref={input}
-            id="tpl-search"
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Escape" && !query && e.currentTarget.blur()}
-            placeholder="Search templates"
-            className="min-w-0 flex-1 bg-transparent py-3 text-base outline-none placeholder:text-ink/45 [&::-webkit-search-cancel-button]:hidden"
-          />
-          <kbd aria-hidden className="hidden shrink-0 rounded-md border border-ink/10 bg-white/60 px-2 py-0.5 font-sans text-xs text-ink/55 sm:block">
-            {mod}K
-          </kbd>
-        </div>
+      {children}
+      <div ref={bar} role="search" className="glass mt-8 flex max-w-xl items-center gap-3 rounded-full px-5 focus-within:outline-2 focus-within:outline-offset-3 focus-within:outline-verm-text">
+        <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 text-ink/45" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <circle cx="8.5" cy="8.5" r="5.5" />
+          <path d="m13 13 4 4" />
+        </svg>
+        <label htmlFor="tpl-search" className="sr-only">Search templates</label>
+        <input
+          ref={input}
+          id="tpl-search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Escape" && !query && e.currentTarget.blur()}
+          placeholder="Search templates"
+          className="min-w-0 flex-1 bg-transparent py-3 text-base outline-none placeholder:text-ink/45 [&::-webkit-search-cancel-button]:hidden"
+        />
+        <kbd aria-hidden className="hidden shrink-0 rounded-md border border-ink/10 bg-white/60 px-2 py-0.5 font-sans text-xs text-ink/55 sm:block">
+          {mod}K
+        </kbd>
       </div>
 
       {/* filters on the left, the count on the right: one row, so the cards start high on the page */}
-      <div ref={results} className="mt-8 flex scroll-mt-24 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-ink/10 pb-4">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-ink/10 pb-4">
         <div role="group" aria-label="Filter templates" className="flex flex-wrap items-center gap-2">
           {groups.map(({ key, label }, g) => (
             <fieldset key={key} className="contents">
