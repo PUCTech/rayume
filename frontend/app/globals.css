@@ -134,33 +134,7 @@ body {
   initial-value: 2;
 }
 
-/* Phone hero: a small lens drifts over the resume (its centre is registered so keyframes can move it),
-   and the arrow between the cards nudges toward it. Both stop for reduced motion. */
-@property --lx {
-  syntax: "<percentage>";
-  inherits: true;
-  initial-value: 32%;
-}
-@property --ly {
-  syntax: "<percentage>";
-  inherits: true;
-  initial-value: 26%;
-}
-@keyframes mini-lens {
-  0%,
-  100% {
-    --lx: 32%;
-    --ly: 26%;
-  }
-  33% {
-    --lx: 68%;
-    --ly: 44%;
-  }
-  66% {
-    --lx: 40%;
-    --ly: 70%;
-  }
-}
+/* Phone hero: the arrow between the note and the resume nudges toward it (off for reduced motion). */
 @keyframes nudge {
   0%,
   100% {
