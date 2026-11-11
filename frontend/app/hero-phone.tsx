@@ -24,6 +24,8 @@ const turn = (mine: boolean) =>
   `transition-[opacity,translate,scale,z-index] duration-500 ${mine ? "z-20 scale-100 opacity-100" : "z-10 scale-[0.93] opacity-75"}`;
 const caret = "ml-px inline-block h-[1em] w-px translate-y-[0.15em] animate-pulse";
 const bubble = "rounded-xl rounded-tr-sm bg-accent-deep px-2 py-1.5 text-white";
+// Rayume's bubbles mirror his: mist, the tail on the left
+const said = "self-start rounded-xl rounded-tl-sm bg-mist px-2 py-1.5";
 const pop = "transition duration-300 ease-out starting:translate-y-1 starting:scale-95 starting:opacity-0";
 const inOut = "cubic-bezier(0.65, 0, 0.35, 1)";
 
@@ -178,8 +180,8 @@ export function PhoneHero() {
           </span>
           Rayume
         </p>
-        <div className="absolute inset-x-3 bottom-3 top-9 flex flex-col justify-end gap-1.5 overflow-hidden text-[12px] leading-snug text-ink/85">
-          <p>
+        <div className="absolute inset-x-3 bottom-3 top-9 flex flex-col justify-end gap-1.5 overflow-hidden text-[11.5px] leading-snug text-ink/85">
+          <p className={said}>
             {question.slice(0, Math.min(q, h))}
             {q > h && (
               <mark
@@ -192,7 +194,7 @@ export function PhoneHero() {
             {!lit && <span className={`${caret} bg-ink/60`} />}
           </p>
           {answered > 0 && (
-            <p className={`${pop} text-ink`}>
+            <p className={`${pop} ${said} text-ink`}>
               {sure}
               {making && <br />}
               {making}
@@ -249,13 +251,6 @@ export function PhoneHero() {
         </div>
       </div>
 
-      <span
-        className={`${enter} absolute bottom-0 left-[44%] z-30 grid size-9 -translate-x-1/2 place-items-center rounded-full bg-accent-deep text-white shadow-[0_8px_20px_-8px_color-mix(in_srgb,var(--color-accent)_80%,transparent)] delay-500 starting:scale-0`}
-      >
-        <svg viewBox="0 0 20 20" className="size-4 animate-[nudge_2.4s_ease-in-out_2s_infinite] motion-reduce:animate-none" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 10h11m-4-4 4 4-4 4" />
-        </svg>
-      </span>
     </div>
   );
 }

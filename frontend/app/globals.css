@@ -133,14 +133,3 @@ body {
   inherits: true;
   initial-value: 2;
 }
-
-/* Phone hero: the arrow between the note and the resume nudges toward it (off for reduced motion). */
-@keyframes nudge {
-  0%,
-  100% {
-    translate: 0;
-  }
-  50% {
-    translate: 3px;
-  }
-}
