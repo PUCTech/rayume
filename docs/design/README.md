@@ -13,15 +13,16 @@
 2. [Colour](#colour)
 3. [Typography](#typography)
 4. [Layout](#layout)
-5. [Surfaces: liquid glass](#surfaces-liquid-glass)
-6. [Shape and depth](#shape-and-depth)
-7. [Components](#components)
-8. [Motion](#motion)
-9. [Voice and copy](#voice-and-copy)
-10. [Accessibility](#accessibility)
-11. [Assets](#assets)
-12. [How it is built](#how-it-is-built)
-13. [Do and don't](#do-and-dont)
+5. [Responsive](#responsive)
+6. [Surfaces: liquid glass](#surfaces-liquid-glass)
+7. [Shape and depth](#shape-and-depth)
+8. [Components](#components)
+9. [Motion](#motion)
+10. [Voice and copy](#voice-and-copy)
+11. [Accessibility](#accessibility)
+12. [Assets](#assets)
+13. [How it is built](#how-it-is-built)
+14. [Do and don't](#do-and-dont)
 
 ---
 
@@ -148,6 +149,68 @@ flowchart TB
 | Card grids | `md:grid-cols-2`, `lg:grid-cols-3` | Grids always start at `grid-cols-1` so they shrink on phones |
 
 Alignment is **left** everywhere except the closing panel, which is centred because it is a single call to action. Backgrounds alternate paper, ultramarine, paper, mist, paper, ink, paper, so each section reads as its own sheet.
+
+---
+
+## Responsive
+
+The landing page is the reference: check it at 320, 375, 768, 1024 and 1440 px before shipping a page. The project's [`responsive-design` agent](../../.claude/agents/responsive-design.md) applies the general rules; this section is what Rayume adds on top.
+
+| Phone hero, first screen | Mobile menu | Comparison on a phone |
+|---|---|---|
+| ![The phone hero: title, pitch, the chat story mid-rant, both buttons, all on the first screen](images/phone-hero.png) | ![The nav's mobile menu open under the pill](images/phone-menu.png) | ![The comparison as a compact matrix with short headings](images/phone-compare.png) |
+
+### Rebuild for the phone, keep desktop as it is
+
+Don't squeeze a desktop composition until it fits. When a section doesn't work on a phone, build a phone version that does the same job and keep the desktop one untouched. Render both and switch with `lg:hidden` / `max-lg:hidden`, so neither leaks into the other.
+
+| Section | Desktop (`lg` and up) | Phones and tablets |
+|---|---|---|
+| Hero visual | The lens over the notes (`lens.tsx`) | A short story between the pitch and the buttons (`hero-phone.tsx`) |
+| Comparison | Full table with a one-liner per tool | One compact matrix: Rayume's row outlined first, four marks per tool under short headings, no one-liners |
+| Nav links | Inline in the pill | Menu button under `md`, panel under the pill (`nav.tsx`) |
+| Footer | Brand plus four columns in one row | Brand on its own row, columns below (five in a row only from `lg`) |
+
+`lg` (1024 px) is the switch for compositions; `sm` and `md` only adjust spacing and grids.
+
+### The first screen
+
+On a phone the hero's title, pitch, visual and both buttons must all be visible without scrolling, from 320×568 to 430×932. What makes it fit:
+
+- Phone-sized type and spacing: the title drops to `clamp(2.5rem,…)` (two lines, not three), the pitch to 17 px, `pt-8` above it and `mt-5`/`mt-6` between blocks.
+- The buttons sit side by side from 360 px (`min-[360px]:flex-row`, `flex-1`, `px-4`).
+- The visual is sized from the screen height, steeply: `h-[clamp(5.5rem,41.7svh-9.3rem,14rem)]` is about 88 px on a 568 px phone, 200 px on 844 px, capped at 224 px. Use `svh`, so the browser's toolbar can't push the buttons off.
+- Anything inside a shrinking box fills it and clips (`top-3 bottom-0 overflow-hidden`), with the text anchored to the bottom so the newest line stays visible.
+
+Measure it: the hero buttons' bottom edge must sit inside the viewport at each of those sizes.
+
+### Less text beats sideways scrolling
+
+Nothing on a page scrolls sideways at any width. When a table or row doesn't fit, take text out on phones instead of adding a horizontal scroller: the comparison drops its one-liners and uses short headings (`ATS`, `Writes`, `Tailors`, `No code`) with the full criterion in an `<abbr title>`. Columns narrow a little below 360 px so names like "Google Docs" stay on one line.
+
+### Touch
+
+- Inputs and the code editor use 16 px text below `sm`: anything smaller makes iOS zoom the page on focus.
+- Filter chips and pill buttons grow to 44 px tall on touch screens only (`pointer-coarse:`), so desktop keeps its tighter rhythm.
+- Tailwind v4 already applies `hover:` only on devices that can hover; don't wrap it again.
+- Use `dvh`/`svh` for full-height layouts, not `vh`.
+
+### Motion on a phone: a story, not decoration
+
+The phone hero tells the product in one loop instead of showing a static picture. Its techniques are reusable:
+
+- **Typewriter.** Characters revealed by a timer chain (faster for a rant: four characters every 22 ms), a blinking caret while typing.
+- **Turn-taking cards.** The card whose turn it is comes to the front at full size; the other sinks to `scale-[0.93]` and 75% opacity. Swap with a 500 ms transition on scale, opacity and `z-index`.
+- **Text flying up.** Messages sit on the bottom edge and grow upward. Each new line would jump the stack, so a `ResizeObserver` plays the jump back as a 240 ms slide with a 1.5 px blur (FLIP); fast typing reads as a flood of text.
+- **Highlights.** A `<mark>` whose background sweeps from `bg-size-[0%_100%]` to `100%` in `accent/20`. Set `bg-transparent` too, or the browser's yellow `<mark>` fill shows through.
+- **Camera moves.** On a small screen zoom far in (4.6× on a name, 3.4× on a section), ease every move in and out (`cubic-bezier(0.65,0,0.35,1)`) with a hold between moves, and add a motion blur on a wrapper that peaks mid-move (3 px) and is 0 on every hold. Aim points come from the PDF (fractions of the page) and are converted to the `object-contain` box at run time. Zoom a vector (`classic.svg`), never a PNG.
+- Decorative stories are `aria-hidden`, and reduced motion shows the final frame, still.
+
+### Gotchas we hit
+
+- A pinned (`sticky`) table column needs an opaque background, and that background paints over neighbouring rows' shadows: the highlighted row's glow lost a rectangle. Pin nothing that sits next to a shadow; on phones, rebuild the table instead.
+- Fixed `max-width` transitions finish early when the guess is bigger than the content. Animate `grid-template-columns: 0fr → 1fr` (or rows) to reach the real size.
+- In `next dev`, edits to `globals.css` sometimes never reach the browser. If a new token or keyframe is missing, restart the dev server and delete `.next/dev`.
 
 ---
 
@@ -299,6 +362,7 @@ Every thumbnail is a real compile of the same person (see [Assets](#assets)): th
 - Competitor logos at `size-4 text-ink/70` (`brands.tsx`, Simple Icons, CC0).
 - Fixed columns: `table-fixed` with a `<colgroup>`, so headers sit over their ticks.
 - Ticks: yes = filled `ink` circle, partly = `ink/10` circle with `~`, no = a faint dash. Each has an `sr-only` label.
+- Below `lg` it becomes the compact matrix described in [Responsive](#responsive): same ticks, Rayume's row outlined first, no one-liners.
 
 ### Footer
 
@@ -313,7 +377,8 @@ Brand column (mark, wordmark, tagline) plus four columns. Entries are plain text
 | Moment | What moves | Timing | Reduced motion |
 |---|---|---|---|
 | Ocean (`ocean.tsx`) | Mantas glide and beat their wings, a fish school passes, god rays sway, caustics shimmer, seagrass bends, specks drift and bubbles rise | SVG + SMIL only (no per-frame JS), loops of 20 to 90 s with negative `begin` so it never visibly restarts; paused while off screen | Frozen on a calm frame |
-| Steps (`steps.tsx`) | Progress bars fill in turn, the note types out, keywords light up, the PDF compiles and prints | Once, when 35% of the row is visible; CSS transitions staggered by `--d` (0.9 s per card) | Final state, no transitions |
+| Steps (`steps.tsx`) | Progress bars fill in turn, the note types out, keywords light up, the PDF compiles and prints | Once, when the row's top passes 65% of the screen height (a stacked row on a short phone never reaches "35% visible"); CSS transitions staggered by `--d` (0.9 s per card) | Final state, no transitions |
+| Phone hero (`hero-phone.tsx`) | Rayume asks, he rants (lines fly up with a blur), "thats about it", Rayume answers, his card compiles, then a camera move over his new resume and his reaction | One loop of about 24 s; timers for the typing, Web Animations for the camera (eased holds, motion blur mid-move) | Final frame: the finished resume, still |
 | Lens drift | Lens wanders over the page until the visitor moves the mouse | `requestAnimationFrame`, slow sine path | Static |
 | Lens toggle | Radius and zoom open to the full page | 700 ms `cubic-bezier(0.2,0.8,0.2,1)` | Instant |
 | Nav compact | Width, wordmark and "Sign in" collapse | 300 ms `ease-out` | Instant (no transition needed) |
@@ -402,7 +467,7 @@ flowchart TB
 ```
 
 - **Tailwind first.** Plain CSS is only for what Tailwind can't express: the glass utilities, the Chromium refraction rule and the registered `@property` values the lens animates.
-- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `gallery.tsx` (filter and selection), `ocean.tsx` (pause off screen and for reduced motion).
+- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `gallery.tsx` (filter and selection), `ocean.tsx` (pause off screen and for reduced motion), `hero-phone.tsx` (the phone story's timeline).
 - New pages reuse the tokens, the `glass` utilities and the component class strings above; they don't add new colours, fonts or radii.
 
 ---
@@ -418,3 +483,6 @@ flowchart TB
 | Keep one star per section | Stack glows, glass and badges in the same spot |
 | Let motion respond to the user or tell the story | Loop flashy animations for attention, or add ambient motion outside the ocean band |
 | Start grids at `grid-cols-1` | Let a desktop grid overflow on phones |
+| Build a phone version of a section that doesn't fit, and keep desktop as it is | Shrink a desktop composition until it technically fits |
+| Fit the hero's title, pitch, visual and buttons on a phone's first screen | Push the buttons below the fold |
+| Drop text on phones to make room | Make a table scroll sideways |
