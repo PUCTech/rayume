@@ -48,3 +48,4 @@ Bugs caught, wrong assumptions, things that didn't work.
 
 | Session | Branch | Summary |
 |---------|--------|---------|
+| [`2026-11-12-1130`](2026-11-12-1130/README.md) | `feat/backend-db` | Local Postgres, SQLAlchemy models for the full schema, CORS, backend docs reorganised |
