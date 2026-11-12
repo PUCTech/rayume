@@ -17,6 +17,8 @@ One file per resource:
 
 `GET /health` (already built) returns `200 {"ok": true}` and needs no auth.
 
+Built so far: `GET /health`, `GET /templates`, `GET /templates/{slug}`.
+
 ## Route map
 
 ```mermaid

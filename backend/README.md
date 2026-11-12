@@ -2,7 +2,7 @@
 
 The API behind Rayume: **FastAPI** for HTTP, **SQLAlchemy** as the ORM (Python classes that map to database tables), and **PostgreSQL** as the database, which runs locally in Docker so everyone gets the exact same setup.
 
-Right now the backend has its data layer and one route (`/health`). Most of the other routes are still to come. See [What's here so far](#whats-here-so-far).
+Right now the backend has its data layer and three routes: `/health`, `GET /templates` and `GET /templates/{slug}`. The other routes are still to come. See [What's here so far](#whats-here-so-far).
 
 > More depth: [`docs/backend/`](../docs/backend/README.md) covers the stack, the [API contract](../docs/backend/endpoints/README.md) and the [architecture](../docs/backend/architecture/README.md). The tables are specified in [`docs/database/`](../docs/database/README.md).
 
@@ -119,6 +119,7 @@ The API runs on **http://localhost:8000** and restarts by itself every time you 
 Open these in your browser:
 
 - <http://localhost:8000/health> should show `{"ok": true}`.
+- <http://localhost:8000/templates> should list the 6 templates from step 4. Try `?q=modern` or `?tag=overleaf&tag=one-column`, or open one with <http://localhost:8000/templates/jake>.
 - <http://localhost:8000/docs> is interactive API documentation that FastAPI generates for you. You can call every route from there.
 
 Stop the server with `Ctrl+C`.
@@ -131,7 +132,7 @@ From `backend/`:
 uv run pytest
 ```
 
-You need `backend/.env` (step 2), because importing the app reads `DATABASE_URL`. The current tests don't connect to the database, but tests that touch tables will need it running (step 3).
+You need `backend/.env` (step 2) and the database running (step 3), with the tables created (step 4). The template tests insert their own rows inside a transaction and roll it back at the end, so they never change your data and don't need the seed.
 
 ---
 
@@ -182,13 +183,14 @@ rayume/
     ├── pyproject.toml     project metadata and dependencies
     ├── uv.lock            the exact version of every dependency
     ├── src/backend/
-    │   ├── main.py        the FastAPI app: CORS and the /health route
+    │   ├── main.py        the FastAPI app: CORS and the routes
     │   ├── db.py          settings, database connection, Base, get_db()
     │   ├── models.py      the 8 tables as Python classes (the ORM layer)
     │   ├── schemas.py     Pydantic shapes for the data inside jsonb columns
     │   └── seed.py        loads the frontend's templates into the database
     └── tests/
-        └── test_health.py checks that /health answers
+        ├── test_health.py    checks that /health answers
+        └── test_templates.py checks /templates against a real database
 ```
 
 ### How the pieces fit together
@@ -229,14 +231,14 @@ Keeps `.env`, the virtualenv `.venv/` and Python's compiled `__pycache__/` files
 `pyproject.toml` lists the dependencies we chose (FastAPI, SQLAlchemy, psycopg, pydantic-settings, ...). `uv.lock` pins the exact version of each one and of everything they depend on. **Why:** `uv sync` installs the same versions on every machine, so "works on my machine" problems don't come from version differences. Change them with `uv add`, not by hand, and commit both files.
 
 **`src/backend/main.py`** · *FastAPI, CORS*
-Creates the FastAPI `app`. That's what `uv run fastapi dev` starts. It adds the **CORS** middleware: browsers block a page on `localhost:3000` from calling an API on `localhost:8000` unless the API explicitly allows it, so we allow the origins listed in `CORS_ORIGINS`. `allow_credentials=True` lets the browser send the refresh-token cookie later. For now it has one route, `/health`, which shows the server is up. **Why:** it's the entry point. New routes get plugged in here.
+Creates the FastAPI `app`. That's what `uv run fastapi dev` starts. It adds the **CORS** middleware: browsers block a page on `localhost:3000` from calling an API on `localhost:8000` unless the API explicitly allows it, so we allow the origins listed in `CORS_ORIGINS`. `allow_credentials=True` lets the browser send the refresh-token cookie later. It holds the routes: `/health`, which shows the server is up, and `GET /templates` / `GET /templates/{slug}` for the gallery (see [`templates.md`](../docs/backend/endpoints/templates.md)). **Why:** it's the entry point. New routes get plugged in here, until there are enough to split them into one `APIRouter` file per resource.
 
 **`src/backend/db.py`** · *pydantic-settings, SQLAlchemy, psycopg*
 Four things, all about connecting to the database:
 - `Settings` reads `.env` and checks it. If `DATABASE_URL` is missing, the app refuses to start with a clear error instead of failing later.
 - `engine` is SQLAlchemy's connection to Postgres. The `+psycopg` in `DATABASE_URL` tells it to use the psycopg driver.
 - `Base` is the parent class of every model. It applies the team rule *every `str` is `text`, every `datetime` is `timestamptz`*, so you never write `String(255)` or a plain `DateTime`.
-- `get_db()` is a FastAPI dependency that gives a route a database session and closes it when the request ends. Use it like this: `def my_route(db: Session = Depends(get_db))`.
+- `get_db()` is a FastAPI dependency that gives a route a database session and closes it when the request ends. Use it like this: `def my_route(db: Annotated[Session, Depends(get_db)])`.
 
 **`src/backend/models.py`** · *SQLAlchemy ORM, PostgreSQL*
 The 8 tables from [`docs/database/`](../docs/database/README.md), written as Python classes. This is the **ORM** (Object-Relational Mapper): instead of writing SQL by hand, you work with Python objects, `User(name="Ana")`, `db.add(user)`, `select(User)`, and SQLAlchemy writes the SQL. The file also defines:
@@ -248,13 +250,16 @@ The 8 tables from [`docs/database/`](../docs/database/README.md), written as Pyt
 **Why:** one place defines the database's structure, and `Base.metadata.create_all()` builds the tables from it (step 4). When Alembic arrives, it will compare these classes with the database to generate migrations.
 
 **`src/backend/schemas.py`** · *Pydantic*
-Pydantic models that describe the JSON stored inside `jsonb` columns: `ExperienceData` (what the AI extracts from an experience), `ResumeContent` (a full resume snapshot) and `Link`. **Why:** Postgres stores any JSON in a `jsonb` column without checking it, and AI output can be malformed. These models reject bad data before it reaches the database. The difference from `models.py`: models describe *tables*, schemas describe *the shape of data*. HTTP request and response bodies will be added here when we write the routes.
+Pydantic models for data crossing a boundary. First, the JSON stored inside `jsonb` columns: `ExperienceData` (what the AI extracts from an experience), `ResumeContent` (a full resume snapshot) and `Link`. **Why:** Postgres stores any JSON in a `jsonb` column without checking it, and AI output can be malformed. These models reject bad data before it reaches the database. The difference from `models.py`: models describe *tables*, schemas describe *the shape of data*. Second, HTTP bodies: `TemplateOut` and `TemplateDetail` decide which fields `/templates` returns. `from_attributes=True` lets them read a SQLAlchemy object directly, and anything not listed (like the internal `id`) is left out of the JSON.
 
 **`src/backend/seed.py`** · *SQLAlchemy, PostgreSQL*
 Fills the `templates` table with the 6 LaTeX templates from the frontend's gallery. It reads the `.tex` files from `frontend/resumes/` and uses a Postgres *upsert* (`INSERT ... ON CONFLICT DO UPDATE`), so running it again updates the rows instead of duplicating them. **Why:** the app needs templates to exist before anyone can render a resume, and a script means everyone gets the same data. The six templates are also listed in `frontend/app/templates/data.ts`, so a new template has to be added in both places.
 
 **`tests/test_health.py`** · *pytest, FastAPI TestClient*
 Calls `/health` through FastAPI's `TestClient`, without starting a real server, and checks the response. **Why:** it's the smallest possible test, proving the app starts and the test setup works. Real tests will follow the same pattern.
+
+**`tests/test_templates.py`** · *pytest, SQLAlchemy, PostgreSQL*
+Tests `/templates` against the real database: ordering, case-insensitive search, repeated tags and the `404`. A fixture opens a transaction, inserts three test templates, swaps `get_db` for a session inside that transaction (`app.dependency_overrides`), and rolls everything back afterwards. **Why:** testing against real Postgres catches what a fake wouldn't (array `@>`, `ILIKE`), and the rollback keeps your local data untouched. Use this fixture as the model for future database tests.
 
 ## Troubleshooting
 

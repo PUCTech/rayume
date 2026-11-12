@@ -1,11 +1,9 @@
-"""Pydantic shapes for the jsonb columns, from docs/backend/endpoints/.
+"""Pydantic shapes for the jsonb columns and the HTTP bodies, from docs/backend/endpoints/."""
 
-Request and response bodies get added next to the routes that use them.
-"""
-
+from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from .models import ExperienceType
 
@@ -50,3 +48,22 @@ class ResumeContent(BaseModel):
 
     profile: ResumeProfile
     entries: list[ResumeEntry]
+
+
+class TemplateOut(BaseModel):
+    """A gallery card in GET /templates. The spec's author and license have no column yet (open team question)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    slug: str
+    name: str
+    preview_url: str | None
+    tags: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+
+class TemplateDetail(TemplateOut):
+    """GET /templates/{slug}: the card plus the LaTeX, which the template page shows and lets people edit."""
+
+    tex_source: str
