@@ -9,7 +9,7 @@ export type Section = { id: string; title: string; body: ReactNode };
 
 // Long-form styles for legal text, kept in one place so all three documents read the same.
 const prose =
-  "text-[15px] leading-[1.75] text-ink/80 [&_a]:font-medium [&_a]:text-verm-text [&_a]:underline [&_a]:underline-offset-2 [&_h3]:mt-8 [&_h3]:text-base [&_h3]:font-medium [&_h3]:text-ink [&_li]:mt-2 [&_ol]:mt-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-4 [&_strong]:font-medium [&_strong]:text-ink [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-5";
+  "wrap-break-word text-[15px] leading-[1.75] text-ink/80 [&_a]:font-medium [&_a]:text-accent-text [&_a]:underline [&_a]:underline-offset-2 [&_h3]:mt-8 [&_h3]:text-base [&_h3]:font-medium [&_h3]:text-ink [&_li]:mt-2 [&_ol]:mt-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-4 [&_strong]:font-medium [&_strong]:text-ink [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-5";
 
 export function LegalDoc({
   title,
@@ -25,14 +25,15 @@ export function LegalDoc({
   return (
     <article className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[14rem_1fr] lg:pt-24">
       <nav aria-label="On this page" className="hidden lg:block">
-        <div className="sticky top-28">
+        {/* scrolls on its own when twelve sections outgrow a short laptop screen */}
+        <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto">
           <Link href="/legal" className="text-sm text-ink/50 transition hover:text-ink">
             Legal
           </Link>
           <ol className="mt-4 space-y-2 border-l border-ink/10 text-sm">
             {sections.map((s, i) => (
               <li key={s.id}>
-                <a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-0.5 pl-4 text-ink/60 transition hover:border-verm hover:text-ink">
+                <a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-0.5 pl-4 text-ink/60 transition hover:border-accent hover:text-ink">
                   {i + 1}. {s.title}
                 </a>
               </li>
@@ -51,17 +52,34 @@ export function LegalDoc({
           <ul className="mt-4 space-y-3 text-[15px] leading-relaxed text-ink/80">
             {summary.map((line) => (
               <li key={line} className="flex gap-3">
-                <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-verm" />
+                <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-accent" />
                 {line}
               </li>
             ))}
           </ul>
         </aside>
 
+        {/* the side contents is desktop only, so smaller screens get it folded here */}
+        <details className="group mt-6 rounded-[28px] ring-1 ring-ink/10 lg:hidden">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-6 font-medium [&::-webkit-details-marker]:hidden">
+            On this page
+            <span aria-hidden className="text-ink/45 transition group-open:rotate-45">+</span>
+          </summary>
+          <ol className="px-6 pb-4 text-[15px]">
+            {sections.map((s, i) => (
+              <li key={s.id}>
+                <a href={`#${s.id}`} className="block py-2 text-ink/70 transition hover:text-ink">
+                  {i + 1}. {s.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </details>
+
         {sections.map((s, i) => (
           <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-14 scroll-mt-28">
             <h2 id={`${s.id}-h`} className={`${serif} text-[1.75rem] leading-tight tracking-[-0.02em]`}>
-              <span className="mr-3 text-verm">{i + 1}</span>
+              <span className="mr-3 text-accent">{i + 1}</span>
               {s.title}
             </h2>
             <div className={prose}>{s.body}</div>

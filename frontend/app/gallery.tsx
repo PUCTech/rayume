@@ -39,7 +39,7 @@ export function Gallery({ children }: { children: ReactNode }) {
           ))}
         </div>
       </div>
-      <ul id="template-grid" className="mt-14 grid grid-cols-2 gap-5 lg:grid-cols-3">
+      <ul id="template-grid" className="mt-14 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
         {shown.map((t) => {
           const on = t.file === selected;
           return (
@@ -48,7 +48,7 @@ export function Gallery({ children }: { children: ReactNode }) {
                 type="button"
                 aria-pressed={on}
                 onClick={() => setSelected(t.file)}
-                className={`glass group block w-full rounded-[26px] p-3 text-left transition hover:-translate-y-1 motion-reduce:hover:translate-y-0 ${on ? "ring-2 ring-verm" : ""}`}
+                className={`glass group block w-full rounded-[26px] p-3 text-left transition hover:-translate-y-1 motion-reduce:hover:translate-y-0 ${on ? "ring-2 ring-accent" : ""}`}
               >
                 <span className="relative block aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]">
                   <Image
@@ -60,10 +60,10 @@ export function Gallery({ children }: { children: ReactNode }) {
                     className="object-cover transition duration-500 group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
                   />
                 </span>
-                <span className="flex items-center justify-between px-1.5 pb-1 pt-3 text-sm font-medium">
+                <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1.5 pb-1 pt-3 text-sm font-medium">
                   {t.name}
                   {on ? (
-                    <span className="rounded-full bg-verm-deep px-2.5 py-0.5 text-xs text-white">Selected</span>
+                    <span className="rounded-full bg-accent-deep px-2.5 py-0.5 text-xs text-white">Selected</span>
                   ) : (
                     <span className="text-xs font-normal text-ink/50">{t.layout}</span>
                   )}

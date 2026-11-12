@@ -16,7 +16,7 @@ export function Detail({ t, tex }: { t: Template; tex: string }) {
     <div className="flex flex-col lg:h-full lg:flex-row">
       <Viewer file={t.file} name={t.name} tex={tex} />
       <aside className="shrink-0 border-t border-ink/10 p-6 lg:w-80 lg:overflow-y-auto lg:border-l lg:border-t-0 lg:p-8">
-        <h1 id="tpl-title" className={`${serif} pr-12 text-3xl leading-tight tracking-[-0.02em]`}>
+        <h1 id="tpl-title" className={`${serif} text-3xl lg:pr-12 leading-tight tracking-[-0.02em]`}>
           {t.name}
         </h1>
         <p className="mt-2 text-sm text-ink/55">
@@ -31,7 +31,7 @@ export function Detail({ t, tex }: { t: Template; tex: string }) {
           ))}
         </dl>
         <h2 className="mt-8 text-xs font-medium uppercase tracking-wide text-ink/50">Abstract</h2>
-        <p className="mt-2 text-[15px] leading-relaxed text-ink/75">{t.abstract}</p>
+        <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-ink/75">{t.abstract}</p>
       </aside>
     </div>
   );

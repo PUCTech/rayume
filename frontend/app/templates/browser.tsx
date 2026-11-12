@@ -65,7 +65,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
   return (
     <>
       {children}
-      <div ref={bar} role="search" className="glass mt-8 flex max-w-xl items-center gap-3 rounded-full px-5 focus-within:outline-2 focus-within:outline-offset-3 focus-within:outline-verm-text">
+      <div ref={bar} role="search" className="glass mt-8 flex max-w-xl items-center gap-3 rounded-full px-5 focus-within:outline-2 focus-within:outline-offset-3 focus-within:outline-accent-text">
         <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 text-ink/45" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <circle cx="8.5" cy="8.5" r="5.5" />
           <path d="m13 13 4 4" />
@@ -101,7 +101,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
                     type="button"
                     aria-pressed={on}
                     onClick={() => toggle(key, v)}
-                    className={`rounded-full px-3.5 py-1.5 text-sm transition ${on ? "bg-ink text-white" : "bg-white/50 text-ink/70 hover:bg-white/80 hover:text-ink"}`}
+                    className={`rounded-full px-3.5 py-1.5 text-sm transition pointer-coarse:py-3 ${on ? "bg-ink text-white" : "bg-white/50 text-ink/70 hover:bg-white/80 hover:text-ink"}`}
                   >
                     {v}
                   </button>
@@ -115,7 +115,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
             {filtered ? `${shown.length} of ${templates.length} templates` : `${templates.length} templates`}
           </p>
           {filtered && (
-            <button type="button" onClick={clear} className="font-medium text-verm-text">
+            <button type="button" onClick={clear} className="font-medium text-accent-text">
               Clear all
             </button>
           )}
@@ -139,7 +139,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
                   className="group block rounded-[26px]"
                 >
                   {/* name and details first, so they stay readable when the preview runs off screen */}
-                  <div className="mb-3 flex items-baseline justify-between gap-3 px-2">
+                  <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-2">
                     <h2 className="font-medium">{t.name}</h2>
                     <p className="text-sm text-ink/50">
                       {t.layout} · {t.source}
@@ -165,7 +165,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
         ) : (
           <div className="mt-8 rounded-[28px] bg-mist px-6 py-20 text-center">
             <p className="font-medium">No templates match.</p>
-            <button type="button" onClick={clear} className="mt-3 text-sm font-medium text-verm-text">
+            <button type="button" onClick={clear} className="mt-3 text-sm font-medium text-accent-text">
               Clear search and filters
             </button>
           </div>

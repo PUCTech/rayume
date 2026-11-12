@@ -4,8 +4,9 @@ import { useState, useSyncExternalStore, type ChangeEvent, type ComponentProps }
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import Link from "next/link";
 
+// 16px on phones, or iOS Safari zooms the page when an input takes focus
 const input =
-  "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[15px] ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-verm-text";
+  "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-base ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text sm:text-[15px]";
 
 function Field({ label, hint, ...props }: { label: string; hint?: string } & ComponentProps<"input">) {
   return (
@@ -41,7 +42,7 @@ const provider =
   "flex w-full items-center justify-center gap-2.5 rounded-full bg-white px-5 py-3 text-[15px] font-medium ring-1 ring-ink/10 transition hover:ring-ink/25 active:scale-[0.98]";
 
 const submit =
-  "inline-flex w-full items-center justify-center rounded-full bg-verm-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_rgb(242_84_45/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[#E5471F] active:scale-[0.97]";
+  "inline-flex w-full items-center justify-center rounded-full bg-accent-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))] active:scale-[0.97]";
 
 const serif = GeistSerifRegular.className;
 
@@ -101,7 +102,7 @@ export function LoginForm() {
       </form>
       <p className="mt-6 text-sm text-ink/65">
         New to Rayume?{" "}
-        <Link href="/signup" className="font-medium text-verm-text">
+        <Link href="/signup" className="font-medium text-accent-text">
           Create an account
         </Link>
       </p>
@@ -142,7 +143,7 @@ export function SignupForm() {
         <div className="flex gap-1.5">
           {steps.map((s, i) => (
             <span key={s} className="h-1 flex-1 overflow-hidden rounded-full bg-ink/10">
-              <span className={`block h-full rounded-full bg-verm-deep transition-[width] duration-500 ease-out ${i <= step ? "w-full" : "w-0"}`} />
+              <span className={`block h-full rounded-full bg-accent-deep transition-[width] duration-500 ease-out ${i <= step ? "w-full" : "w-0"}`} />
             </span>
           ))}
         </div>
@@ -151,7 +152,7 @@ export function SignupForm() {
         </p>
       </div>
 
-      <h1 className={`${serif} text-[2.6rem] leading-[1.05] tracking-[-0.03em]`}>Create your account</h1>
+      <h1 className={`${serif} text-[clamp(2.25rem,10vw,2.6rem)] leading-[1.05] tracking-[-0.03em]`}>Create your account</h1>
       <p className="mt-3 text-ink/65">Free while you hunt. It takes a minute.</p>
 
       {/* grid rows 1fr to 0fr folds the providers away to nothing once the email route starts */}
@@ -218,7 +219,7 @@ export function SignupForm() {
       </form>
       <p className="mt-6 text-sm text-ink/65">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-verm-text">
+        <Link href="/login" className="font-medium text-accent-text">
           Sign in
         </Link>
       </p>

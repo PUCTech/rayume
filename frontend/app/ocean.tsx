@@ -2,15 +2,16 @@
 
 import { useEffect, useRef } from "react";
 
-// Underwater scene for the vermilion band: every shape is a lighter or darker vermilion, animated with SMIL
+// Underwater scene for the accent band: every shape is a lighter or darker accent, animated with SMIL
 // so nothing runs per frame in JS. Paths for the mantas and seagrass are computed once at module load.
 
 type Pt = [number, number];
 const TAU = Math.PI * 2;
-const DEEP = "#B8330F";
-const SHADE = "#C73A17";
-const MID = "#D9441F";
-const LIGHT = "#FF9466";
+// derived from the accent tokens in globals.css, so the ocean follows the colour
+const DEEP = "var(--ocean-deep)";
+const SHADE = "var(--ocean-shade)";
+const MID = "var(--ocean-mid)";
+const LIGHT = "var(--ocean-light)";
 
 const n = (v: number) => Math.round(v * 10) / 10;
 const mid = (a: Pt, b: Pt): Pt => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];

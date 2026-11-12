@@ -47,13 +47,13 @@ export default function LegalIndex() {
             >
               <span className={`${serif} text-2xl tracking-[-0.02em]`}>{d.title}</span>
               <span className="mt-3 text-[15px] leading-relaxed text-ink/65">{d.body}</span>
-              <span className="mt-auto pt-6 text-sm font-medium text-verm-text">Read</span>
+              <span className="mt-auto pt-6 text-sm font-medium text-accent-text">Read</span>
             </Link>
           </li>
         ))}
       </ul>
       <p className="mt-12 max-w-2xl text-sm leading-relaxed text-ink/55">
-        Questions about any of these? Write to <a href={`mailto:${legal.email}`} className="font-medium text-verm-text underline underline-offset-2">{legal.email}</a>.
+        Questions about any of these? Write to <a href={`mailto:${legal.email}`} className="font-medium text-accent-text underline underline-offset-2">{legal.email}</a>.
       </p>
     </section>
   );

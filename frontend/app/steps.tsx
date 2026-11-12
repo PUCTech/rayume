@@ -54,17 +54,17 @@ const steps = [
             alt=""
             fill
           draggable={false}
-            sizes="320px"
+            sizes="(min-width: 1024px) 320px, 100vw"
             className={`${anim} object-cover object-top duration-[1100ms] ease-linear [clip-path:inset(0_0_100%_0)] delay-[calc(var(--d)_+_0.5s)] group-data-seen:[clip-path:inset(0_0_0_0)]`}
           />
         </div>
         <div className="flex items-center gap-3 rounded-2xl bg-white p-4 text-sm shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-verm text-xs font-semibold text-white">PDF</span>
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-xs font-semibold text-white">PDF</span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium">lucas-mendes-orbita.pdf</span>
             <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-ink/10">
               <span
-                className={`${anim} block h-full origin-left scale-x-0 rounded-full bg-verm duration-[1100ms] delay-[calc(var(--d)_+_0.5s)] group-data-seen:scale-x-100`}
+                className={`${anim} block h-full origin-left scale-x-0 rounded-full bg-accent duration-[1100ms] delay-[calc(var(--d)_+_0.5s)] group-data-seen:scale-x-100`}
               />
             </span>
             {/* the status line swaps once the compile bar fills */}
@@ -92,7 +92,7 @@ function Keyword({ delay, children }: { delay: string; children: string }) {
   return (
     <mark
       style={{ "--k": delay } as CSSProperties}
-      className={`${anim} rounded bg-transparent px-1 text-ink/60 delay-[calc(var(--d)_+_var(--k))] group-data-seen:bg-verm/15 group-data-seen:text-verm-text`}
+      className={`${anim} rounded bg-transparent px-1 text-ink/60 delay-[calc(var(--d)_+_var(--k))] group-data-seen:bg-accent/15 group-data-seen:text-accent-text`}
     >
       {children}
     </mark>
@@ -110,7 +110,8 @@ export function Steps({ serif }: { serif: string }) {
         setSeen(true);
         io.disconnect();
       },
-      { threshold: 0.35 },
+      // a margin, not a ratio: stacked on a short phone the list is taller than 35% of any viewport
+      { rootMargin: "0px 0px -35% 0px" },
     );
     io.observe(ref.current!);
     return () => io.disconnect();
@@ -126,10 +127,10 @@ export function Steps({ serif }: { serif: string }) {
         >
           {/* together the three bars read as one progress line across the row */}
           <span aria-hidden className="block h-1 overflow-hidden rounded-full bg-ink/10">
-            <span className={`${anim} block h-full origin-left scale-x-0 rounded-full bg-verm duration-700 delay-(--d) group-data-seen:scale-x-100`} />
+            <span className={`${anim} block h-full origin-left scale-x-0 rounded-full bg-accent duration-700 delay-(--d) group-data-seen:scale-x-100`} />
           </span>
           <h3 className="mt-6 flex items-baseline gap-3 text-lg font-medium tracking-tight">
-            <span className={`${serif} text-3xl leading-none text-verm`}>{i + 1}</span>
+            <span className={`${serif} text-3xl leading-none text-accent`}>{i + 1}</span>
             {s.title}
           </h3>
           <p className="mt-2 text-[15px] leading-relaxed text-ink/65">{s.body}</p>
