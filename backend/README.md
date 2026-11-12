@@ -183,7 +183,9 @@ rayume/
     ├── pyproject.toml     project metadata and dependencies
     ├── uv.lock            the exact version of every dependency
     ├── src/backend/
-    │   ├── main.py        the FastAPI app: CORS and the routes
+    │   ├── main.py        creates the app: CORS, /health, plugs in the routers
+    │   ├── routers/
+    │   │   └── templates.py   GET /templates and GET /templates/{slug}
     │   ├── db.py          settings, database connection, Base, get_db()
     │   ├── models.py      the 8 tables as Python classes (the ORM layer)
     │   ├── schemas.py     Pydantic shapes for the data inside jsonb columns
@@ -199,8 +201,9 @@ rayume/
 browser / frontend (Next.js, :3000)
         │  HTTP request
         ▼
-main.py        FastAPI receives it, checks CORS, picks the route
-        │  route asks for a session with Depends(get_db)
+main.py        FastAPI receives it, checks CORS, hands it to a router
+        ▼
+routers/       the route function runs, and asks for a session with Depends(get_db)
         ▼
 db.py          opens a SQLAlchemy Session on the engine (settings come from .env)
         │  you work with Python objects from models.py ...
@@ -231,7 +234,10 @@ Keeps `.env`, the virtualenv `.venv/` and Python's compiled `__pycache__/` files
 `pyproject.toml` lists the dependencies we chose (FastAPI, SQLAlchemy, psycopg, pydantic-settings, ...). `uv.lock` pins the exact version of each one and of everything they depend on. **Why:** `uv sync` installs the same versions on every machine, so "works on my machine" problems don't come from version differences. Change them with `uv add`, not by hand, and commit both files.
 
 **`src/backend/main.py`** · *FastAPI, CORS*
-Creates the FastAPI `app`. That's what `uv run fastapi dev` starts. It adds the **CORS** middleware: browsers block a page on `localhost:3000` from calling an API on `localhost:8000` unless the API explicitly allows it, so we allow the origins listed in `CORS_ORIGINS`. `allow_credentials=True` lets the browser send the refresh-token cookie later. It holds the routes: `/health`, which shows the server is up, and `GET /templates` / `GET /templates/{slug}` for the gallery (see [`templates.md`](../docs/backend/endpoints/templates.md)). **Why:** it's the entry point. New routes get plugged in here, until there are enough to split them into one `APIRouter` file per resource.
+Creates the FastAPI `app`. That's what `uv run fastapi dev` starts. It adds the **CORS** middleware: browsers block a page on `localhost:3000` from calling an API on `localhost:8000` unless the API explicitly allows it, so we allow the origins listed in `CORS_ORIGINS`. `allow_credentials=True` lets the browser send the refresh-token cookie later. Then it plugs in each router with `app.include_router(...)`. The only route it defines itself is `/health`, which shows the server is up. **Why:** it's the entry point, and it stays short on purpose. The routes themselves live in `routers/`.
+
+**`src/backend/routers/templates.py`** · *FastAPI `APIRouter`, SQLAlchemy*
+The template gallery routes: `GET /templates` (with the `q` search and `tag` filters) and `GET /templates/{slug}`. The contract is in [`templates.md`](../docs/backend/endpoints/templates.md). An `APIRouter` is a mini-app: `prefix="/templates"` is set once, so the routes inside only write `""` and `"/{slug}"`, and `tags=["templates"]` groups them under one heading in `/docs`. **Why one file per resource:** it mirrors `docs/backend/endpoints/` (one doc, one router file), keeps `main.py` from growing forever, and means people working on different resources edit different files, so fewer merge conflicts. **Adding a new resource:** copy this file's shape into `routers/<resource>.py`, then add one `app.include_router(...)` line in `main.py`.
 
 **`src/backend/db.py`** · *pydantic-settings, SQLAlchemy, psycopg*
 Four things, all about connecting to the database:
