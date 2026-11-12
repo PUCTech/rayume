@@ -6,20 +6,24 @@ Right now the backend has its data layer and one route (`/health`). Most of the 
 
 > More depth: [`docs/backend/`](../docs/backend/README.md) covers the stack, the [API contract](../docs/backend/endpoints/README.md) and the [architecture](../docs/backend/architecture/README.md). The tables are specified in [`docs/database/`](../docs/database/README.md).
 
+> **Windows users:** run everything in **PowerShell** (Windows Terminal opens it by default). Almost every command below works the same there. Where Windows is different, there's a separate **Windows** block or note.
+
 ---
 
 ## 1. Install the tools (once per machine)
 
 You need two things:
 
-| Tool | Why | Install (macOS) |
-|------|-----|-----------------|
-| [uv](https://docs.astral.sh/uv/) | Installs the right Python (3.14), creates the virtualenv and installs dependencies. You don't need to install Python yourself. | `brew install uv` |
-| A Docker engine | Runs Postgres in a container | `brew install colima docker docker-compose` (or use Docker Desktop if you already have it) |
+| Tool | Why | macOS | Windows (PowerShell) |
+|------|-----|-------|----------------------|
+| [uv](https://docs.astral.sh/uv/) | Installs the right Python (3.14), creates the virtualenv and installs dependencies. You don't need to install Python yourself. | `brew install uv` | `winget install --id=astral-sh.uv -e` |
+| A Docker engine | Runs Postgres in a container | `brew install colima docker docker-compose` (or use Docker Desktop if you already have it) | `winget install -e --id Docker.DockerDesktop` |
 
-We use [Colima](https://github.com/abiosoft/colima) instead of Docker Desktop. It's a free, lightweight engine, and the normal `docker` commands work with it.
+On macOS we use [Colima](https://github.com/abiosoft/colima) instead of Docker Desktop. It's a free, lightweight engine, and the normal `docker` commands work with it.
 
-On Linux, install Docker Engine with your package manager. On Windows, use WSL2 with Docker Desktop.
+On Windows, Docker Desktop runs on top of WSL2. The installer turns WSL2 on for you if it isn't already, and may ask you to restart. After installing, **open a new PowerShell window**, so it can find the new `uv` and `docker` commands.
+
+On Linux, install Docker Engine with your package manager.
 
 Check that everything is there:
 
@@ -42,6 +46,8 @@ cd backend
 uv sync
 ```
 
+These work as they are in PowerShell too: `cp` is a built-in shortcut for `Copy-Item` there, and forward slashes in paths are fine.
+
 `backend/.env` holds your local settings and is git-ignored, so it never gets committed. The defaults already match the database from step 3, so you don't need to edit anything.
 
 | Variable | What it is |
@@ -57,6 +63,8 @@ From the **repo root**:
 colima start               # only with Colima, once after each reboot
 docker compose up -d --wait
 ```
+
+**Windows:** skip `colima start`. Instead, open **Docker Desktop** from the Start menu and wait until it says the engine is running. Then run `docker compose up -d --wait`.
 
 - `-d` runs Postgres in the background, so you get your terminal back.
 - `--wait` returns only once Postgres is actually ready to accept connections.
@@ -137,6 +145,16 @@ docker compose up -d --wait                           # from the repo root
 cd backend && uv run fastapi dev src/backend/main.py
 ```
 
+**Windows (PowerShell):** open Docker Desktop first, then:
+
+```powershell
+docker compose up -d --wait                           # from the repo root
+cd backend
+uv run fastapi dev src/backend/main.py
+```
+
+`cd` gets its own line because the older Windows PowerShell 5.1 that comes with Windows doesn't understand `&&`.
+
 After pulling new changes, run `uv sync` in case someone added a dependency.
 
 ## Common tasks
@@ -173,15 +191,25 @@ A few things that help when you start reading the code:
 
 - **`get_db`** is a FastAPI dependency that gives a route a database session and closes it afterwards. Use it like this: `def my_route(db: Session = Depends(get_db))`.
 - **Every `str` column is `text` and every `datetime` is `timestamptz`.** `Base` in `db.py` applies this for you, so don't add `String(255)` or a plain `DateTime`.
-- **Public ids** (the ones that show up in URLs) come from `new_public_id()` in `models.py`. Never put the internal integer `id` in a URL.
+- **Public ids** (the ones that show up in URLs) come from `new_public_id()` in `models.py`. Never put the internal `uuid` `id` in a URL.
 
 ## Troubleshooting
 
-**`Cannot connect to the Docker daemon`**
-The engine isn't running. With Colima, run `colima start`. With Docker Desktop, open the app.
+**`Cannot connect to the Docker daemon`** (on Windows: `error during connect` or `open //./pipe/docker_engine`)
+The engine isn't running. With Colima, run `colima start`. With Docker Desktop, open the app and wait until it says the engine is running.
 
 **`port 5432 is already allocated` / `address already in use`**
-Another Postgres is already running on your machine, probably one installed with Homebrew. Stop it with `brew services stop postgresql` (or whichever version you have), then run `docker compose up -d --wait` again.
+Another Postgres is already running on your machine.
+- macOS: probably one installed with Homebrew. Stop it with `brew services stop postgresql` (or whichever version you have).
+- Windows: probably one installed with the EDB installer, running as a Windows service. Find its name with `Get-Service *postgres*`, then stop it from a PowerShell opened **as Administrator** with `Stop-Service <name>` (for example `Stop-Service postgresql-x64-17`).
+
+Then run `docker compose up -d --wait` again.
+
+**Windows: `uv` or `docker` is not recognized**
+The terminal was opened before you installed them. Close it and open a new PowerShell window.
+
+**Windows: `running scripts is disabled on this system`**
+This happens if you try to activate the virtualenv by hand. You don't need to: `uv run` uses it automatically.
 
 **`ValidationError ... database_url Field required`**
 `backend/.env` is missing. Go back to step 2 and run `cp backend/.env.example backend/.env`.
