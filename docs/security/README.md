@@ -141,21 +141,21 @@ Put a handful of hostile postings in the AI evaluation set: instructions in plai
 
 ## 3. The usual suspects
 
-Most of these are already specified in [`database/README.md`](../database/README.md) and [`endpoints/`](../endpoints/README.md). They're listed here so the whole picture is in one place.
+Most of these are already specified in [`database/README.md`](../database/README.md) and [`backend/endpoints/`](../backend/endpoints/README.md). They're listed here so the whole picture is in one place.
 
 | Threat | Mitigation | Where |
 |--------|-----------|-------|
 | Reading another user's resume by changing the id (IDOR) | Every query filters by the user from the token; random `public_id`s; `404` rather than `403` | database, auth |
 | Forged or tampered JWT | Fixed algorithm, never `none`; validate `exp`, `iss`, `aud`; check `disabled_at` | database, auth |
 | Stolen refresh token | HttpOnly, Secure cookie sent only to `/auth`; rotation with reuse detection revokes the family | database, auth |
-| Credential stuffing, brute force | Rate limits on `/auth/login` and `/auth/register`; slow password hash | endpoints/auth |
-| Forged OAuth callback | `oauth_state` cookie checked on return | endpoints/auth |
+| Credential stuffing, brute force | Rate limits on `/auth/login` and `/auth/register`; slow password hash | backend/endpoints/auth |
+| Forged OAuth callback | `oauth_state` cookie checked on return | backend/endpoints/auth |
 | XSS through resume text or AI output | React escapes by default; never `dangerouslySetInnerHTML` with user or model text | frontend |
-| Malicious upload | Type checked from bytes, 2 MB cap, stored outside the DB, served by signed URL | endpoints/users |
+| Malicious upload | Type checked from bytes, 2 MB cap, stored outside the DB, served by signed URL | backend/endpoints/users |
 | SSRF (server-side request forgery) | The backend never fetches job `url`s or other user-supplied URLs; the worker only reads our own storage | this doc |
-| AI cost abuse | Rate limits on AI routes, input caps (5,000 and 20,000 characters), output token cap | endpoints |
+| AI cost abuse | Rate limits on AI routes, input caps (5,000 and 20,000 characters), output token cap | backend/endpoints |
 | Data leaking through logs | Never log tokens or resume or job content; 90-day retention | database, logs |
-| Long-lived file links | Signed URLs that expire in minutes; storage paths never returned | endpoints/renders |
+| Long-lived file links | Signed URLs that expire in minutes; storage paths never returned | backend/endpoints/renders |
 
 ## Review checklists
 

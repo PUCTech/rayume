@@ -1,4 +1,4 @@
-"""Pydantic shapes for the jsonb columns, from docs/endpoints/.
+"""Pydantic shapes for the jsonb columns, from docs/backend/endpoints/.
 
 Request and response bodies get added next to the routes that use them.
 """

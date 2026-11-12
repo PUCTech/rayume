@@ -1,7 +1,7 @@
 # API Endpoints
 
-> Status: **draft**. Derived from the accepted schema in [`../database/README.md`](../database/README.md).
-> FastAPI backend. Product context: [`../PROJECT.md`](../PROJECT.md).
+> Status: **draft**. Derived from the accepted schema in [`../../database/README.md`](../../database/README.md).
+> FastAPI backend. Product context: [`../../PROJECT.md`](../../PROJECT.md).
 
 One file per resource:
 
