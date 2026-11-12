@@ -173,25 +173,88 @@ After pulling new changes, run `uv sync` in case someone added a dependency.
 ## What's here so far
 
 ```
-backend/
-├── .env.example       template for your .env
-├── pyproject.toml     dependencies (managed by uv; don't edit versions by hand)
-├── src/backend/
-│   ├── main.py        the FastAPI app, CORS setup and the /health route
-│   ├── db.py          settings (read from .env), the database engine, Base, get_db()
-│   ├── models.py      the 8 tables as SQLAlchemy classes, with enums, indexes and constraints
-│   ├── schemas.py     Pydantic shapes that validate what goes into the jsonb columns
-│   └── seed.py        loads the frontend's templates into the templates table
-└── tests/
+rayume/
+├── compose.yaml           the local Postgres container
+└── backend/
+    ├── .env.example       template for your .env
+    ├── .env               your local settings (you create it, git ignores it)
+    ├── .gitignore         keeps .env, .venv/ and __pycache__/ out of git
+    ├── pyproject.toml     project metadata and dependencies
+    ├── uv.lock            the exact version of every dependency
+    ├── src/backend/
+    │   ├── main.py        the FastAPI app: CORS and the /health route
+    │   ├── db.py          settings, database connection, Base, get_db()
+    │   ├── models.py      the 8 tables as Python classes (the ORM layer)
+    │   ├── schemas.py     Pydantic shapes for the data inside jsonb columns
+    │   └── seed.py        loads the frontend's templates into the database
+    └── tests/
+        └── test_health.py checks that /health answers
 ```
 
-The Postgres container itself is defined in [`compose.yaml`](../compose.yaml) at the repo root. It lives there because it will later hold the backend and frontend services too.
+### How the pieces fit together
 
-A few things that help when you start reading the code:
+```
+browser / frontend (Next.js, :3000)
+        │  HTTP request
+        ▼
+main.py        FastAPI receives it, checks CORS, picks the route
+        │  route asks for a session with Depends(get_db)
+        ▼
+db.py          opens a SQLAlchemy Session on the engine (settings come from .env)
+        │  you work with Python objects from models.py ...
+        ▼
+models.py      ... and SQLAlchemy (the ORM) turns them into SQL
+        │  psycopg (the driver) sends that SQL over the network
+        ▼
+PostgreSQL     running in Docker, started by compose.yaml (:5432)
+```
 
-- **`get_db`** is a FastAPI dependency that gives a route a database session and closes it afterwards. Use it like this: `def my_route(db: Session = Depends(get_db))`.
-- **Every `str` column is `text` and every `datetime` is `timestamptz`.** `Base` in `db.py` applies this for you, so don't add `String(255)` or a plain `DateTime`.
-- **Public ids** (the ones that show up in URLs) come from `new_public_id()` in `models.py`. Never put the internal `uuid` `id` in a URL.
+`schemas.py` sits beside this flow. Before JSON data goes into a `jsonb` column, a Pydantic model in `schemas.py` checks that it has the right shape.
+
+### Each file, one by one
+
+**`compose.yaml`** (repo root) · *Docker Compose, PostgreSQL*
+Describes the Postgres 18 container: its user, password and database name (all `rayume`), port `5432`, a volume so your data survives restarts, and a health check so `docker compose up --wait` knows when it's ready. **Why:** everyone gets the same database with one command, without installing Postgres on their machine. It lives at the repo root, not in `backend/`, because it will later also start the backend and frontend for the CI/CD pipeline.
+
+**`backend/.env.example`** · *pydantic-settings*
+A template listing every setting the backend needs (`DATABASE_URL`, `CORS_ORIGINS`), filled with values that work locally. **Why:** it's committed so a newcomer knows exactly what to configure. You copy it to `.env`.
+
+**`backend/.env`** · *pydantic-settings*
+Your own copy of the settings. `db.py` reads it on startup. **Why it's not in git:** later it will hold real secrets (API keys, production passwords), and anything committed stays in the git history forever. Production and CI set these values as environment variables instead.
+
+**`backend/.gitignore`** · *git*
+Keeps `.env`, the virtualenv `.venv/` and Python's compiled `__pycache__/` files out of git. **Why:** they're local to each machine or generated automatically, and committing them causes noise and conflicts. Before this file existed, `.pyc` files had been committed by accident.
+
+**`backend/pyproject.toml` and `backend/uv.lock`** · *uv*
+`pyproject.toml` lists the dependencies we chose (FastAPI, SQLAlchemy, psycopg, pydantic-settings, ...). `uv.lock` pins the exact version of each one and of everything they depend on. **Why:** `uv sync` installs the same versions on every machine, so "works on my machine" problems don't come from version differences. Change them with `uv add`, not by hand, and commit both files.
+
+**`src/backend/main.py`** · *FastAPI, CORS*
+Creates the FastAPI `app`. That's what `uv run fastapi dev` starts. It adds the **CORS** middleware: browsers block a page on `localhost:3000` from calling an API on `localhost:8000` unless the API explicitly allows it, so we allow the origins listed in `CORS_ORIGINS`. `allow_credentials=True` lets the browser send the refresh-token cookie later. For now it has one route, `/health`, which shows the server is up. **Why:** it's the entry point. New routes get plugged in here.
+
+**`src/backend/db.py`** · *pydantic-settings, SQLAlchemy, psycopg*
+Four things, all about connecting to the database:
+- `Settings` reads `.env` and checks it. If `DATABASE_URL` is missing, the app refuses to start with a clear error instead of failing later.
+- `engine` is SQLAlchemy's connection to Postgres. The `+psycopg` in `DATABASE_URL` tells it to use the psycopg driver.
+- `Base` is the parent class of every model. It applies the team rule *every `str` is `text`, every `datetime` is `timestamptz`*, so you never write `String(255)` or a plain `DateTime`.
+- `get_db()` is a FastAPI dependency that gives a route a database session and closes it when the request ends. Use it like this: `def my_route(db: Session = Depends(get_db))`.
+
+**`src/backend/models.py`** · *SQLAlchemy ORM, PostgreSQL*
+The 8 tables from [`docs/database/`](../docs/database/README.md), written as Python classes. This is the **ORM** (Object-Relational Mapper): instead of writing SQL by hand, you work with Python objects, `User(name="Ana")`, `db.add(user)`, `select(User)`, and SQLAlchemy writes the SQL. The file also defines:
+- the 4 enums (`ExperienceType`, `RenderKind`, ...), which become real Postgres enum types;
+- foreign keys and what happens on delete (cascade, set null, restrict);
+- every index and unique constraint, including the case-insensitive username index;
+- `new_public_id()`, which makes the short random ids that show up in URLs. Never put the internal `uuid` `id` in a URL.
+
+**Why:** one place defines the database's structure, and `Base.metadata.create_all()` builds the tables from it (step 4). When Alembic arrives, it will compare these classes with the database to generate migrations.
+
+**`src/backend/schemas.py`** · *Pydantic*
+Pydantic models that describe the JSON stored inside `jsonb` columns: `ExperienceData` (what the AI extracts from an experience), `ResumeContent` (a full resume snapshot) and `Link`. **Why:** Postgres stores any JSON in a `jsonb` column without checking it, and AI output can be malformed. These models reject bad data before it reaches the database. The difference from `models.py`: models describe *tables*, schemas describe *the shape of data*. HTTP request and response bodies will be added here when we write the routes.
+
+**`src/backend/seed.py`** · *SQLAlchemy, PostgreSQL*
+Fills the `templates` table with the 6 LaTeX templates from the frontend's gallery. It reads the `.tex` files from `frontend/resumes/` and uses a Postgres *upsert* (`INSERT ... ON CONFLICT DO UPDATE`), so running it again updates the rows instead of duplicating them. **Why:** the app needs templates to exist before anyone can render a resume, and a script means everyone gets the same data. The six templates are also listed in `frontend/app/templates/data.ts`, so a new template has to be added in both places.
+
+**`tests/test_health.py`** · *pytest, FastAPI TestClient*
+Calls `/health` through FastAPI's `TestClient`, without starting a real server, and checks the response. **Why:** it's the smallest possible test, proving the app starts and the test setup works. Real tests will follow the same pattern.
 
 ## Troubleshooting
 
