@@ -5,7 +5,7 @@ import secrets
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Index, String, UniqueConstraint, func, text
+from sqlalchemy import Enum, ForeignKey, Index, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -105,7 +105,7 @@ class Template(Timestamps, Base):
     name: Mapped[str]
     tex_source: Mapped[str]
     preview_url: Mapped[str | None]
-    tags: Mapped[list[str]] = mapped_column(ARRAY(String), server_default="{}")
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
 
 
 class Resume(Timestamps, Base):

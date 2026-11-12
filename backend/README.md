@@ -90,6 +90,14 @@ docker compose exec db psql -U rayume
 \q       -- quit
 ```
 
+Then fill the `templates` table with the gallery from the frontend (the six LaTeX templates in `frontend/resumes/`). From `backend/`:
+
+```bash
+uv run python -m backend.seed
+```
+
+This is also safe to run again: it updates the templates that already exist instead of duplicating them. The other tables stay empty until the app writes to them.
+
 ## 5. Run the API
 
 From `backend/`:
@@ -142,6 +150,7 @@ After pulling new changes, run `uv sync` in case someone added a dependency.
 | Database logs | `docker compose logs db` | repo root |
 | Stop Postgres (keeps your data) | `docker compose down` | repo root |
 | Reset the database (**deletes all data**) | `docker compose down -v`, then steps 3 and 4 again | repo root |
+| Reload the templates after changing a `.tex` file | `uv run python -m backend.seed` | `backend/` |
 
 ## What's here so far
 
@@ -153,7 +162,8 @@ backend/
 │   ├── main.py        the FastAPI app, CORS setup and the /health route
 │   ├── db.py          settings (read from .env), the database engine, Base, get_db()
 │   ├── models.py      the 8 tables as SQLAlchemy classes, with enums, indexes and constraints
-│   └── schemas.py     Pydantic shapes that validate what goes into the jsonb columns
+│   ├── schemas.py     Pydantic shapes that validate what goes into the jsonb columns
+│   └── seed.py        loads the frontend's templates into the templates table
 └── tests/
 ```
 
