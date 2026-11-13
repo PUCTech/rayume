@@ -1,7 +1,7 @@
 # API Endpoints
 
-> Status: **draft**. Derived from the accepted schema in [`../database/README.md`](../database/README.md).
-> FastAPI backend. Product context: [`../PROJECT.md`](../PROJECT.md).
+> Status: **draft**. Derived from the accepted schema in [`../../database/README.md`](../../database/README.md).
+> FastAPI backend. Product context: [`../../PROJECT.md`](../../PROJECT.md).
 
 One file per resource:
 
@@ -16,6 +16,8 @@ One file per resource:
 | [`templates.md`](templates.md) | Template gallery |
 
 `GET /health` (already built) returns `200 {"ok": true}` and needs no auth.
+
+Built so far: `GET /health`, `GET /templates`, `GET /templates/{slug}`.
 
 ## Route map
 

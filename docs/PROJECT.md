@@ -65,9 +65,11 @@ If a task drifts toward any of these, flag it instead of implementing it.
 |-----|--------|-----------------|
 | This file | current | What Rayume is, scope, stack |
 | [`database/README.md`](database/README.md) | accepted | Tables, auth rules, versioning, renders, logs |
-| [`endpoints/README.md`](endpoints/README.md) | draft | Every API route, parameters, errors |
+| [`backend/README.md`](backend/README.md) | draft | How the backend is built and run; links to every API route |
+| [`backend/endpoints/README.md`](backend/endpoints/README.md) | draft | Every API route, parameters, errors |
 | [`design/README.md`](design/README.md) | accepted | Colours, type, glass, components; the style for every page |
 | [`security/README.md`](security/README.md) | draft | Threat model: LaTeX injection, prompt injection, review checklists |
+| [`sessions/README.md`](sessions/README.md) | current | What each working session achieved, decided and left open |
 
 Building a backend feature: read the schema, then its endpoint file. Building a page: read the design system first. Touching rendering or AI calls: read the threat model.
 

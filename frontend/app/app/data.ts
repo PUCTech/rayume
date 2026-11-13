@@ -1,5 +1,5 @@
 // Demo data for the signed-in workspace: Lucas Mendes's Master Resume (the same fictional person as
-// resumes/body.tex), shaped like the API's Experience and Resume objects in docs/endpoints.
+// resumes/body.tex), shaped like the API's Experience and Resume objects in docs/backend/endpoints.
 // shortcut: static until the API serves /me, /experiences, /resumes and /job-postings; swap these for fetches then.
 
 export type Bullet = { id: string; text: string };

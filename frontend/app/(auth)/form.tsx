@@ -68,7 +68,7 @@ function Providers() {
   );
 }
 
-// Fields from docs/endpoints/auth.md.
+// Fields from docs/backend/endpoints/auth.md.
 // shortcut: nothing is sent until the API has /auth, so submitting does nothing yet. Wire the forms to
 // POST /auth/login and /auth/register and the provider buttons to GET /auth/{github,google} then.
 // The email typed on login, carried to signup when someone switches over. It lives in this module, so

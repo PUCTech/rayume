@@ -1,15 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .db import settings
+from .routers import templates
+
 app = FastAPI()
 
-# Next dev server runs on :3000; browser calls to :8000 need CORS
+# the frontend runs on another origin (:3000 locally), so browser calls here need CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.cors_origins,
+    # the refresh token is a cookie, sent with fetch(..., { credentials: "include" })
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(templates.router)
 
 
 @app.get("/health")

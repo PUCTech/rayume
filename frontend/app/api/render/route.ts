@@ -9,7 +9,7 @@ const run = promisify(execFile);
 
 // Compiles an edited template with the local Tectonic and returns the PDF.
 // shortcut: dev only. Raw LaTeX can't be escaped and Tectonic still reads any file it can see,
-// so production waits for the sandboxed worker in docs/endpoints/renders.md and docs/security.
+// so production waits for the sandboxed worker in docs/backend/endpoints/renders.md and docs/security.
 export async function POST(request: Request) {
   if (process.env.NODE_ENV !== "development") return new Response("Not found", { status: 404 });
 

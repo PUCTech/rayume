@@ -1,6 +1,6 @@
 # Auth
 
-In-house JWT, as specified in [`../database/README.md#auth-in-house-jwt`](../database/README.md#auth-in-house-jwt). This file only adds the HTTP surface.
+In-house JWT, as specified in [`../../database/README.md#auth-in-house-jwt`](../../database/README.md#auth-in-house-jwt). This file only adds the HTTP surface.
 
 ## Tokens on the wire
 

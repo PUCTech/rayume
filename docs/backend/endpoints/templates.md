@@ -4,6 +4,8 @@ Table: `templates`. Written by the team, read-only through the API (seeded by mi
 
 ## Template object
 
+> **Built without `author` and `license`:** the `templates` table has no columns for them yet. Whether to add them is an open team question; until then the API leaves them out.
+
 ```json
 {
   "slug": "classic-ats",

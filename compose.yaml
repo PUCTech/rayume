@@ -1,0 +1,21 @@
+# Local dev stack. Start with `docker compose up -d` from the repo root.
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: rayume
+      POSTGRES_PASSWORD: rayume
+      POSTGRES_DB: rayume
+    ports:
+      - "5432:5432"
+    volumes:
+      # postgres 18+ keeps its data under /var/lib/postgresql/<version>, so mount the parent
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rayume -d rayume"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  db-data:
