@@ -56,6 +56,57 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
       clearTimeout(wait);
     };
   }, []);
+  // Pinch to zoom, a step at a time (each step redraws the pages): a trackpad pinch arrives as ctrl+wheel,
+  // in Safari as gesture events, on a phone as two touches. The browser's own page zoom is held off over the PDF.
+  // shortcut: steps, not a smooth scale; a CSS transform during the gesture would make it follow the fingers
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    // how much bigger or smaller the gesture has made things since the last step
+    let at = 1;
+    const pinch = (ratio: number) => {
+      if (ratio < 1.25 && ratio > 0.8) return false;
+      setZoom((z) => Math.min(zooms.length - 1, Math.max(0, z + (ratio > 1 ? 1 : -1))));
+      return true;
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      at *= Math.exp(-e.deltaY / 200);
+      if (pinch(at)) at = 1;
+    };
+    let gap = 0;
+    let touching = false;
+    const apart = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const onTouch = (e: TouchEvent) => {
+      touching = e.touches.length === 2;
+      if (!touching) return;
+      e.preventDefault();
+      if (e.type === "touchstart") gap = apart(e.touches);
+      else if (pinch(apart(e.touches) / gap)) gap = apart(e.touches);
+    };
+    // iOS sends gesture events alongside the touches: those already count
+    const onGesture = (e: Event) => {
+      e.preventDefault();
+      const scale = (e as Event & { scale: number }).scale;
+      if (touching) return;
+      if (e.type === "gesturestart") at = 1;
+      else if (pinch(scale / at)) at = scale;
+    };
+    const opts = { passive: false };
+    el.addEventListener("wheel", onWheel, opts);
+    el.addEventListener("touchstart", onTouch, opts);
+    el.addEventListener("touchmove", onTouch, opts);
+    el.addEventListener("gesturestart", onGesture, opts);
+    el.addEventListener("gesturechange", onGesture, opts);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouch);
+      el.removeEventListener("touchmove", onTouch);
+      el.removeEventListener("gesturestart", onGesture);
+      el.removeEventListener("gesturechange", onGesture);
+    };
+  }, []);
   // the text layers on screen; each holds a global selection listener until it's cancelled
   const layers = useRef<{ cancel(): void }[]>([]);
   useEffect(() => () => layers.current.forEach((l) => l.cancel()), []);

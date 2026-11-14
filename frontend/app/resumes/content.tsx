@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Accordion } from "@base-ui/react/accordion";
 import { ChevronDown, Link2, Plus, Trash2 } from "lucide-react";
-import type { Field, Section } from "./tex";
+import type { Field, Group, Section } from "./tex";
 
 const input =
   "w-full rounded-lg bg-white px-2.5 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text sm:text-[13px]";
@@ -103,6 +103,14 @@ export function Content({
 }) {
   // the entry a new bullet is being written for: "section/group"
   const [adding, setAdding] = useState<string | null>(null);
+  // an entry folded to one line: its title, then its company and dates (or its first two texts)
+  const by = (g: Group, hint: string) => g.fields.find((f) => f.hint === hint);
+  const summary = (g: Group, i: number) => {
+    const head = by(g, "Title") ?? g.fields[0];
+    const sub = [by(g, "Company") ?? g.fields[1], by(g, "Dates")].filter((f): f is Field => !!f && f !== head);
+    return { head: head ? run(head) : `Entry ${i + 1}`, sub: sub.map(run).join(" · ") };
+  };
+  const panel = "h-(--accordion-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none";
   return (
     <Accordion.Root multiple defaultValue={sections.map((s) => s.title)} className="h-full overflow-y-auto [scrollbar-gutter:stable]">
       {sections.map((s) => (
@@ -116,15 +124,17 @@ export function Content({
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
-          <Accordion.Panel className="h-(--accordion-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
-            <div className="space-y-2.5 px-3 pb-4">
+          <Accordion.Panel className={panel}>
+            {/* several entries (jobs, schools) fold to a line each, one open at a time, so the form isn't a wall of fields */}
+            <Accordion.Root className="space-y-1.5 px-3 pb-4">
               {s.groups.map((g, i) => {
                 const id = `${s.title}/${i}`;
                 const shown = g.items.flatMap(bullets);
                 const labelled = g.fields.filter((f) => f.hint && !f.link);
                 const rest = g.fields.filter((f) => !f.hint || f.link);
-                return (
-                  <div key={id} className="space-y-1.5 rounded-xl bg-mist/60 p-2">
+                const { head, sub } = summary(g, i);
+                const fields = (
+                  <div className="space-y-1.5 p-2">
                     {labelled.length > 0 && (
                       // a company and its place share a row; a title or dates need the width
                       <div className="grid grid-cols-2 gap-1.5">
@@ -190,8 +200,23 @@ export function Content({
                     )}
                   </div>
                 );
+                if (s.groups.length === 1) return <div key={id} className="rounded-xl bg-mist/60">{fields}</div>;
+                return (
+                  <Accordion.Item key={id} value={id} className="rounded-xl bg-mist/60">
+                    <Accordion.Header>
+                      <Accordion.Trigger className="group/e flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-ink/5">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-medium text-ink">{head}</span>
+                          {sub && <span className="block truncate text-xs text-ink/50">{sub}</span>}
+                        </span>
+                        <ChevronDown aria-hidden className="size-4 shrink-0 text-ink/40 transition-transform duration-200 group-data-panel-open/e:rotate-180" />
+                      </Accordion.Trigger>
+                    </Accordion.Header>
+                    <Accordion.Panel className={panel}>{fields}</Accordion.Panel>
+                  </Accordion.Item>
+                );
               })}
-            </div>
+            </Accordion.Root>
           </Accordion.Panel>
         </Accordion.Item>
       ))}

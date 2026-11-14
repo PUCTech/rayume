@@ -5,7 +5,7 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import Image from "next/image";
 import Link from "next/link";
 import { Select } from "@base-ui/react/select";
-import { Check, ChevronDown, Omega, PanelLeft, Redo2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, Omega, PanelLeft, PanelRight, Redo2, Undo2 } from "lucide-react";
 import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { Mark } from "../logo";
 import { Viewer } from "../templates/viewer";
@@ -573,6 +573,10 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         <span role="status" className="ml-auto text-xs text-ink/50">
           {busy ? "Saving…" : doc === blank ? "" : "Saved in this browser"}
         </span>
+        <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
+        <button type="button" aria-label="Chat" title={chat ? "Hide the chat" : "Show the chat"} aria-pressed={chat} onClick={() => fold(right)} className={tool}>
+          <PanelRight aria-hidden className="size-4" />
+        </button>
       </div>
       {!wired && (
         <div role="status" className="shrink-0 border-b border-ink/10 bg-error/15 px-4 py-2 text-sm text-ink/75">
@@ -611,7 +615,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               onPointerDown={() => (dragging.current = true)}
               onPointerMove={(e) => (pointer.current = { x: e.clientX, y: e.clientY })}
               onScrollCapture={() => setPick(null)}
-              className="flex min-w-0 flex-1 flex-col"
+              // min-h-0 down to the viewer: otherwise Code grows to the whole LaTeX and pushes Preview off the panel
+              className="flex min-h-0 min-w-0 flex-1 flex-col *:min-h-0"
             >
               <Viewer
                 file={r.template}
