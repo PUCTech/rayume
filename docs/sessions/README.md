@@ -50,3 +50,4 @@ Bugs caught, wrong assumptions, things that didn't work.
 |---------|--------|---------|
 | [`2026-11-12-1130`](2026-11-12-1130/README.md) | `feat/backend-db` | Local Postgres, SQLAlchemy models for the full schema, CORS, backend docs reorganised |
 | [`2026-11-12-2036`](2026-11-12-2036/README.md) | `feat/backend-db` | Backend README for interns (setup, Windows, file guide), schema verified, templates seeded |
+| [`2026-11-13-2150`](2026-11-13-2150/README.md) | `feat/frontend-polish` | Signup confirm password; edit-the-PDF resume editor; `/resumes` home replaces `/app`; templates and landing redesign |
