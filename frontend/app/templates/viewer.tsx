@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Pdf } from "./pdf";
+import { Pdf, type Page } from "./pdf";
 import { Reveal, ThemeMenu } from "./theme-menu";
 
 // rendering edits needs a TeX engine; only the dev server has one until the compile worker exists
@@ -40,9 +40,29 @@ function highlight(code: string) {
 const editor =
   "absolute inset-0 m-0 overflow-y-scroll whitespace-pre-wrap break-words px-4 pb-6 pt-18 font-mono text-base sm:px-6 sm:text-[13px] leading-relaxed [tab-size:2]";
 
-export function Viewer({ file, name, tex }: { file: string; name: string; tex: string }) {
+// overlay is drawn over the PDF view's pages (see Pdf), not over the preview under the code; src, when it
+// changes, replaces the PDF shown (a render made outside the viewer)
+export function Viewer({
+  file,
+  name,
+  tex,
+  overlay,
+  src,
+}: {
+  file: string;
+  name: string;
+  tex: string;
+  overlay?: (page: Page) => ReactNode;
+  src?: string;
+}) {
   const [mode, setMode] = useState<"pdf" | "code">("pdf");
   const [code, setCode] = useState(tex);
+  // a new tex from outside (the resume editor's latest changes) replaces the code, unless you've edited it
+  const [shownTex, setShownTex] = useState(tex);
+  if (tex !== shownTex) {
+    setShownTex(tex);
+    if (code === shownTex) setCode(tex);
+  }
   const [pdf, setPdf] = useState(`/resumes/${file}.pdf`);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -50,6 +70,12 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
   // code mode only: split the editor with the PDF underneath
   const [preview, setPreview] = useState(false);
   const shadow = useRef<HTMLPreElement>(null);
+  // a new src from outside swaps its PDF in, as Render does (set while rendering, React's pattern for props)
+  const [shownSrc, setShownSrc] = useState(src);
+  if (src !== shownSrc) {
+    setShownSrc(src);
+    if (src) setPdf(src);
+  }
 
   // free each rendered PDF once a newer one replaces it or the viewer closes
   useEffect(() => () => (pdf.startsWith("blob:") ? URL.revokeObjectURL(pdf) : undefined), [pdf]);
@@ -86,8 +112,9 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
     </button>
   );
 
+  // min-w-0: a page zoomed wider than the viewer scrolls inside it instead of pushing the side panel out
   return (
-    <div className="relative flex min-h-[75vh] flex-1 flex-col bg-mist lg:min-h-0">
+    <div className="relative flex min-h-[75vh] min-w-0 flex-1 flex-col bg-mist lg:min-h-0">
       {/* anchored right with the extras on the left, so PDF/Code never move out from under the cursor */}
       <div role="group" aria-label="View" className="glass absolute right-3 top-3 z-10 sm:right-4 sm:top-4 flex items-center rounded-full p-1">
         <ThemeMenu themes={themes} value={theme} onChange={setTheme} hidden={mode !== "code"} />
@@ -112,7 +139,7 @@ export function Viewer({ file, name, tex }: { file: string; name: string; tex: s
       </div>
 
       {mode === "pdf" ? (
-        <Pdf src={pdf} title={`${name} resume PDF`} />
+        <Pdf src={pdf} title={`${name} resume PDF`} overlay={overlay} />
       ) : (
         <>
           <label htmlFor="tpl-code" className="sr-only">

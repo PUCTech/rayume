@@ -7,14 +7,16 @@ import { templates } from "../../templates/data";
 
 const run = promisify(execFile);
 
-// Compiles an edited template with the local Tectonic and returns the PDF.
+// Compiles an edited template with the local Tectonic and returns the PDF. body, when sent, replaces the
+// shared content (resumes/body.tex) for this compile: the resume editor sends it with the bullets edited.
 // shortcut: dev only. Raw LaTeX can't be escaped and Tectonic still reads any file it can see,
 // so production waits for the sandboxed worker in docs/backend/endpoints/renders.md and docs/security.
 export async function POST(request: Request) {
   if (process.env.NODE_ENV !== "development") return new Response("Not found", { status: 404 });
 
-  const { file, tex } = await request.json().catch(() => ({}));
-  if (!templates.some((t) => t.file === file) || typeof tex !== "string" || tex.length > 100_000) {
+  const { file, tex, body } = await request.json().catch(() => ({}));
+  const badBody = body !== undefined && (typeof body !== "string" || body.length > 100_000);
+  if (!templates.some((t) => t.file === file) || typeof tex !== "string" || tex.length > 100_000 || badBody) {
     return new Response("Bad request", { status: 400 });
   }
 
@@ -23,6 +25,7 @@ export async function POST(request: Request) {
   try {
     await cp(path.join(process.cwd(), "resumes"), dir, { recursive: true });
     await writeFile(path.join(dir, `${file}.tex`), tex);
+    if (body !== undefined) await writeFile(path.join(dir, "body.tex"), body);
     await run("tectonic", ["-X", "compile", `${file}.tex`], { cwd: dir, timeout: 30_000 });
     return new Response(await readFile(path.join(dir, `${file}.pdf`)), { headers: { "content-type": "application/pdf" } });
   } catch (e) {
