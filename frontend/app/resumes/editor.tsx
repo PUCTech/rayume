@@ -122,6 +122,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   ]);
   const [mode, setMode] = useState<Mode>("refine");
   const [typing, setTyping] = useState(false);
+  // quotes on their way to the chat's composer, which takes them from here
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pick, setPick] = useState<{ text: string; x: number; y: number } | null>(null);
   // the entry focused on the PDF and its bullets picked for Rayume
@@ -404,16 +405,16 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   };
 
   // Refine answers each pasted line on its own; Add experience reads them all as one story
-  const send = (typed: string) => {
+  // sent: the quotes attached to the message in the composer
+  const send = (typed: string, sent: Quote[]) => {
     const text = typed.trim();
-    say({ from: "you", text, quotes: quotes.length ? quotes : undefined });
+    say({ from: "you", text, quotes: sent.length ? sent : undefined });
     const replies =
       mode === "refine"
-        ? quotes.length
-          ? quotes.map((q) => refine(q.text, q))
+        ? sent.length
+          ? sent.map((q) => refine(q.text, q))
           : [refine(text, null)]
-        : [answer(mode, text, quotes.length ? { text: quotes.map((q) => q.text).join(" ") } : null, entries)];
-    setQuotes([]);
+        : [answer(mode, text, sent.length ? { text: sent.map((q) => q.text).join(" ") } : null, entries)];
     setTyping(true);
     timers.current.push(
       window.setTimeout(() => {
@@ -631,7 +632,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                   mode={mode}
                   setMode={setMode}
                   quotes={quotes}
-                  removeQuote={(i) => setQuotes((qs) => qs.filter((_, j) => j !== i))}
+                  takeQuotes={() => setQuotes([])}
                   send={send}
                   apply={(m) => {
                     change(withBullet(doc, m.suggestion!.bulletId, m.suggestion!.text));
