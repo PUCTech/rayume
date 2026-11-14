@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
+import { share } from "../share";
 import Link from "next/link";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { legal } from "./info";
 
 const serif = GeistSerifRegular.className;
 
-export const metadata: Metadata = {
-  title: "Legal · Rayume",
-  description: "Rayume's privacy policy, terms of service and cookie policy.",
-};
+export const metadata: Metadata = share("Legal · Rayume", "Rayume's privacy policy, terms of service and cookie policy.");
 
 const docs = [
   {

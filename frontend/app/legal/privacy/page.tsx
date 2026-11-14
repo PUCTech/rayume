@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
+import { share } from "../../share";
 import Link from "next/link";
 import { LegalDoc, Table, type Section } from "../doc";
 import { legal } from "../info";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy · Rayume",
-  description: "What Rayume collects, why, who processes it, how long it is kept and your rights in Brazil and the United States.",
-};
+export const metadata: Metadata = share("Privacy Policy · Rayume", "What Rayume collects, why, who processes it, how long it is kept and your rights in Brazil and the United States.");
 
 const mail = <a href={`mailto:${legal.email}`}>{legal.email}</a>;
 

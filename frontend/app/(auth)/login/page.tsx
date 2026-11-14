@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
+import { share } from "../../share";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { LoginForm } from "../form";
 
 const serif = GeistSerifRegular.className;
 
-export const metadata: Metadata = {
-  title: "Sign in · Rayume",
-  description: "Sign in to Rayume to pick up your resumes where you left them.",
-};
+export const metadata: Metadata = share("Sign in · Rayume", "Sign in to Rayume to pick up your resumes where you left them.");
 
 export default function Login() {
   return (
