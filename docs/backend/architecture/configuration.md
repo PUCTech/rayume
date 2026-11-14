@@ -25,6 +25,8 @@ A required field with no value stops the app at startup with a validation error,
 |----------|----------|---------|---------|
 | `DATABASE_URL` | yes | - | SQLAlchemy URL, `postgresql+psycopg://user:password@host:port/db`. Locally it matches the `db` service in [`compose.yaml`](../../../compose.yaml) |
 | `CORS_ORIGINS` | no | `["http://localhost:3000"]` | JSON list of frontend origins allowed to call the API from a browser |
+| `GITHUB_CLIENT_ID` | no | `""` | GitHub OAuth app (`rayume-dev` locally, callback `http://localhost:8000/auth/github/callback`). Declared for [`auth.md`](../endpoints/auth.md); no route reads it yet |
+| `GITHUB_CLIENT_SECRET` | no | `""` | That app's secret. Real secret: only in `backend/.env`, never in `.env.example` |
 
 Never commit real secrets. The password in `compose.yaml` and `.env.example` is for the local database only.
 

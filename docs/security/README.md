@@ -5,7 +5,7 @@ Rayume has two attack surfaces that most web apps don't have:
 1. It **compiles text into LaTeX**, and LaTeX is a programming language that can read files and run shell commands.
 2. It **sends text from strangers to an LLM**. Job postings come from any web page, and the browser extension makes capturing them one click.
 
-This page covers both in depth, then lists the ordinary web threats in one table. Nothing here is built yet (the backend only has `/health`), so every mitigation is a requirement for the PR that adds that feature. The checklists at the end are what reviewers should look for.
+This page covers both in depth, then lists the ordinary web threats in one table. None of the backend parts here is built yet (it only serves `/health` and `/templates`), so every mitigation is a requirement for the PR that adds that feature. What the frontend already does with LaTeX is in [What exists today](#what-exists-today). The checklists at the end are what reviewers should look for.
 
 ## Where untrusted text goes
 
@@ -31,6 +31,14 @@ flowchart LR
 ```
 
 The rule: **everything in the top box is untrusted, including the model's output.** A job posting that injects the model can make the model write LaTeX, so prompt injection becomes LaTeX injection unless the escaper sits between them.
+
+## What exists today
+
+The resume editor and the template viewer already compile LaTeX, as a development stand-in for the worker:
+
+- **`POST /api/render`** ([`route.ts`](../../frontend/app/api/render/route.ts)) runs the local Tectonic on raw LaTeX from the browser (the template, plus an edited `body.tex`). It only answers under `next dev` and returns `404` otherwise, because raw LaTeX can't be escaped and Tectonic reads any file it can see. It checks the template name and caps each input at 100,000 characters and the compile at 30 s. **It must never be deployed as is.**
+- **The editor's escaper** ([`tex.ts`](../../frontend/app/resumes/tex.ts)): typed text goes through `esc` / `toTex`, which escape every LaTeX special character (the same set as `tex_escape` below). Bullets may carry `<b>`, `<i>`, `<u>` only, turned into `\textbf`, `\textit`, `\underline`; unpaired tags are dropped. Links go through `href`: web, `mailto:` and `tel:` only, percent-encoded for `\href`. The backend still needs its own `tex_escape`: the browser is not a trust boundary.
+- **One `dangerouslySetInnerHTML`** ([`inplace.tsx`](../../frontend/app/resumes/inplace.tsx)) shows a bullet's formatting while it is edited. Its text goes through `safe` (`tex.ts`), which escapes every `<` that doesn't open or close `b`, `i` or `u`. It is the user's own text in their own browser today; once text comes from the API or the model, keep `safe` in front of it or replace the field.
 
 ## 1. LaTeX injection
 
@@ -150,7 +158,7 @@ Most of these are already specified in [`database/README.md`](../database/README
 | Stolen refresh token | HttpOnly, Secure cookie sent only to `/auth`; rotation with reuse detection revokes the family | database, auth |
 | Credential stuffing, brute force | Rate limits on `/auth/login` and `/auth/register`; slow password hash | backend/endpoints/auth |
 | Forged OAuth callback | `oauth_state` cookie checked on return | backend/endpoints/auth |
-| XSS through resume text or AI output | React escapes by default; never `dangerouslySetInnerHTML` with user or model text | frontend |
+| XSS through resume text or AI output | React escapes by default; never `dangerouslySetInnerHTML` with user or model text, except the editor's field behind `safe` (see [What exists today](#what-exists-today)) | frontend |
 | Malicious upload | Type checked from bytes, 2 MB cap, stored outside the DB, served by signed URL | backend/endpoints/users |
 | SSRF (server-side request forgery) | The backend never fetches job `url`s or other user-supplied URLs; the worker only reads our own storage | this doc |
 | AI cost abuse | Rate limits on AI routes, input caps (5,000 and 20,000 characters), output token cap | backend/endpoints |
