@@ -9,9 +9,10 @@ const zooms = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
 
 // A drawn page as an overlay sees it: the sheet element, its size, and every run of text on it with its
 // box in CSS pixels from the sheet's top left, all in reading order. font is the PDF's own embedded font,
-// which pdf.js has loaded into the document under that family name, and size its size in CSS pixels.
+// which pdf.js has loaded into the document under that family name, and size its size in CSS pixels; bold and
+// italic say which face of the family it is.
 // el is the run's element in the text layer.
-export type Span = { text: string; x: number; y: number; w: number; h: number; font?: string; size?: number; el: HTMLElement };
+export type Span = { text: string; x: number; y: number; w: number; h: number; font?: string; size?: number; bold?: boolean; italic?: boolean; el: HTMLElement };
 export type Page = { n: number; of: number; el: HTMLElement; width: number; height: number; spans: Span[] };
 const zoomButton = "grid size-8 place-items-center rounded-full text-ink/70 transition hover:bg-ink/5 hover:text-ink disabled:opacity-30 pointer-coarse:size-10";
 
@@ -44,7 +45,8 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
     let cancelled = false;
     const task = import("pdfjs-dist").then((pdfjs) => {
       pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-      return pdfjs.getDocument({ url: src });
+      // fontExtraProperties keeps each font's PostScript name, the only thing that says which face a TeX font is
+      return pdfjs.getDocument({ url: src, fontExtraProperties: true });
     });
     task
       .then((t) => t.promise)
@@ -66,7 +68,7 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
       const fit = box.current?.clientWidth ?? 0;
       const pages: HTMLElement[] = [];
       const built: { cancel(): void }[] = [];
-      const runs: { font: string; size: number; base: number }[][] = [];
+      const runs: { font: string; size: number; base: number; bold: boolean; italic: boolean }[][] = [];
       const { Util } = await import("pdfjs-dist");
       for (let n = 1; n <= doc.numPages; n++) {
         const page = await doc.getPage(n);
@@ -97,11 +99,14 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
         // one per visible run, in the order the text layer makes its spans
         // base: where the run's baseline is on the page, in CSS pixels from the top
         runs.push(
-          content.items.flatMap((item) =>
-            "str" in item && item.str.trim()
-              ? [{ font: item.fontName, size: Math.hypot(item.transform[2], item.transform[3]) * scale, base: Util.transform(viewport.transform, item.transform)[5] }]
-              : [],
-          ),
+          content.items.flatMap((item) => {
+            if (!("str" in item) || !item.str.trim()) return [];
+            // the rendered page has every font it drew
+            const name: string = (page.commonObjs.has(item.fontName) && page.commonObjs.get(item.fontName).name) || "";
+            const bold = /bold|medi(?!um)|demi|cmbx/i.test(name);
+            const italic = /ital|obli|slant|cmti|cmsl/i.test(name);
+            return [{ font: item.fontName, size: Math.hypot(item.transform[2], item.transform[3]) * scale, base: Util.transform(viewport.transform, item.transform)[5], bold, italic }];
+          }),
         );
         if (cancelled) return built.forEach((l) => l.cancel());
         const loaded = new Set([...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family.replace(/"/g, "")));

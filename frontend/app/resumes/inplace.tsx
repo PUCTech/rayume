@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { safe } from "./tex";
+
+// where the caret leaves a field for the text next to it: a line up or down, or past its start or end
+export type Dir = "up" | "down" | "left" | "right";
 
 // Where a bullet's text sits on the page: its lines run from left to right, the first starting at firstX
 // (past a bold label, when there is one); top is where the first line box starts, lh the line spacing,
@@ -20,12 +24,55 @@ const offsetIn = (el: HTMLElement) => {
   return r.toString().length;
 };
 
+// what a field holds as the document keeps it (tex.ts): text with <b> and <i>, "&" and "<" spelled out
+export const marked = (n: Node): string => {
+  if (n.nodeType === Node.TEXT_NODE) return n.textContent!.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const inner = [...n.childNodes].map(marked).join("");
+  const tag = { B: "b", STRONG: "b", I: "i", EM: "i" }[n.nodeName];
+  return tag && inner ? `<${tag}>${inner}</${tag}>` : inner;
+};
+
+// the text node and place in it that's offset characters into el, through its bold and italic
+const spot = (el: HTMLElement, offset: number): [Node, number] => {
+  const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let last: Text | null = null;
+  for (let n = walk.nextNode() as Text | null; n; n = walk.nextNode() as Text | null) {
+    if (offset <= n.length) return [n, offset];
+    offset -= n.length;
+    last = n;
+  }
+  return last ? [last, last.length] : [el, 0];
+};
+
+// the caret leaves the field on ← at its start, → at its end, and ↑ or ↓ from its first or last line
+const leaving = (e: KeyboardEvent<HTMLDivElement>, lh: number): { dir: Dir; x: number } | null => {
+  const sel = document.getSelection();
+  if (e.shiftKey || e.metaKey || e.altKey || e.ctrlKey || !sel?.rangeCount || !sel.isCollapsed) return null;
+  const el = e.currentTarget;
+  const at = offsetIn(el) ?? 0;
+  const r = sel.getRangeAt(0).getBoundingClientRect();
+  const box = el.getBoundingClientRect();
+  // an empty field's caret has no rectangle
+  const [x, top, bottom] = r.height ? [r.left, r.top, r.bottom] : [box.left, box.top, box.top];
+  if (e.key === "ArrowLeft" && at === 0) return { dir: "left", x };
+  if (e.key === "ArrowRight" && at === el.textContent!.length) return { dir: "right", x };
+  if (e.key === "ArrowUp" && top < box.top + lh / 2) return { dir: "up", x };
+  if (e.key === "ArrowDown" && bottom > box.bottom - lh / 2) return { dir: "down", x };
+  return null;
+};
+
+// what's pasted or dropped goes in as plain text on one line; its formatting isn't the resume's
+const pastePlain = (e: { preventDefault(): void; clipboardData: DataTransfer }) => {
+  e.preventDefault();
+  document.execCommand("insertText", false, e.clipboardData.getData("text/plain").replace(/\s+/g, " "));
+};
+
 const caret = (el: HTMLElement, at?: { x: number; y: number }, offset?: number) => {
   el.focus({ preventScroll: true });
   const range = document.createRange();
   const pos = at && document.caretPositionFromPoint?.(at.x, at.y);
   if (pos && el.contains(pos.offsetNode)) range.setStart(pos.offsetNode, pos.offset);
-  else if (offset !== undefined && el.firstChild) range.setStart(el.firstChild, Math.min(offset, el.textContent!.length));
+  else if (offset !== undefined) range.setStart(...spot(el, offset));
   else {
     range.selectNodeContents(el);
     range.collapse(false);
@@ -39,7 +86,7 @@ const caret = (el: HTMLElement, at?: { x: number; y: number }, offset?: number) 
 // change landing mid-sentence): that blur comes while the field is still attached, so this waits a tick and
 // commits only if it's still on the page. Its replacement on the new page takes over, text and caret intact.
 const commitLater = (el: HTMLElement, commit: (text: string) => void) => {
-  const text = el.textContent ?? "";
+  const text = marked(el);
   setTimeout(() => el.isConnected && commit(text));
 };
 
@@ -48,7 +95,9 @@ const commitLater = (el: HTMLElement, commit: (text: string) => void) => {
 // editing looks like the page itself changing. It reports how many lines it gained or lost (onDelta) so
 // the overlay can slide the rest of the page; offset is how far the bullets above have moved it.
 // Enter splits it at the caret into a new bullet (onSplit), Backspace in an empty one removes it, Esc
-// drops the edit. It stays, no longer editable, until the re-typeset PDF arrives and replaces it.
+// drops the edit. ⌘B and ⌘I set bold and italic (the browser's own, on a contenteditable), shown in the
+// PDF's bold and italic faces when it has them (faces). The arrow keys walk out of it into the text next
+// to it (onNav). It stays, no longer editable, until the re-typeset PDF arrives and replaces it.
 // What's typed and where the caret is go up as you type (onLive), so a field swapped out with the page
 // comes back with both (see commitLater).
 // shortcut: glyphs the PDF's font subset lacks show in Times.
@@ -67,6 +116,7 @@ export function Written({
   onDelta,
   onLive,
   onNav,
+  faces,
 }: {
   g: Geometry;
   offset: number;
@@ -81,7 +131,8 @@ export function Written({
   onRemove: () => void;
   onDelta: (delta: number) => void;
   onLive: (text: string, at: number) => void;
-  onNav: (dir: 1 | -1, x: number) => void;
+  onNav: (dir: Dir, x: number) => void;
+  faces: { bold?: string; italic?: string };
 }) {
   const box = useRef<HTMLDivElement>(null);
   // while editing, the browser owns the text: React re-setting it under the caret would move the caret
@@ -117,9 +168,16 @@ export function Written({
     const value = el.textContent ?? "";
     if (e.key === "Enter") {
       e.preventDefault();
-      const at = offsetIn(el) ?? value.length;
+      // either side of the caret, each keeping its bold and italic
+      const sel = document.getSelection()!.getRangeAt(0);
+      const half = document.createRange();
+      half.selectNodeContents(el);
+      half.setEnd(sel.startContainer, sel.startOffset);
+      const before = marked(half.cloneContents());
+      half.selectNodeContents(el);
+      half.setStart(sel.endContainer, sel.endOffset);
       handled.current = true;
-      onSplit(value.slice(0, at), value.slice(at));
+      onSplit(before, marked(half.cloneContents()));
     } else if (e.key === "Backspace" && !value) {
       e.preventDefault();
       handled.current = true;
@@ -129,20 +187,14 @@ export function Written({
       e.stopPropagation();
       handled.current = true;
       onCancel();
-    } else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !e.shiftKey) {
-      // past the last line (or above the first) the caret goes on to the next bullet (or the one before),
-      // at the same place across, as in a document
-      const caretAt = document.getSelection()?.getRangeAt(0).getBoundingClientRect();
-      const box = el.getBoundingClientRect();
-      if (!caretAt) return;
-      const down = e.key === "ArrowDown";
-      if (down ? caretAt.bottom > box.bottom - g.lh / 2 : caretAt.top < box.top + g.lh / 2) {
-        // saved here, not by the blur: the field goes away before a blur's late save would run
-        e.preventDefault();
-        handled.current = true;
-        onCommit(value);
-        onNav(down ? 1 : -1, caretAt.left);
-      }
+    } else {
+      const to = leaving(e, g.lh);
+      if (!to) return;
+      // saved here, not by the blur: the field goes away before a blur's late save would run
+      e.preventDefault();
+      handled.current = true;
+      onCommit(marked(el));
+      onNav(to.dir, to.x);
     }
   };
 
@@ -161,19 +213,28 @@ export function Written({
         aria-label="Bullet text"
         aria-multiline
         lang="en"
-        contentEditable={editing ? "plaintext-only" : false}
+        contentEditable={editing}
         suppressContentEditableWarning
         onBlur={(e) => editing && !handled.current && commitLater(e.currentTarget, onCommit)}
-        onInput={(e) => onLive(e.currentTarget.textContent ?? "", offsetIn(e.currentTarget) ?? 0)}
-        onKeyUp={(e) => editing && onLive(e.currentTarget.textContent ?? "", offsetIn(e.currentTarget) ?? 0)}
+        onInput={(e) => onLive(marked(e.currentTarget), offsetIn(e.currentTarget) ?? 0)}
+        onKeyUp={(e) => editing && onLive(marked(e.currentTarget), offsetIn(e.currentTarget) ?? 0)}
         onKeyDown={onKey}
-        style={{ ...type, left: g.left, top, width: g.right - g.left, textIndent: g.firstX - g.left, minHeight: editing ? g.lh : undefined }}
-        className={`absolute text-justify hyphens-auto text-black caret-black [overflow-wrap:anywhere] ${
+        onPaste={pastePlain}
+        onDrop={(e) => e.preventDefault()}
+        style={{
+          ...type,
+          left: g.left,
+          top,
+          width: g.right - g.left,
+          textIndent: g.firstX - g.left,
+          minHeight: editing ? g.lh : undefined,
+          ...({ "--bold": faces.bold && `"${faces.bold}"`, "--italic": faces.italic && `"${faces.italic}"` } as object),
+        }}
+        dangerouslySetInnerHTML={{ __html: safe(editing ? frozen : text) }}
+        className={`written absolute text-justify hyphens-auto text-black caret-black [overflow-wrap:anywhere] ${
           editing ? `pointer-events-auto ${halo}` : "pointer-events-none"
         }`}
-      >
-        {editing ? frozen : text}
-      </div>
+      />
       {busy && !editing && (
         <span aria-label="Typesetting" style={{ left: g.left - 28, top: top + g.lh / 2 - 3 }} className="absolute size-1.5 animate-pulse rounded-full bg-accent" />
       )}
@@ -184,7 +245,7 @@ export function Written({
 // Any other run of text written on the page (a title, a date, a skill line): one line in the run's font and
 // place, growing the way the PDF sets it: from its left, from its right for text set flush right (dates),
 // from its middle for centered text (the name). A run set in capitals (the name, uppercased by the template)
-// shows capitals as you type. Enter or a click away saves, Esc drops it.
+// shows capitals as you type. Enter or a click away saves, Esc drops it, the arrow keys walk out of it.
 export function Run({
   x,
   y,
@@ -204,6 +265,7 @@ export function Run({
   onCommit,
   onCancel,
   onLive,
+  onNav,
 }: {
   x: number;
   y: number;
@@ -223,6 +285,7 @@ export function Run({
   onCommit: (text: string) => void;
   onCancel: () => void;
   onLive: (text: string, at: number) => void;
+  onNav: (dir: Dir, x: number) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const handled = useRef(false);
@@ -253,6 +316,13 @@ export function Run({
           e.stopPropagation();
           handled.current = true;
           onCancel();
+        } else {
+          const to = leaving(e, h);
+          if (!to) return;
+          e.preventDefault();
+          handled.current = true;
+          onCommit(e.currentTarget.textContent ?? "");
+          onNav(to.dir, to.x);
         }
       }}
       style={{

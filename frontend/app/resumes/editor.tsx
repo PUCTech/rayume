@@ -16,7 +16,7 @@ import { editsOf, touch } from "./store";
 import { master as masterSeed } from "./data";
 import { Overlay, label, type Target } from "./overlay";
 import { plain } from "./regions";
-import { blank, inline, projectBullets, withDoc, type Doc } from "./tex";
+import { blank, inline, projectBullets, strip, withDoc, type Doc } from "./tex";
 
 const serif = GeistSerifRegular.className;
 const only: Mode[] = ["refine", "add"];
@@ -41,7 +41,10 @@ const kept = (key: string): Doc => {
   } catch {}
   return blank;
 };
-const tidy = (t: string) => t.replace(/\s+/g, " ").trim();
+// toolbar buttons take the press without taking the caret out of the text
+const tool = "grid size-8 place-items-center rounded-md text-ink/70 transition hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30 aria-pressed:bg-accent/15 aria-pressed:text-accent-text pointer-coarse:size-10";
+// single spaces, none at either end, not even inside the bold or italic a bullet opens or closes with
+const tidy = (t: string) => t.replace(/\s+/g, " ").trim().replace(/^((?:<[bi]>)*) /, "$1").replace(/ ((?:<\/[bi]>)*)$/, "$1");
 const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` : `${t.kind}:${t.id}`);
 
 // A resume's own page (/resumes/[id]): the templates' PDF/Code viewer across the width, with Rayume's chat in a
@@ -49,6 +52,7 @@ const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` :
 // You write on the PDF itself (overlay.tsx): any text, bullets included; Enter splits a bullet into a new one,
 // Backspace in an empty bullet removes it. Each change goes into the document (tex.ts), and the PDF is typeset
 // again from the pristine LaTeX with every change (dev only, through /api/render), in well under a second.
+// A toolbar under the bar has undo, redo, bold and italic (bullets only) and says when changes are saved.
 // ⌘Z and ⇧⌘Z step through the changes, they're kept in this browser across reloads, Code shows the whole
 // LaTeX with them written in, and the bar says when the resume no longer fits on one page.
 // Text selected in the PDF or the code gets a "Paste into chat" button; an entry can be focused to send its
@@ -95,8 +99,12 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const [inPdf, setInPdf] = useState<Doc>(blank);
   const past = useRef<Doc[]>([]);
   const future = useRef<Doc[]>([]);
+  // how many steps there are to undo and redo, for the toolbar
+  const [steps, setSteps] = useState([0, 0]);
   const [src, setSrc] = useState<string>();
   const [busy, setBusy] = useState(false);
+  // whether the caret is in bold or italic text, for the toolbar
+  const [fmt, setFmt] = useState({ bold: false, italic: false });
   const [pages, setPages] = useState(1);
   // what a render that just landed contains, until its pages are drawn; and which render is the latest
   const landing = useRef<Doc | null>(null);
@@ -111,6 +119,11 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const timers = useRef<number[]>([]);
   const store = editsOf(r.id);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  // the live text, while it's for the field being edited
+  const mine = live && live.key === key(editing) ? live : null;
+  // typing the document doesn't have yet
+  const dirty = !!editing && !!mine && tidy(mine.text) !== tidy(textIn(doc, editing, fresh));
 
   const say = (m: Omit<Message, "id">) => setMessages((ms) => [...ms, { ...m, id: nextId.current++ }]);
   const update = (id: number, patch: Partial<Message>) => setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
@@ -145,6 +158,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const change = (next: Doc) => {
     past.current.push(doc);
     future.current = [];
+    setSteps([past.current.length, 0]);
     setDoc(next);
     keep(next);
     render(next);
@@ -154,11 +168,14 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     const to = (back ? past : future).current.pop();
     if (!to) return;
     (back ? future : past).current.push(doc);
+    setSteps([past.current.length, future.current.length]);
     setEditing(null);
     setDoc(to);
     keep(to);
     render(to);
   };
+  // only bullets take bold and italic: any other run is matched back to the LaTeX by its whole text
+  const rich = !!editing && editing.kind !== "run";
   // the new pages are on screen: what the render held is now in the PDF
   const drawn = (page: Page) => {
     setPages(page.of);
@@ -176,6 +193,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
 
   useEffect(() => {
     const onChange = () => {
+      const [bold, italic] = [document.queryCommandState("bold"), document.queryCommandState("italic")];
+      setFmt((f) => (f.bold === bold && f.italic === italic ? f : { bold, italic }));
       if (dragging.current) return setPick(null);
       const el = document.activeElement;
       let text = "";
@@ -214,7 +233,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const field = (e.target as Element).closest("input, textarea, [contenteditable]:not([contenteditable=false])");
-      if (field || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      // a field on the page keeps the keys only while it holds typing that isn't saved yet
+      if ((field && (!editing || dirty)) || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
       e.preventDefault();
       step(!e.shiftKey);
     };
@@ -251,8 +271,9 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const shown = [...added, ...entries].map((e) => ({
     ...e,
     bullets: e.bullets.flatMap((b) => {
-      const text = inPdf.bullets[b.id] ?? b.text;
-      return [...(text ? [{ ...b, text }] : []), ...after(b.id).map((a) => ({ ...b, ...a }))];
+      // bare text: the page is matched on what it says, not on what's bold
+      const text = strip(inPdf.bullets[b.id] ?? b.text);
+      return [...(text ? [{ ...b, text }] : []), ...after(b.id).map((a) => ({ ...b, ...a, text: strip(a.text) }))];
     }),
   }));
   const pending = {
@@ -261,33 +282,45 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     added: doc.added.filter((a) => a.text && !inPdf.added.some((b) => b.id === a.id)),
   };
   const entry = shown.find((e) => e.id === selected);
-  // the live text, while it's for the field being edited
-  const mine = live && live.key === key(editing) ? live : null;
-
   // writing on the page leaves the Rayume focus mode, so the page isn't dimmed while you type
-  const edit = (t: Target, at?: { x: number; y: number }) => {
+  const edit = (t: Target, at?: { x: number; y: number }, start?: number) => {
     select(null);
     setLive(null);
     setEditAt(at);
-    setEditStart(undefined);
+    setEditStart(start);
     setEditing(t);
   };
   // a blur commits a tick late (inplace.tsx), when another edit may have started: it ends only its own
-  const commit = (t: Target, raw: string) => {
-    setEditing((cur) => (key(cur) === key(t) ? null : cur));
+  // a new bullet the document doesn't have yet
+  const unsaved = (t: Target): t is Target & { kind: "new" } => t.kind === "new" && !doc.added.some((a) => a.id === t.id);
+  const save = (t: Target, raw: string) => {
     const text = tidy(raw);
-    if (t.kind === "new") return text && change({ ...doc, added: [...doc.added, { id: t.id, after: t.after, text }] });
+    if (unsaved(t)) return text && change({ ...doc, added: [...doc.added, { id: t.id, after: t.after, text }] });
     if (text === textIn(doc, t)) return;
     if (t.kind === "run") return text && change({ ...doc, runs: { ...doc.runs, [t.key]: text } });
     change(withBullet(doc, t.id, text));
   };
+  const commit = (t: Target, raw: string) => {
+    setEditing((cur) => (key(cur) === key(t) ? null : cur));
+    save(t, raw);
+  };
+  // Writing saves itself, as in a document: a pause in the typing saves what's there and typesets it, the
+  // field and its caret staying where they are over the new page. Never an empty bullet, which would delete it.
+  useEffect(() => {
+    if (!editing || !dirty || !tidy(mine!.text)) return;
+    const id = window.setTimeout(() => save(editing, mine!.text), 700);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
+  }, [mine?.text]);
+  // one history, as a document has: the field's own for typing not saved yet, the document's otherwise
+  const history = (back: boolean) => (dirty ? document.execCommand(back ? "undo" : "redo") : step(back));
   // Enter: the text before the caret stays, the rest starts a new bullet under it, the caret at its start
   const split = (before: string, rest: string) => {
     const t = editing;
     if (!t || t.kind === "run") return;
     const id = `new-${Date.now()}`;
     const kept = tidy(before);
-    const next = t.kind === "new" ? (kept ? { ...doc, added: [...doc.added, { id: t.id, after: t.after, text: kept }] } : doc) : withBullet(doc, t.id, kept);
+    const next = unsaved(t) ? (kept ? { ...doc, added: [...doc.added, { id: t.id, after: t.after, text: kept }] } : doc) : withBullet(doc, t.id, kept);
     if (next !== doc && kept !== textIn(doc, t)) change(next);
     setFresh(tidy(rest));
     setLive(null);
@@ -313,7 +346,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const ask = () => {
     if (!entry) return;
     const add = entry.bullets.length
-      ? entry.bullets.flatMap((b) => (!picked.length || picked.includes(b.id) ? [{ text: textIn(doc, { kind: "bullet", id: b.id }), bulletId: b.id }] : []))
+      ? entry.bullets.flatMap((b) => (!picked.length || picked.includes(b.id) ? [{ text: strip(textIn(doc, { kind: "bullet", id: b.id })), bulletId: b.id }] : []))
       : [{ text: label(entry) }];
     setQuotes((qs) => [...qs, ...add.filter((a) => !qs.some((q) => q.text === a.text))]);
     setMode("refine");
@@ -369,7 +402,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         <div className="min-w-0 flex-1">
           <h1 className={`${serif} truncate text-xl leading-tight tracking-[-0.01em]`}>{r.title}</h1>
           <p className="hidden truncate text-xs text-ink/50 md:block">
-            {isMaster ? "Everything you've done · new resumes start from here" : "Click any text to change it · Enter adds a bullet · ⌘Z undoes"}
+            {isMaster ? "Everything you've done · new resumes start from here" : "Click any text to change it · it saves as you write · Enter adds a bullet · ⌘B bold"}
           </p>
         </div>
         {job && (
@@ -430,6 +463,28 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           Rayume
         </button>
       </header>
+      <div role="toolbar" aria-label="Editing" onMouseDown={(e) => e.preventDefault()} className="flex h-10 shrink-0 items-center gap-0.5 border-b border-ink/10 bg-paper px-3 sm:px-4">
+        <button type="button" aria-label="Undo" title="Undo (⌘Z)" disabled={!dirty && !steps[0]} onClick={() => history(true)} className={tool}>
+          <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 4 3.5 7.5 7 11M4 7.5h7.5a4.5 4.5 0 0 1 0 9H8" />
+          </svg>
+        </button>
+        <button type="button" aria-label="Redo" title="Redo (⇧⌘Z)" disabled={!dirty && !steps[1]} onClick={() => history(false)} className={tool}>
+          <svg aria-hidden viewBox="0 0 20 20" className="size-4 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 4 3.5 7.5 7 11M4 7.5h7.5a4.5 4.5 0 0 1 0 9H8" />
+          </svg>
+        </button>
+        <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
+        <button type="button" aria-label="Bold" title={rich ? "Bold (⌘B)" : "Bold: click into a bullet first"} aria-pressed={rich && fmt.bold} disabled={!rich} onClick={() => document.execCommand("bold")} className={`${tool} ${serif} text-[17px] font-bold`}>
+          B
+        </button>
+        <button type="button" aria-label="Italic" title={rich ? "Italic (⌘I)" : "Italic: click into a bullet first"} aria-pressed={rich && fmt.italic} disabled={!rich} onClick={() => document.execCommand("italic")} className={`${tool} ${serif} text-[17px] italic`}>
+          I
+        </button>
+        <span role="status" className="ml-auto text-xs text-ink/50">
+          {busy ? "Saving…" : doc === blank ? "" : "Saved in this browser"}
+        </span>
+      </div>
       {!wired && (
         <div role="status" className="shrink-0 border-b border-ink/10 bg-error/15 px-4 py-2 text-sm text-ink/75">
           This template keeps its own copy of the text, so changes made here don&apos;t reach its PDF yet. Classic and Modern are wired up.

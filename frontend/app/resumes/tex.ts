@@ -34,7 +34,23 @@ const escapes: Record<string, string> = {
   "”": "''",
   "…": "\\ldots{}",
 };
-export const toTex = (s: string) => s.replace(/[\\{}$&#_%~^–—‘’“”…]/g, (c) => escapes[c] ?? `\\${c}`).replace(/\s+/g, " ").trim();
+const escaped = (s: string) => s.replace(/[\\{}$&#_%~^–—‘’“”…]/g, (c) => escapes[c] ?? `\\${c}`);
+const spaced = (s: string) => s.replace(/\s+/g, " ").trim();
+export const esc = (s: string) => spaced(escaped(s));
+
+// A bullet's text carries bold and italic as <b> and <i>, its own "&" and "<" spelled &amp; and &lt;
+// (inplace.tsx's marked writes it from the page). strip is the bare text, safe the HTML to show it with:
+// nothing but those two tags gets through.
+export const strip = (s: string) => s.replace(/<\/?[bi]>/g, "").replace(/&(amp|lt);/g, (_, e) => (e === "amp" ? "&" : "<"));
+export const safe = (s: string) => s.replace(/<(?!\/?[bi]>)/g, "&lt;");
+const marks: Record<string, string> = { "<b>": "\\textbf{", "<i>": "\\textit{", "</b>": "}", "</i>": "}" };
+// tags that don't pair up (a document tampered with in storage) would unbalance the braces: they're dropped
+export const toTex = (s: string) => {
+  const parts = s.split(/(<\/?[bi]>)/);
+  const tags = parts.filter((_, i) => i % 2);
+  const paired = tags.filter((t) => t[1] !== "/").length * 2 === tags.length;
+  return spaced(parts.map((p, i) => (i % 2 ? (paired ? marks[p] : "") : escaped(strip(p)))).join(""));
+};
 
 // A run's text as it can be written in LaTeX: dashes as -- or ---, spaces as thin spaces or ties, symbols
 // escaped. It must fill a whole argument or phrase, so "São Paulo, Brazil" doesn't match inside
@@ -53,9 +69,9 @@ const pattern = (t: string) =>
 export function withDoc(body: string, doc: Doc, bullets: { id: string; text: string }[]) {
   const counts = new Map<string, number>();
   const projects = (doc.projects ?? []).flatMap((p) => [
-    `\\textbf{${toTex(p.title)}}`,
+    `\\textbf{${esc(p.title)}}`,
     "\\begin{itemize}",
-    ...p.bullets.map((b) => `\\item ${toTex(b)}`),
+    ...p.bullets.map((b) => `\\item ${esc(b)}`),
     "\\end{itemize}",
     "\\vspace{3pt}",
   ]);
@@ -76,7 +92,7 @@ export function withDoc(body: string, doc: Doc, bullets: { id: string; text: str
       out = out.replace(pattern(text), (m) => {
         const seen = counts.get(key) ?? 0;
         counts.set(key, seen + 1);
-        return seen === Number(n) ? toTex(to) : m;
+        return seen === Number(n) ? esc(to) : m;
       });
     }
     return { id: undefined as string | undefined, line: out as string | null };

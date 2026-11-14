@@ -43,9 +43,11 @@ export function regions(spans: Span[], entries: Entry[]): Region[] {
     );
     const bullets = marks.flatMap((j, m) => {
       const lines = own.slice(j, marks[m + 1] ?? own.length);
-      const said = plain(lines.map((l) => l.text).join(" ").replace(/^•\s*/, ""));
+      // without spaces: a bullet with bold or italic in it comes as several runs, split where no space was
+      const tight = (t: string) => plain(t).replace(/ /g, "");
+      const said = tight(lines.map((l) => l.text).join(" ").replace(/^•\s*/, ""));
       // either side can carry extra words: the PDF a label like "Relevant Activities:", the data a longer ending
-      const bullet = e.bullets.find((b) => plain(b.text).includes(said.slice(0, 30)) || said.includes(plain(b.text).slice(0, 30)));
+      const bullet = e.bullets.find((b) => tight(b.text).includes(said.slice(0, 30)) || said.includes(tight(b.text).slice(0, 30)));
       return bullet ? [{ id: bullet.id, ...union(lines), lines }] : [];
     });
     return { id: e.id, ...union(own), bullets };

@@ -4,8 +4,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Page, Span } from "../templates/pdf";
 import type { Entry } from "../app/data";
 import { plain, regions, type Box, type Bullet } from "./regions";
-import { Run, Written, type Geometry } from "./inplace";
-import type { Added } from "./tex";
+import { Run, Written, type Dir, type Geometry } from "./inplace";
+import { strip, type Added } from "./tex";
 
 // entries get more room than their bullets, so a bullet's box sits inside its entry's
 const grow = (b: Box, pad: number): Box => ({ x: b.x - pad, y: b.y - pad / 2, w: b.w + pad * 2, h: b.h + pad });
@@ -103,7 +103,7 @@ export function Overlay({
   onToggle: (bulletId: string) => void;
   onAll: () => void;
   onAsk: () => void;
-  onEdit: (t: Target, at?: { x: number; y: number }) => void;
+  onEdit: (t: Target, at?: { x: number; y: number }, start?: number) => void;
   onCommit: (t: Target, text: string) => void;
   onCancel: () => void;
   onSplit: (before: string, after: string) => void;
@@ -126,8 +126,14 @@ export function Overlay({
       const ys = rowsOf(b.lines);
       return ys.length > 1 ? [ys[1] - ys[0]] : [];
     });
-    return { indent: conts.length ? Math.min(...conts.map((l) => l.x)) : undefined, lh: steps.length ? Math.min(...steps) : undefined };
+    // the bullets' own font is the one most of their text is set in: a bullet may open in bold
+    const set = new Map<string, number>();
+    for (const l of bullets.flatMap((b) => b.lines)) if (l.font) set.set(l.font, (set.get(l.font) ?? 0) + l.text.length);
+    const font = [...set].sort((a, b) => b[1] - a[1])[0]?.[0];
+    return { indent: conts.length ? Math.min(...conts.map((l) => l.x)) : undefined, lh: steps.length ? Math.min(...steps) : undefined, font };
   }, [bullets]);
+  // the PDF's bold and italic faces, if anything on the page is set in them
+  const faces = useMemo(() => ({ bold: page.spans.find((s) => s.bold && !s.italic)?.font, italic: page.spans.find((s) => s.italic && !s.bold)?.font }), [page]);
 
   // the runs that aren't bullets, each with its key: "n:text" for the nth run with that text as the PDF first
   // had it, skipping the ones already rewritten (they show their new text, matched back through runKeys)
@@ -164,7 +170,7 @@ export function Overlay({
   const geometry = (b: (typeof bullets)[number]): { g: Geometry; hide: HTMLElement[] } => {
     const first = b.lines[0];
     // the text as the PDF shows it, to find where it starts after a label
-    const words = plain(entries.flatMap((e) => e.bullets).find((x) => x.id === b.id)?.text ?? "");
+    const words = plain(strip(entries.flatMap((e) => e.bullets).find((x) => x.id === b.id)?.text ?? ""));
     // "• Text" runs bullet and text together; a lone "•" may be followed by a bold label, then the text
     const lead = /^•\s*\S/.test(first.text) ? 0 : Math.max(0, b.lines.findIndex((l, i) => i > 0 && words.startsWith(plain(l.text).slice(0, 8))));
     const run = b.lines[lead];
@@ -172,7 +178,7 @@ export function Overlay({
     const left = measure.indent ?? first.x + size;
     const lh = measure.lh ?? size * 1.2;
     return {
-      g: { left, firstX: lead === 0 ? (wordsAt(first.el) ?? left) : run.x, right: b.right, top: first.y - (lh - first.h) / 2, lh, rows: rowsOf(b.lines).length, font: run.font ?? "", size, glyph: lead === 0 ? first.x : undefined },
+      g: { left, firstX: lead === 0 ? (wordsAt(first.el) ?? left) : run.x, right: b.right, top: first.y - (lh - first.h) / 2, lh, rows: rowsOf(b.lines).length, font: measure.font ?? run.font ?? "", size, glyph: lead === 0 ? first.x : undefined },
       hide: b.lines.slice(lead).map((l) => l.el),
     };
   };
@@ -209,16 +215,39 @@ export function Overlay({
   useLayoutEffect(() => paint(page.spans, new Set([...written.flatMap((w) => w.hide), ...writtenRuns.map((r) => r.s.el)]), movedAt));
   useEffect(() => () => paint(page.spans, new Set(), () => 0), [page]);
 
-  // ↑ and ↓ past a bullet's edge: the caret goes to the bullet above or below, on its nearest line, at x
-  const nav = (from: Target, dir: 1 | -1, x: number) => {
-    if (from.kind !== "bullet") return;
-    const order = [...bullets].sort((a, b) => a.y - b.y);
-    const to = order[order.findIndex((b) => b.id === from.id) + dir];
-    if (!to) return;
-    const ys = rowsOf(to.lines);
-    const y = dir > 0 ? ys[0] : ys[ys.length - 1];
-    const line = to.lines.find((l) => l.y === y)!;
-    onEdit({ kind: "bullet", id: to.id }, { x, y: page.el.getBoundingClientRect().top + y + movedAt(y) + line.h / 2 });
+  // An arrow key past a field's edge: the caret goes on into the text next to it, as in a document. ↑ and ↓
+  // take the nearest line above or below, at the same place across; ← and → the text before or after in
+  // reading order, at its end or start.
+  const nav = (from: Target, dir: Dir, x: number) => {
+    const stops = [
+      ...bullets.flatMap((b) => b.lines.map((l) => ({ t: { kind: "bullet", id: b.id } as Target, x: l.x, y: l.y, w: l.w, h: l.h }))),
+      ...runs.map((r) => ({ t: { kind: "run", key: r.key } as Target, x: r.s.x, y: r.s.y, w: r.s.w, h: r.s.h })),
+    ];
+    // a bullet the PDF doesn't have yet stands where it's written
+    const own = stops.some((s) => same(from, s.t))
+      ? stops.filter((s) => same(from, s.t))
+      : written.flatMap((w) => (same(from, w.t) ? [{ t: w.t, x: w.g.left, y: w.g.top, w: 0, h: w.g.lh }] : []));
+    if (!own.length) return;
+    const others = stops.filter((s) => !same(from, s.t));
+    if (dir === "left" || dir === "right") {
+      // reading order: by line, runs of different fonts on one line sitting a little apart in height
+      type Stop = (typeof stops)[number];
+      const reading = (a: Stop, b: Stop) => (Math.abs(a.y + a.h / 2 - b.y - b.h / 2) < Math.min(a.h, b.h) / 2 ? a.x - b.x : a.y - b.y);
+      const side = others.filter((s) => reading(s, own[0]) < 0 === (dir === "left")).sort(reading);
+      const to = dir === "left" ? side.at(-1) : side[0];
+      return to && onEdit(to.t, undefined, dir === "left" ? Infinity : 0);
+    }
+    const up = dir === "up";
+    const edge = up ? Math.min(...own.map((s) => s.y)) : Math.max(...own.map((s) => s.y + s.h));
+    const beyond = others.filter((s) => (up ? s.y + s.h / 2 < edge : s.y + s.h / 2 > edge));
+    if (!beyond.length) return;
+    const y = up ? Math.max(...beyond.map((s) => s.y)) : Math.min(...beyond.map((s) => s.y));
+    const at = page.el.getBoundingClientRect();
+    const px = x - at.left;
+    const away = (s: (typeof stops)[number]) => Math.max(s.x - px, px - (s.x + s.w), 0);
+    const to = beyond.filter((s) => Math.abs(s.y - y) < s.h / 2).sort((a, b) => away(a) - away(b))[0];
+    // a point inside the line, so the caret lands in it even from further right than it runs
+    onEdit(to.t, { x: at.left + Math.min(Math.max(px, to.x + 1), to.x + to.w - 1), y: at.top + to.y + movedAt(to.y) + to.h / 2 }, up ? Infinity : 0);
   };
 
   // a point as it would be on the PDF before anything slid, or the written bullet it falls on
@@ -314,6 +343,7 @@ export function Overlay({
             onRemove={onRemove}
             onLive={onLive}
             onNav={(dir, x) => nav(w.t, dir, x)}
+            faces={faces}
             onDelta={(d) => setDeltas((ds) => (ds[w.key] === d ? ds : { ...ds, [w.key]: d }))}
           />
         ))}
@@ -333,6 +363,7 @@ export function Overlay({
             onCommit={(t) => onCommit({ kind: "run", key: r.key }, t)}
             onCancel={onCancel}
             onLive={onLive}
+            onNav={(dir, x) => nav({ kind: "run", key: r.key }, dir, x)}
           />
         ))}
 

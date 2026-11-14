@@ -66,3 +66,18 @@
     top: 0;
   }
 }
+
+/* A bullet being written on the page (resumes/inplace.tsx): bold and italic in the PDF's own faces, when it
+   has them (--bold, --italic), or Times'. No synthesis: the PDF's bold face is already bold. */
+.written :is(b, i) {
+  font-synthesis: none;
+}
+.written b {
+  font-family: var(--bold, "Times New Roman"), "Times New Roman", Times, serif;
+}
+.written i {
+  font-family: var(--italic, "Times New Roman"), "Times New Roman", Times, serif;
+}
+.written :is(b i, i b) {
+  font-family: "Times New Roman", Times, serif;
+}
