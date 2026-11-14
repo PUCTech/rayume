@@ -1,4 +1,6 @@
 import { Fragment } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { BrandMark, type Brand } from "./brands";
 import { Mark } from "./logo";
@@ -7,7 +9,6 @@ import { Nav } from "./nav";
 import { Footer } from "./footer";
 import { OceanScene } from "./ocean";
 import { Steps } from "./steps";
-import { Gallery } from "./gallery";
 import { PhoneHero } from "./hero-phone";
 
 const serif = GeistSerifRegular.className;
@@ -120,6 +121,12 @@ function PhoneCompare() {
   );
 }
 
+const editorPoints = [
+  "Titles, dates and bullets: click any of them and write",
+  "Ask Rayume to rewrite a line, with your guidance",
+  "It tells you the moment it runs past one page",
+];
+
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
 const primary = `${btn} bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`;
 
@@ -144,8 +151,8 @@ export default function Landing() {
           <PhoneHero />
           {/* side by side from 360px so the whole hero fits the first screen of a phone */}
           <div className="mt-6 flex flex-col gap-3 min-[360px]:flex-row lg:mt-9">
-            <a href="#" className={`${primary} max-sm:flex-1 max-sm:px-4`}>Build my resume</a>
-            <a href="#templates" className={`glass ${btn} text-ink hover:bg-white/40 max-sm:flex-1 max-sm:px-4`}>See the templates</a>
+            <Link href="/signup" className={`${primary} max-sm:flex-1 max-sm:px-4`}>Build my resume</Link>
+            <Link href="/templates" className={`glass glass-prism ${btn} text-ink hover:bg-white/40 max-sm:flex-1 max-sm:px-4`}>See the templates</Link>
           </div>
           <p className="mt-5 text-sm text-ink/50">Free while in beta. Sign in with GitHub or Google.</p>
         </div>
@@ -167,12 +174,12 @@ export default function Landing() {
           </p>
           <div className="mt-14 grid gap-4 md:grid-cols-2">
             {sources.map((s, i) => (
-              <article key={s.from} className={`glass glass-dark rounded-[28px] p-6 sm:p-7 ${i % 2 ? "md:translate-y-10" : ""}`}>
+              <article key={s.from} className={`glass glass-dark glass-prism rounded-[28px] p-6 sm:p-7 ${i % 2 ? "md:translate-y-10" : ""}`}>
                 <p className="text-sm">{s.from}</p>
                 <p className={`${serif} mt-3 text-[22px] leading-snug sm:text-2xl`}>{s.line}</p>
                 <ul className="mt-5 flex flex-wrap gap-2" aria-label="Skills found">
                   {s.skills.map((k) => (
-                    <li key={k} className="rounded-full bg-ink px-3 py-1 text-[13px] font-medium text-white">{k}</li>
+                    <li key={k} className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-ink">{k}</li>
                   ))}
                 </ul>
               </article>
@@ -194,20 +201,53 @@ export default function Landing() {
         <Steps serif={serif} />
       </section>
 
-      {/* templates */}
-      <section id="templates" aria-labelledby="tpl-h" className="relative overflow-hidden bg-mist py-28 lg:py-36">
+      {/* editor: the resume as a page you write on, shown on the real render with a bullet clicked into */}
+      <section id="editor" aria-labelledby="editor-h" className="relative overflow-hidden bg-mist py-28 lg:py-36">
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/25 blur-[120px]" />
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <Gallery>
-            <div>
-              <h2 id="tpl-h" className={`${serif} max-w-xl text-[clamp(2.4rem,4.6vw,3.8rem)] leading-[1] tracking-[-0.03em]`}>
-                Every template, already filled in with you.
-              </h2>
-              <p className="mt-5 max-w-md text-lg leading-relaxed text-ink/65">
-                The Overleaf favorites, filled in with your real name, projects and skills. Compare, then switch with one tap.
-              </p>
+        <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-2 lg:gap-20">
+          <div>
+            <h2 id="editor-h" className={`${serif} max-w-xl text-[clamp(2.4rem,4.6vw,3.8rem)] leading-[1] tracking-[-0.03em]`}>
+              Edit it like a document.
+            </h2>
+            <p className="mt-5 max-w-md text-lg leading-relaxed text-ink/65">
+              Click any line of your resume and type. The page re-flows as you write, and the real LaTeX PDF is typeset again in under a second.
+            </p>
+            <ul className="mt-8 max-w-md space-y-3 text-[15px] text-ink/80">
+              {editorPoints.map((p) => (
+                <li key={p} className="flex gap-3">
+                  <svg aria-hidden viewBox="0 0 20 20" className="mt-0.5 size-5 shrink-0 text-accent-text" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m5 10.5 3.2 3L15 7" />
+                  </svg>
+                  {p}
+                </li>
+              ))}
+            </ul>
+            <Link href="/resumes" className="mt-9 inline-flex items-center gap-1.5 text-[15px] font-medium text-accent-text">
+              Try the editor
+              <span aria-hidden>→</span>
+            </Link>
+          </div>
+          {/* the highlight and Rayume's rewrite sit over the dashboard bullet, placed in % of the render so they scale with it */}
+          <figure className="relative mx-auto w-full max-w-[30rem]">
+            <div className="rounded-[28px] bg-white p-3 shadow-[0_24px_60px_-28px_rgb(22_27_34/0.45)] ring-1 ring-ink/5">
+              <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl">
+                <Image src="/resumes/classic.png" alt="Lucas Mendes's resume, with one bullet being edited" fill sizes="(min-width: 1024px) 480px, 100vw" className="object-cover" />
+                <span aria-hidden className="absolute left-[5%] top-[16.25%] h-[2%] w-[90%] rounded-[3px] bg-accent/10 ring-2 ring-accent/50">
+                  <span className="absolute -right-0.5 top-[15%] h-[70%] w-px animate-pulse bg-ink motion-reduce:animate-none" />
+                </span>
+              </div>
             </div>
-          </Gallery>
+            <figcaption className="absolute -bottom-6 right-2 w-[78%] rounded-2xl bg-paper p-4 text-[13px] leading-relaxed shadow-[0_18px_40px_-18px_rgb(22_27_34/0.45)] ring-1 ring-ink/10 sm:-right-6">
+              <span className="flex items-center gap-2 font-medium">
+                <span className="grid size-6 place-items-center rounded-full bg-accent-deep text-white">
+                  <Mark className="h-3.5 w-auto" />
+                </span>
+                Rayume
+              </span>
+              <span className="mt-2 block text-ink/80">Made the main dashboard 3.5x faster (3.8 s to 1.1 s median) with cursor pagination and Redis caching.</span>
+              <span className="mt-3 inline-block rounded-full bg-accent-deep px-3 py-1 text-[12px] font-medium text-white">Replace in resume</span>
+            </figcaption>
+          </figure>
         </div>
       </section>
 
@@ -273,8 +313,8 @@ export default function Landing() {
             Write it once. Tailor it in minutes. Send it with confidence.
           </p>
           <div className="relative mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <a href="#" className={primary}>Build my resume</a>
-            <a href="#" className={`glass glass-dark ${btn} text-white hover:bg-white/15`}>Get the extension</a>
+            <Link href="/signup" className={primary}>Build my resume</Link>
+            <a href="#" className={`glass glass-dark glass-prism ${btn} text-white hover:bg-white/15`}>Get the extension</a>
           </div>
         </div>
       </section>
