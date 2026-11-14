@@ -8,6 +8,8 @@ import "./pdf.css";
 // the zoom buttons step through these; a pinch goes anywhere between the ends
 const zooms = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
 const [min, max] = [zooms[0], zooms.at(-1)!];
+// pages open at three quarters of the box's width, with room around them; Reset comes back here
+const start = 0.75;
 
 // A drawn page as an overlay sees it: the sheet element, its size, and every run of text on it with its
 // box in CSS pixels from the sheet's top left, all in reading order. font is the PDF's own embedded font,
@@ -37,7 +39,7 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
   const box = useRef<HTMLDivElement>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy>();
   // the zoom the pages are drawn at, 1 filling the width of the box
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(start);
   const [failed, setFailed] = useState(false);
   const [pages, setPages] = useState<Page[]>([]);
   const vector = !!overlay;
@@ -64,9 +66,9 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
   // sharp, at the new size. A trackpad pinch arrives as ctrl+wheel, in Safari as gesture events, on a phone as
   // two touches; the browser's own page zoom is held off over the PDF.
   // live is the zoom on screen, drawn the one the pages were drawn at; shown is live, for the controls
-  const live = useRef(1);
-  const drawn = useRef(1);
-  const [shown, setShown] = useState(1);
+  const live = useRef(start);
+  const drawn = useRef(start);
+  const [shown, setShown] = useState(start);
   const settle = useRef(0);
   const zoomTo = (to: number, at?: { x: number; y: number }) => {
     const el = box.current;
@@ -305,7 +307,7 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
             <path d="M5 10h10" />
           </svg>
         </button>
-        <button type="button" aria-label="Reset zoom" onClick={() => zoomTo(1)} className="w-14 rounded-full py-1.5 font-medium tabular-nums text-ink/70 transition hover:bg-ink/5 hover:text-ink">
+        <button type="button" aria-label="Reset zoom" onClick={() => zoomTo(start)} className="w-14 rounded-full py-1.5 font-medium tabular-nums text-ink/70 transition hover:bg-ink/5 hover:text-ink">
           {Math.round(shown * 100)}%
         </button>
         <button type="button" aria-label="Zoom in" disabled={shown >= max} onClick={() => zoomTo(zooms.find((z) => z > shown + 0.01) ?? max)} className={zoomButton}>

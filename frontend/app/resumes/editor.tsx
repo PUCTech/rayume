@@ -5,7 +5,7 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import Image from "next/image";
 import Link from "next/link";
 import { Select } from "@base-ui/react/select";
-import { Check, ChevronDown, Omega, PanelLeft, PanelRight, Redo2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, MessageSquareQuote, Omega, PanelLeft, PanelRight, Redo2, Undo2 } from "lucide-react";
 import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { Mark } from "../logo";
 import { Viewer } from "../templates/viewer";
@@ -17,7 +17,7 @@ import type { Quote } from "../app/resume";
 import type { Saved } from "./data";
 import { editsOf, kept, touch } from "./store";
 import { master as masterSeed } from "./data";
-import { Overlay, label, type Target } from "./overlay";
+import { Overlay, type Target } from "./overlay";
 import { plain } from "./regions";
 import { Content } from "./content";
 import { blank, fonts, inline, margins, projectBullets, sizes, strip, settle, styled, symbols, tidy, withBullet, withDoc, type Doc, type Setup } from "./tex";
@@ -83,8 +83,8 @@ const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` :
 // (tex.ts's styled), bold, italic, underline and symbols (bullets only), and says when changes are saved.
 // ⌘Z and ⇧⌘Z step through the changes, they're kept in this browser across reloads, Code shows the whole
 // LaTeX with them written in, and the bar says when the resume no longer fits on one page.
-// Text selected in the PDF or the code gets a "Paste into chat" button; an entry can be focused to send its
-// bullets to Rayume, whose suggestions go into the document like your own edits.
+// Text selected in the PDF or the code gets a "Send to chat" button, which quotes it in the composer (opening
+// the chat if it's folded); Rayume's suggestions go into the document like your own edits.
 // shortcut: the chat is scripted (app/workspace.tsx's answer); changes live in localStorage until the API
 // saves versions (POST /resumes/{id}/versions); edits made in Code and rendered there aren't part of the
 // document, so the next edit on the page typesets over them.
@@ -125,9 +125,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   // quotes on their way to the chat's composer, which takes them from here
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pick, setPick] = useState<{ text: string; x: number; y: number } | null>(null);
-  // the entry focused on the PDF and its bullets picked for Rayume
-  const [selected, setSelected] = useState<string | null>(null);
-  const [picked, setPicked] = useState<string[]>([]);
   // what's being written, where the click was (for the caret), where the caret starts in a split-off bullet,
   // and that bullet's text until it's saved
   const [editing, setEditing] = useState<Target | null>(null);
@@ -283,19 +280,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  // Esc lets go of the focused entry first, even from a text field (nothing typed is lost); the drawer only
-  // closes on the next one. While writing on the page, Esc belongs to that field: it cancels the edit.
-  useEffect(() => {
-    if (!selected || editing) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.stopPropagation();
-      setSelected(null);
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [selected, editing]);
-
   // the entries as the PDF on screen has them, added bullets in place and deleted ones gone: what the overlay
   // finds on the page
   const after = (id: string): { id: string; text: string }[] =>
@@ -331,10 +315,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     runs: Object.keys({ ...doc.runs, ...inPdf.runs }).filter((k) => doc.runs[k] !== inPdf.runs[k]),
     added: doc.added.filter((a) => a.text && !inPdf.added.some((b) => b.id === a.id)),
   };
-  const entry = shown.find((e) => e.id === selected);
-  // writing on the page leaves the Rayume focus mode, so the page isn't dimmed while you type
   const edit = (t: Target, at?: { x: number; y: number }, start?: number) => {
-    select(null);
     setLive(null);
     setEditAt(at);
     setEditStart(start);
@@ -386,22 +367,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     setEditing(null);
     setLive(null);
     if (t?.kind === "bullet") change(withBullet(doc, t.id, ""));
-  };
-
-  const select = (id: string | null) => {
-    setSelected(id);
-    setPicked([]);
-  };
-  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const all = () => setPicked((p) => (entry && p.length === entry.bullets.length ? [] : (entry?.bullets.map((b) => b.id) ?? [])));
-  // the picked bullets, or all of them, go to the chat as quotes; an entry without bullets goes as its name
-  const ask = () => {
-    if (!entry) return;
-    const add = entry.bullets.length
-      ? entry.bullets.flatMap((b) => (!picked.length || picked.includes(b.id) ? [{ text: strip(textIn(doc, { kind: "bullet", id: b.id })), bulletId: b.id }] : []))
-      : [{ text: label(entry) }];
-    setQuotes((qs) => [...qs, ...add.filter((a) => !qs.some((q) => q.text === a.text))]);
-    setMode("refine");
   };
 
   // neither the PDF nor the code knows bullet ids, so a quoted or typed line is matched to its bullet by
@@ -604,8 +569,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                   <Overlay
                     page={page}
                     entries={shown}
-                    selected={selected}
-                    picked={picked}
                     pending={pending}
                     editing={editing}
                     editAt={mine ? undefined : editAt}
@@ -613,10 +576,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                     runKeys={inPdf.runs}
                     text={(t) => (mine && key(t) === mine.key ? mine.text : textIn(doc, t, fresh))}
                     busy={busy}
-                    onSelect={select}
-                    onToggle={toggle}
-                    onAll={all}
-                    onAsk={ask}
                     onEdit={edit}
                     onCommit={commit}
                     onCancel={() => {
@@ -671,16 +630,16 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               onClick={() => {
                 // the same text twice would be one chip answered twice
                 setQuotes((qs) => (qs.some((q) => q.text === pick.text) ? qs : [...qs, { text: pick.text }]));
+                setMode("refine");
+                if (!chat) fold(right);
                 document.getSelection()?.removeAllRanges();
                 setPick(null);
               }}
-              style={{ left: pick.x, top: Math.max(8, pick.y - 48) }}
-              className="fixed z-[60] inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-[13px] font-medium text-white shadow-[0_10px_28px_-10px_rgb(22_27_34/0.6)] transition duration-200 ease-out starting:translate-y-1 starting:opacity-0 pointer-coarse:py-2.5"
+              style={{ left: pick.x, top: Math.max(8, pick.y - 44) }}
+              className="fixed z-[60] inline-flex -translate-x-1/2 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-[13px] font-medium text-ink shadow-[0_8px_24px_-10px_rgb(22_27_34/0.45)] ring-1 ring-ink/10 transition duration-150 ease-out hover:bg-mist starting:translate-y-1 starting:opacity-0 pointer-coarse:py-2.5"
             >
-              <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 5h12v8H9l-4 3v-3H4z" />
-              </svg>
-              Paste into chat
+              <MessageSquareQuote aria-hidden className="size-4 text-accent-text" />
+              Send to chat
             </button>
           )}
     </div>
