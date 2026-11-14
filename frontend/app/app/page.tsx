@@ -1,11 +1,6 @@
-import type { Metadata } from "next";
-import { Workspace } from "./workspace";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Master resume · Rayume",
-  robots: { index: false },
-};
-
+// The old workspace (sidebar, HTML resume, chat) gave way to /resumes and each resume's own editor page.
 export default function App() {
-  return <Workspace />;
+  redirect("/resumes");
 }

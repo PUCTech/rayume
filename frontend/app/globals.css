@@ -21,6 +21,15 @@
   --color-accent: #4338f5;
   --color-accent-deep: #271bf4;
   --color-accent-text: #180bea;
+  /* pastel vermilion for errors; error-text is its deep shade, which keeps AA contrast on paper */
+  --color-error: #f4a28c;
+  --color-error-text: #b8401f;
+  --animate-shake: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+
+  @keyframes shake {
+    20%, 60% { translate: -4px; }
+    40%, 80% { translate: 3px; }
+  }
 }
 
 /* the ocean in the accent band: shades derived from the accent, so it follows the colour */

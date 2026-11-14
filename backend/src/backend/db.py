@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     database_url: str
     # frontend origins allowed by CORS; in env as JSON: CORS_ORIGINS='["https://rayume.app"]'
     cors_origins: list[str] = ["http://localhost:3000"]
+    # GitHub OAuth app (docs/backend/endpoints/auth.md); empty until set in backend/.env
+    github_client_id: str = ""
+    github_client_secret: str = ""
 
 
 settings = Settings()

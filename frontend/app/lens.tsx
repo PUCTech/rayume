@@ -1,19 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
+
+// The bend pattern behind every filter below: smooth noise, ~100px blobs, red pushes across and green down.
+// Drawn once here, not by feTurbulence in the filters, which a browser re-runs every frame something behind
+// the glass moves (the ocean always is). Seeded, so it's the same pattern on every load.
+function bendMap() {
+  const cells = 16;
+  const small = document.createElement("canvas");
+  small.width = small.height = cells;
+  const img = small.getContext("2d")!.createImageData(cells, cells);
+  let x = 4;
+  const rand = () => ((x = (x * 16807) % 2147483647) / 2147483647) * 255;
+  for (let i = 0; i < img.data.length; i += 4) img.data.set([rand(), rand(), 128, 255], i);
+  small.getContext("2d")!.putImageData(img, 0, 0);
+  const big = document.createElement("canvas");
+  big.width = big.height = 512;
+  const ctx = big.getContext("2d")!;
+  ctx.filter = "blur(10px)";
+  ctx.drawImage(small, 0, 0, 512, 512);
+  return big.toDataURL();
+}
+
+// the map covers 1600px, more than any glass surface is wide, so blobs keep their size on every element
+const mapAt = { x: 0, y: 0, width: 1600, height: 1600, preserveAspectRatio: "none" } as const;
 
 // Page-wide glass effects. The SVG displacement filter is used by `.glass` as a backdrop-filter;
 // only Chromium renders url() in backdrop-filter, and userAgentData is Chromium-only, so it
 // doubles as the feature check. A single pointer listener lights up whichever glass surface the
 // mouse is over (--mx/--my/--glow drive the highlight and rim in globals.css).
+let made: string | undefined;
+const noop = () => () => {};
+
 export function Refraction() {
+  // made once in the browser, nothing on the server
+  const map = useSyncExternalStore(noop, () => (made ??= bendMap()), () => undefined);
   useEffect(() => {
     if ("userAgentData" in navigator) document.documentElement.dataset.refract = "";
     let lit: HTMLElement | null = null;
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== "mouse") return;
-      const el = (e.target as Element).closest<HTMLElement>(".glass");
+      // prism glass has no cursor light, and every variable set here would repaint it and its filter
+      const el = (e.target as Element).closest<HTMLElement>(".glass:not(.glass-prism)");
       if (lit && lit !== el) lit.style.setProperty("--glow", "0");
       lit = el;
       if (!el) return;
@@ -28,12 +57,12 @@ export function Refraction() {
       delete document.documentElement.dataset.refract;
     };
   }, []);
+  if (!map) return null;
   return (
     <svg width="0" height="0" className="absolute" aria-hidden>
       <filter id="lg-refract" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="4" result="noise" />
-        <feGaussianBlur in="noise" stdDeviation="3" result="soft" />
-        <feDisplacementMap in="SourceGraphic" in2="soft" scale="46" xChannelSelector="R" yChannelSelector="G" />
+        <feImage href={map} {...mapAt} result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="46" xChannelSelector="R" yChannelSelector="G" />
       </filter>
     </svg>
   );
@@ -149,7 +178,7 @@ export function Lens() {
           type="button"
           onClick={() => setFull((f) => !f)}
           aria-pressed={full}
-          className="glass shrink-0 rounded-full px-4 py-2 font-medium text-ink transition active:scale-95"
+          className="glass glass-prism shrink-0 rounded-full px-4 py-2 font-medium text-ink transition active:scale-95"
         >
           {full ? "Show the notes" : "Show the PDF"}
         </button>

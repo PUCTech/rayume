@@ -1,21 +1,58 @@
 "use client";
 
-import { useState, useSyncExternalStore, type ChangeEvent, type ComponentProps } from "react";
+import { useId, useRef, useState, useSyncExternalStore, type ChangeEvent, type ComponentProps, type FormEvent } from "react";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import Link from "next/link";
 
 // 16px on phones, or iOS Safari zooms the page when an input takes focus
 const input =
-  "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-base ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text sm:text-[15px]";
+  "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-base ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text sm:text-[15px] aria-invalid:ring-2 aria-invalid:ring-error aria-invalid:focus:ring-error-text aria-invalid:duration-400 aria-invalid:animate-shake motion-reduce:animate-none";
 
-function Field({ label, hint, ...props }: { label: string; hint?: string } & ComponentProps<"input">) {
+function Field({ label, hint, error, ...props }: { label: string; hint?: string; error?: string } & ComponentProps<"input">) {
+  const id = useId();
   return (
     <label className="block">
       <span className="text-sm font-medium">{label}</span>
-      <input required {...props} className={input} />
-      {hint && <span className="mt-1.5 block text-xs text-ink/55">{hint}</span>}
+      <input required {...props} aria-invalid={!!error} aria-describedby={error || hint ? id : undefined} className={input} />
+      {error ? (
+        <span id={id} role="alert" className="mt-2 flex items-start gap-1.5 text-xs font-medium text-error-text transition duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none starting:-translate-y-1 starting:opacity-0">
+          <svg aria-hidden viewBox="0 0 16 16" className="mt-px size-3.5 shrink-0">
+            <circle cx="8" cy="8" r="8" className="fill-error" />
+            <path d="M8 4.5v4M8 11h.01" stroke="white" strokeWidth="1.75" strokeLinecap="round" />
+          </svg>
+          {error}
+        </span>
+      ) : (
+        hint && <span id={id} className="mt-1.5 block text-xs text-ink/55">{hint}</span>
+      )}
     </label>
   );
+}
+
+// Our own messages in place of the browser's validation bubbles (the forms are noValidate). Each input
+// carries its message in data-message, one per field for both empty and malformed. check() marks every
+// invalid field on submit and focuses the first; typing in a field clears its error.
+function useErrors() {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const check = (form: HTMLFormElement) => {
+    const found: Record<string, string> = {};
+    let first: HTMLInputElement | undefined;
+    for (const el of form.querySelectorAll("input")) {
+      const mismatch = el.name === "confirm" && el.value !== (form.elements.namedItem("password") as HTMLInputElement).value;
+      // disabled inputs (the folded confirm field) are skipped, as the browser would
+      if (!el.willValidate || (el.validity.valid && !mismatch)) continue;
+      found[el.name] = el.dataset.message ?? "Check this field.";
+      first ??= el;
+    }
+    setErrors(found);
+    first?.focus();
+    return !first;
+  };
+  const clear = (e: FormEvent<HTMLFormElement>) => {
+    const { name } = e.target as HTMLInputElement;
+    if (errors[name]) setErrors((o) => ({ ...o, [name]: "" }));
+  };
+  return { errors, check, clear };
 }
 
 // GitHub from Simple Icons (CC0); Google's four-colour G, as its sign-in branding asks
@@ -87,15 +124,22 @@ const subscribeEmail = (l: () => void) => {
 };
 
 export function LoginForm() {
+  const { errors, check, clear } = useErrors();
   return (
     <>
       <Providers />
       {/* preventDefault keeps the browser from submitting by GET, which would put the password in the URL */}
-      <form onSubmit={(e) => e.preventDefault()}
+      <form
+        noValidate
+        onInput={clear}
+        onSubmit={(e) => {
+          e.preventDefault();
+          check(e.currentTarget);
+        }}
         className="mt-7 grid gap-4"
       >
-        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" onChange={(e) => setLoginEmail(e.target.value)} />
-        <Field label="Password" name="password" type="password" autoComplete="current-password" maxLength={128} />
+        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" data-message="Enter an email like you@example.com." error={errors.email} onChange={(e) => setLoginEmail(e.target.value)} />
+        <Field label="Password" name="password" type="password" autoComplete="current-password" maxLength={128} data-message="Enter your password." error={errors.password} />
         <button type="submit" className={`${submit} mt-2`}>
           Sign in
         </button>
@@ -111,7 +155,7 @@ export function LoginForm() {
 }
 
 const steps = ["Account", "Password", "Name"];
-type Values = { username: string; password: string; name: string };
+type Values = { username: string; password: string; confirm: string; name: string };
 
 // Signup starts like login. Continuing with email and username folds GitHub and Google away and turns
 // the form into three steps under a progress bar: email + username, then password, then name. Only the
@@ -120,7 +164,13 @@ export function SignupForm() {
   const [email, setEmail] = useState(false);
   const [step, setStep] = useState(0);
   const [back, setBack] = useState(false);
-  const [v, setV] = useState<Values>({ username: "", password: "", name: "" });
+  const [v, setV] = useState<Values>({ username: "", password: "", confirm: "", name: "" });
+  const { errors, check, clear } = useErrors();
+  const [confirm, setConfirm] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const reveal = () => {
+    timer.current ??= setTimeout(() => setConfirm(true), 2000);
+  };
   // the login email until the person types their own here
   const fromLogin = useSyncExternalStore(subscribeEmail, () => loginEmail, () => "");
   const [ownEmail, setOwnEmail] = useState<string | null>(null);
@@ -166,8 +216,11 @@ export function SignupForm() {
       </div>
 
       <form
+        noValidate
+        onInput={clear}
         onSubmit={(e) => {
           e.preventDefault();
+          if (!check(e.currentTarget)) return;
           setEmail(true);
           if (step < steps.length - 1) go(step + 1);
         }}
@@ -181,6 +234,8 @@ export function SignupForm() {
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
+              data-message="Enter an email like you@example.com."
+              error={errors.email}
               value={ownEmail ?? fromLogin}
               onChange={(e) => setOwnEmail(e.target.value)}
             />
@@ -192,18 +247,36 @@ export function SignupForm() {
               pattern="[a-z0-9_\-]{3,30}"
               placeholder="lucasmendes"
               hint="3 to 30 characters: lowercase letters, numbers, - and _."
+              data-message="Use 3 to 30 lowercase letters, numbers, - or _."
+              error={errors.username}
               {...bind("username")}
             />
           </div>
         )}
         {step === 1 && (
           <div key="password" className={enter}>
-            <Field label="Password" type="password" autoComplete="new-password" minLength={8} maxLength={128} hint="At least 8 characters." autoFocus {...bind("password")} />
+            {/* one block, not two grid items: the grid gap would leave space under the folded field */}
+            <div>
+              <Field label="Password" type="password" autoComplete="new-password" minLength={8} maxLength={128} hint="At least 8 characters." data-message="Use at least 8 characters." error={errors.password} autoFocus onFocus={reveal} {...bind("password")} />
+              {/* unfolds 2s after the password field is first focused or typed in, then stays. Rows 0fr to 1fr
+                  ease the buttons down; the 1-unit padding, cancelled by negative margins, keeps the focus ring
+                  and the shake from being clipped */}
+              <div
+                inert={!confirm}
+                className={`-mx-1 grid transition-[grid-template-rows,opacity] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${confirm ? "-mb-1 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="px-1 pt-4 pb-1">
+                    <Field label="Confirm password" type="password" autoComplete="new-password" maxLength={128} disabled={!confirm} data-message="The passwords don't match." error={errors.confirm} {...bind("confirm")} />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
         {step === 2 && (
           <div key="name" className={enter}>
-            <Field label="What should we call you?" autoComplete="name" maxLength={100} placeholder="Lucas" autoFocus {...bind("name")} />
+            <Field label="What should we call you?" autoComplete="name" maxLength={100} placeholder="Lucas" data-message="Tell us what to call you." error={errors.name} autoFocus {...bind("name")} />
           </div>
         )}
         <div className="mt-2 flex gap-3">

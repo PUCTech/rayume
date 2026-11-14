@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { ArrowDown } from "lucide-react";
+import { motion } from "motion/react";
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { Mark } from "../logo";
 import type { Entry, Posting } from "./data";
 import type { Quote } from "./resume";
@@ -17,7 +20,7 @@ export type Message = {
   id: number;
   from: "rayume" | "you";
   text: string;
-  quote?: Quote;
+  quotes?: Quote[];
   suggestion?: { bulletId: string; text: string; applied?: boolean };
   draft?: { entry: Entry; added?: boolean };
   skills?: { hard: [string, number][]; soft: string[] };
@@ -39,7 +42,26 @@ function Done({ children }: { children: ReactNode }) {
   );
 }
 
-// The assistant beside the resume: messages, the four modes, a pasted quote, and the composer.
+// a message comes in from just below where it lands
+const enter = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const } };
+
+// the way back down, once you've scrolled up from the newest message
+function Newest() {
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+  return (
+    <button
+      type="button"
+      aria-label="Scroll to the newest message"
+      tabIndex={isAtBottom ? -1 : 0}
+      onClick={() => scrollToBottom()}
+      className={`absolute bottom-3 left-1/2 grid size-8 -translate-x-1/2 place-items-center rounded-full bg-white text-ink/70 shadow-[0_8px_20px_-8px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 hover:text-ink ${isAtBottom ? "pointer-events-none translate-y-2 opacity-0" : ""}`}
+    >
+      <ArrowDown aria-hidden className="size-4" />
+    </button>
+  );
+}
+
+// The assistant beside the resume: messages, the four modes, the pasted quotes, and the composer.
 export function Chat({
   messages,
   typing,
@@ -47,13 +69,15 @@ export function Chat({
   setMode,
   draft,
   setDraft,
-  quote,
-  clearQuote,
+  quotes,
+  removeQuote,
   send,
   apply,
   addEntry,
   tailor,
   pickPosting,
+  only,
+  addedTo = "your Master Resume",
 }: {
   messages: Message[];
   typing: boolean;
@@ -61,26 +85,24 @@ export function Chat({
   setMode: (m: Mode) => void;
   draft: string;
   setDraft: (s: string) => void;
-  quote: Quote | null;
-  clearQuote: () => void;
+  quotes: Quote[];
+  removeQuote: (i: number) => void;
   send: () => void;
   apply: (m: Message) => void;
   addEntry: (m: Message) => void;
   tailor: (m: Message) => void;
   pickPosting: (p: Posting) => void;
+  // the modes to offer; all of them when unset
+  only?: Mode[];
+  // where an added experience went, for its confirmation
+  addedTo?: string;
 }) {
-  const list = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
-
-  // keep the newest message in view
-  useEffect(() => {
-    list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, typing]);
 
   // a paste or a mode change puts the cursor in the composer
   useEffect(() => {
     box.current?.focus();
-  }, [quote, mode]);
+  }, [quotes.length, mode]);
 
   // grow the composer with its text, up to six lines
   useEffect(() => {
@@ -90,21 +112,25 @@ export function Chat({
     el.style.height = `${Math.min(el.scrollHeight, 6 * 22 + 20)}px`;
   }, [draft]);
 
-  const canSend = draft.trim() || quote;
+  const canSend = draft.trim() || quotes.length;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={list} aria-live="polite" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
+      {/* the newest message stays in view as the list grows, unless you've scrolled up to read */}
+      <StickToBottom resize="smooth" initial="instant" className="relative min-h-0 flex-1">
+        <StickToBottom.Content aria-live="polite" className="space-y-4 px-4 py-5 sm:px-5">
         {messages.map((m) =>
           m.from === "you" ? (
-            <div key={m.id} className="ml-8 flex justify-end">
+            <motion.div key={m.id} {...enter} className="ml-8 flex justify-end">
               <div className="rounded-2xl rounded-tr-md bg-accent-deep px-3.5 py-2.5 text-[14px] leading-relaxed text-white">
-                {m.quote && <p className="mb-1.5 border-l-2 border-white/40 pl-2 text-[13px] italic text-white/80">“{m.quote.text}”</p>}
+                {m.quotes?.map((q, i) => (
+                  <p key={i} className="mb-1.5 border-l-2 border-white/40 pl-2 text-[13px] italic text-white/80">“{q.text}”</p>
+                ))}
                 {m.text && <p className="whitespace-pre-wrap">{m.text}</p>}
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div key={m.id} className="mr-6 flex gap-2.5">
+            <motion.div key={m.id} {...enter} className="mr-6 flex gap-2.5">
               <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-accent-deep text-white">
                 <Mark className="h-4 w-auto" />
               </span>
@@ -136,7 +162,7 @@ export function Chat({
                     </ul>
                     <div className="mt-3">
                       {m.draft.added ? (
-                        <Done>Added to your Master Resume</Done>
+                        <Done>Added to {addedTo}</Done>
                       ) : (
                         <button type="button" onClick={() => addEntry(m)} className={primary}>
                           Add to resume
@@ -188,22 +214,24 @@ export function Chat({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ),
         )}
         {typing && (
-          <div className="flex items-center gap-2.5" aria-label="Rayume is typing">
+          <motion.div {...enter} className="flex items-center gap-2.5" aria-label="Rayume is typing">
             <span className="grid size-7 place-items-center rounded-full bg-accent-deep text-white">
               <Mark className="h-4 w-auto" />
             </span>
             <span className="flex gap-1 rounded-2xl rounded-tl-md bg-mist px-3.5 py-3.5">
               {[0, 1, 2].map((d) => (
-                <span key={d} style={{ animationDelay: `${d * 150}ms` }} className="size-1.5 animate-pulse rounded-full bg-ink/40" />
+                <motion.span key={d} animate={{ y: [0, -3, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }} className="size-1.5 rounded-full bg-ink/50" />
               ))}
             </span>
-          </div>
+          </motion.div>
         )}
-      </div>
+        </StickToBottom.Content>
+        <Newest />
+      </StickToBottom>
 
       <form
         onSubmit={(e) => {
@@ -213,7 +241,7 @@ export function Chat({
         className="border-t border-ink/10 p-3 sm:p-4"
       >
         <div role="group" aria-label="Mode" className="flex flex-wrap gap-1.5 pb-3">
-          {modes.map((m) => (
+          {modes.filter((m) => !only || only.includes(m.id)).map((m) => (
             <button
               key={m.id}
               type="button"
@@ -226,16 +254,30 @@ export function Chat({
           ))}
         </div>
         <div className="rounded-2xl bg-white ring-1 ring-ink/10 focus-within:ring-2 focus-within:ring-accent-text">
-          {quote && (
-            <div className="flex items-start gap-2 border-b border-ink/10 px-3.5 py-2.5 text-[13px]">
-              <p className="line-clamp-3 flex-1 border-l-2 border-accent pl-2 italic text-ink/70">“{quote.text}”</p>
-              <button type="button" onClick={clearQuote} aria-label="Remove the pasted text" className="-m-1 grid size-7 shrink-0 place-items-center rounded-full text-ink/50 hover:bg-ink/5 hover:text-ink">
-                <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="m6 6 8 8M14 6l-8 8" />
-                </svg>
-              </button>
-            </div>
-          )}
+          {/* each pasted text as a chip above the input; rows 0fr to 1fr grows the composer to fit as one fades
+              up. Past a few the chips scroll, so the input stays on screen */}
+          <div className="max-h-44 overflow-y-auto">
+            {quotes.map((quote, i) => (
+              <div
+                key={quote.text}
+                className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity,translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none starting:translate-y-1 starting:grid-rows-[0fr] starting:opacity-0"
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="mx-2 mt-2 flex items-start gap-2.5 rounded-xl bg-accent/[0.07] py-2 pl-3 pr-1.5">
+                    <svg aria-hidden viewBox="0 0 20 20" className="mt-0.5 size-3.5 shrink-0 text-accent-text" fill="currentColor">
+                      <path d="M3 11.5C3 8 4.8 5.8 7.6 4.6l.6 1.2C6.6 6.7 5.8 8 5.6 9.6H8V15H3zm8.5 0c0-3.5 1.8-5.7 4.6-6.9l.6 1.2c-1.6.9-2.4 2.2-2.6 3.8h2.4V15h-5z" />
+                    </svg>
+                    <p className="line-clamp-2 flex-1 text-[13px] leading-snug text-ink/75">{quote.text}</p>
+                    <button type="button" onClick={() => removeQuote(i)} aria-label="Remove the pasted text" className="-my-0.5 grid size-6 shrink-0 place-items-center rounded-full text-ink/45 transition hover:bg-ink/5 hover:text-ink pointer-coarse:size-9">
+                      <svg aria-hidden viewBox="0 0 20 20" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="m6 6 8 8M14 6l-8 8" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
           <div className="flex items-end gap-2 p-2">
             <label htmlFor="chat-box" className="sr-only">
               Message Rayume
