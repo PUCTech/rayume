@@ -10,9 +10,9 @@ import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { Mark } from "../logo";
 import { Viewer } from "../templates/viewer";
 import type { Page } from "../templates/pdf";
-import { Chat, type Message, type Mode } from "../app/chat";
+import { Chat, type Mode } from "../app/chat";
 import { answer } from "../app/workspace";
-import { entries, postings } from "../app/data";
+import { entries, postings, profile } from "../app/data";
 import type { Quote } from "../app/resume";
 import type { Saved } from "./data";
 import { editsOf, kept, touch } from "./store";
@@ -113,15 +113,9 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   };
   // the symbols menu under the toolbar
   const [sym, setSym] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 0,
-      from: "rayume",
-      text: "Hi Lucas. Click any text on your resume to change it, or paste a line here and I'll rewrite it.",
-    },
-  ]);
   const [mode, setMode] = useState<Mode>("refine");
-  const [typing, setTyping] = useState(false);
+  // set once a render fails: the PDF can't be typeset here, so changes are only drawn over it
+  const [offline, setOffline] = useState(false);
   // quotes on their way to the chat's composer, which takes them from here
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pick, setPick] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -149,13 +143,11 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   // what a render that just landed contains, until its pages are drawn; and which render is the latest
   const landing = useRef<Doc | null>(null);
   const renders = useRef(0);
-  const warned = useRef(false);
   const view = useRef<HTMLDivElement>(null);
   // where the pointer last was over the viewer: a textarea can't say where its selected text is on screen
   const pointer = useRef({ x: 0, y: 0 });
   // true while a drag is selecting: the button waits for the release, or it covers text the drag is heading to
   const dragging = useRef(false);
-  const nextId = useRef(1);
   const timers = useRef<number[]>([]);
   const store = editsOf(r.id);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -164,9 +156,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const mine = live && live.key === key(editing) ? live : null;
   // typing the document doesn't have yet
   const dirty = !!editing && !!mine && tidy(mine.text) !== tidy(textIn(doc, editing, fresh));
-
-  const say = (m: Omit<Message, "id">) => setMessages((ms) => [...ms, { ...m, id: nextId.current++ }]);
-  const update = (id: number, patch: Partial<Message>) => setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
 
   // typesets the pristine LaTeX with the document's changes; the newest render wins if several overlap
   const render = async (next: Doc) => {
@@ -183,9 +172,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       landing.current = next;
       setSrc(URL.createObjectURL(await res.blob()));
     } catch {
-      if (n !== renders.current || warned.current) return;
-      warned.current = true;
-      say({ from: "rayume", text: "Saved. I can't typeset the PDF here yet, so your changes are drawn over the page until I can." });
+      if (n === renders.current) setOffline(true);
     } finally {
       if (n === renders.current) setBusy(false);
     }
@@ -379,25 +366,14 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     return answer("refine", "", bullet ? { text: clean, bulletId: bullet.id } : q, entries);
   };
 
-  // Refine answers each pasted line on its own; Add experience reads them all as one story
-  // sent: the quotes attached to the message in the composer
-  const send = (typed: string, sent: Quote[]) => {
-    const text = typed.trim();
-    say({ from: "you", text, quotes: sent.length ? sent : undefined });
-    const replies =
-      mode === "refine"
-        ? sent.length
-          ? sent.map((q) => refine(q.text, q))
-          : [refine(text, null)]
-        : [answer(mode, text, sent.length ? { text: sent.map((q) => q.text).join(" ") } : null, entries)];
-    setTyping(true);
-    timers.current.push(
-      window.setTimeout(() => {
-        setTyping(false);
-        replies.forEach((reply) => say({ from: "rayume", ...reply }));
-      }, 900),
-    );
-  };
+  // Rayume's answer to what was sent: Refine answers each quoted line on its own, Add experience reads them
+  // all as one story
+  const reply = (text: string, sent: Quote[]) =>
+    mode === "refine"
+      ? sent.length
+        ? sent.map((q) => refine(q.text, q))
+        : [refine(text, null)]
+      : [answer(mode, text, sent.length ? { text: sent.map((q) => q.text).join(" ") } : null, entries)];
 
   // the resume's LaTeX with its changes; a job's keyword counts as said when the text has it
   const latex = withDoc(body, doc, originals);
@@ -520,7 +496,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           )}
         </div>
         <span role="status" className="ml-auto text-xs text-ink/50">
-          {busy ? "Saving…" : doc === blank ? "" : "Saved in this browser"}
+          {busy ? "Saving…" : offline ? "Saved · the PDF can't be typeset here, so changes are drawn over it" : doc === blank ? "" : "Saved in this browser"}
         </span>
         <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
         <button type="button" aria-label="Chat" title={chat ? "Hide the chat" : "Show the chat"} aria-pressed={chat} onClick={() => fold(right)} className={tool}>
@@ -596,26 +572,16 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
             <aside hidden={!chat && !easing} className="flex h-full min-w-[300px] flex-col">
               <div className="min-h-0 flex-1">
                 <Chat
-                  messages={messages}
-                  typing={typing}
+                  reply={reply}
                   mode={mode}
                   setMode={setMode}
                   quotes={quotes}
                   takeQuotes={() => setQuotes([])}
-                  send={send}
-                  apply={(m) => {
-                    change(withBullet(doc, m.suggestion!.bulletId, m.suggestion!.text));
-                    update(m.id, { suggestion: { ...m.suggestion!, applied: true } });
-                  }}
-                  addEntry={(m) => {
-                    // a drafted experience goes in as a project, at the top of Projects
-                    const e = m.draft!.entry;
-                    change({ ...doc, projects: [{ id: e.id, title: e.title, bullets: e.bullets.map((b) => b.text) }, ...(doc.projects ?? [])] });
-                    update(m.id, { draft: { ...m.draft!, added: true } });
-                  }}
-                  tailor={() => {}}
-                  pickPosting={() => {}}
+                  apply={(bulletId, text) => change(withBullet(doc, bulletId, text))}
+                  // a drafted experience goes in as a project, at the top of Projects
+                  addEntry={(title, bullets) => change({ ...doc, projects: [{ id: `new-${Date.now()}`, title, bullets }, ...(doc.projects ?? [])] })}
                   only={only}
+                  name={profile.name.split(" ")[0]}
                   addedTo={isMaster ? "your master resume, under Projects" : "this resume, under Projects"}
                 />
               </div>
