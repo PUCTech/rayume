@@ -142,7 +142,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const [pages, setPages] = useState(1);
   // what a render that just landed contains, until its pages are drawn; and which render is the latest
   const landing = useRef<Doc | null>(null);
-  const renders = useRef(0);
+  // whether a render is in flight, and the newest one asked for meanwhile
+  const flight = useRef<{ busy: boolean; next: Doc | null }>({ busy: false, next: null });
   const view = useRef<HTMLDivElement>(null);
   // where the pointer last was over the viewer: a textarea can't say where its selected text is on screen
   const pointer = useRef({ x: 0, y: 0 });
@@ -158,8 +159,11 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const dirty = !!editing && !!mine && tidy(mine.text) !== tidy(textIn(doc, editing, fresh));
 
   // typesets the pristine LaTeX with the document's changes; the newest render wins if several overlap
+  // One render at a time: what's asked for meanwhile waits, the newest replacing anything older, and goes as
+  // soon as the page in flight lands. The typesetter never works on a page that's already out of date.
   const render = async (next: Doc) => {
-    const n = ++renders.current;
+    if (flight.current.busy) return void (flight.current.next = next);
+    flight.current.busy = true;
     setBusy(true);
     try {
       const res = await fetch("/api/render", {
@@ -167,14 +171,17 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ file: r.template, tex: inline(styled(template, next.setup), withDoc(body, next, originals)) }),
       });
-      if (n !== renders.current) return;
       if (!res.ok) throw new Error(await res.text());
       landing.current = next;
       setSrc(URL.createObjectURL(await res.blob()));
     } catch {
-      if (n === renders.current) setOffline(true);
+      setOffline(true);
     } finally {
-      if (n === renders.current) setBusy(false);
+      flight.current.busy = false;
+      const queued = flight.current.next;
+      flight.current.next = null;
+      if (queued) render(queued);
+      else setBusy(false);
     }
   };
   const keep = (d: Doc) => {
@@ -311,22 +318,34 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   // a blur commits a tick late (inplace.tsx), when another edit may have started: it ends only its own
   // a new bullet the document doesn't have yet
   const unsaved = (t: Target): t is Target & { kind: "new" } => t.kind === "new" && !doc.added.some((a) => a.id === t.id);
-  const save = (t: Target, raw: string) => {
+  // the document with what's written in a field, or null when that changes nothing; settled moves a job whose
+  // dates were written to its place by date (a save does, a live preview doesn't: half a date would send it last)
+  const edited = (t: Target, raw: string, settled = true): Doc | null => {
     const text = tidy(raw);
-    if (unsaved(t)) return text && change({ ...doc, added: [...doc.added, { id: t.id, after: t.after, text }] });
-    if (text === textIn(doc, t)) return;
-    // settled: a date written on the page moves its job to its place in the date order
-    if (t.kind === "run") return text && change(settle(body, { ...doc, runs: { ...doc.runs, [t.key]: text } }, { ...doc, runs: { ...doc.runs, [t.key]: text } }));
-    change(withBullet(doc, t.id, text));
+    if (unsaved(t)) return text ? { ...doc, added: [...doc.added, { id: t.id, after: t.after, text }] } : null;
+    if (text === textIn(doc, t)) return null;
+    if (t.kind === "run") {
+      const next = { ...doc, runs: { ...doc.runs, [t.key]: text } };
+      return text ? (settled ? settle(body, next, next) : next) : null;
+    }
+    return withBullet(doc, t.id, text);
+  };
+  const save = (t: Target, raw: string) => {
+    const next = edited(t, raw);
+    if (next) change(next);
   };
   const commit = (t: Target, raw: string) => {
     setEditing((cur) => (key(cur) === key(t) ? null : cur));
     save(t, raw);
   };
-  // Writing saves itself, as in a document: a pause in the typing saves what's there and typesets it, the
-  // field and its caret staying where they are over the new page. Never an empty bullet, which would delete it.
+  // Writing typesets as you type: each keystroke asks for the page with it (render keeps one in flight), the
+  // field and its caret staying where they are over the new page. A pause saves what's there, as a document
+  // does, so an undo step is a burst of typing, not a letter; that save typesets the same text, which the
+  // render route already has. Never an empty bullet, which would delete it.
   useEffect(() => {
     if (!editing || !dirty || !tidy(mine!.text)) return;
+    const live = edited(editing, mine!.text, false);
+    if (live) render(live);
     const id = window.setTimeout(() => save(editing, mine!.text), 700);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
@@ -523,7 +542,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               while it slides it keeps its least width, clipped, instead of rewrapping at every step */}
           <div hidden={!leftOpen && !easing} className="h-full min-w-[260px]">
           {/* the master's content is your experience: settings edits the same, from outside any resume */}
-          <Content body={body} doc={doc} change={change} busy={busy} settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
+          <Content body={body} doc={doc} change={change} preview={render} busy={busy} settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
           </div>
         </Panel>
         <Separator className={handle} />

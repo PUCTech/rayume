@@ -130,6 +130,7 @@ function Text({
   autoFocus,
   className = "",
   onSave,
+  onLive,
 }: {
   value: string;
   label: string;
@@ -140,6 +141,8 @@ function Text({
   autoFocus?: boolean;
   className?: string;
   onSave: (text: string) => void;
+  // each keystroke's text, for a live preview, ahead of the save on a pause
+  onLive?: (text: string) => void;
 }) {
   const [text, setText] = useState(value);
   const [seen, setSeen] = useState<string | null>(value);
@@ -150,6 +153,7 @@ function Text({
   }
   useEffect(() => {
     if (late || !focused || text === value || !(empty || text.trim())) return;
+    onLive?.(text);
     const id = window.setTimeout(() => onSave(text), 700);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
@@ -187,7 +191,7 @@ function Text({
 // and typesetting with it) or the experience settings' (kept, no more). Both pages pass the master resume's
 // document when they edit it, so what either writes is what the other opens with. A text is found whatever
 // its capitals: the page reads the name in the capitals the template sets it in, the form as the LaTeX has it.
-function form(body: string, doc: Doc, change: (d: Doc) => void) {
+function form(body: string, doc: Doc, change: (d: Doc) => void, preview?: (d: Doc) => void) {
   const runKey = (f: Field) => Object.keys(doc.runs).find((k) => k.toLowerCase() === f.key.toLowerCase());
   const text = (id: string) => strip(doc.added.find((a) => a.id === id)?.text ?? doc.bullets[id] ?? [...originals, ...projectBullets(doc)].find((b) => b.id === id)?.text ?? "");
   const chain = (id: string): { id: string; text: string }[] => {
@@ -195,21 +199,39 @@ function form(body: string, doc: Doc, change: (d: Doc) => void) {
     const next = doc.added.filter((a) => a.after === id).reverse().flatMap((a) => chain(a.id));
     return [...(t ? [{ id, text: t }] : []), ...next];
   };
+  // the document with a text written, or null when that changes nothing; settled moves a job whose dates
+  // changed to its place by date (a save does, a live preview doesn't: half a date would send it last)
+  const withRun = (f: Field, raw: string, settled: boolean): Doc | null => {
+    const t = tidy(raw);
+    const was = runKey(f);
+    if (!t || t === (was ? doc.runs[was] : f.was)) return null;
+    const next = { ...doc, runs: { ...Object.fromEntries(Object.entries(doc.runs).filter(([k]) => k !== was)), [f.key]: t } };
+    return settled ? settle(body, next, next) : next;
+  };
+  // the form writes plain text: a bullet it changes loses its bold and italic
+  const withText = (id: string, raw: string): Doc | null => (tidy(raw) !== text(id) ? withBullet(doc, id, mark(tidy(raw))) : null);
   return {
     sections: outline(body, doc, originals),
     run: (f: Field) => doc.runs[runKey(f) ?? ""] ?? f.was,
     bullets: chain,
     links: doc.links ?? {},
     onRun: (f: Field, raw: string) => {
-      const t = tidy(raw);
-      const was = runKey(f);
-      if (!t || t === (was ? doc.runs[was] : f.was)) return;
-      // settled: a job whose dates changed moves to its place in the date order
-      const next = { ...doc, runs: { ...Object.fromEntries(Object.entries(doc.runs).filter(([k]) => k !== was)), [f.key]: t } };
-      change(settle(body, next, next));
+      const next = withRun(f, raw, true);
+      if (next) change(next);
     },
-    // the form writes plain text: a bullet it changes loses its bold and italic
-    onBullet: (id: string, raw: string) => tidy(raw) !== text(id) && change(withBullet(doc, id, mark(tidy(raw)))),
+    onBullet: (id: string, raw: string) => {
+      const next = withText(id, raw);
+      if (next) change(next);
+    },
+    // what's being typed, typeset as it's typed; the saves above still wait for a pause
+    liveRun: (f: Field, raw: string) => {
+      const next = withRun(f, raw, false);
+      if (next) preview?.(next);
+    },
+    liveBullet: (id: string, raw: string) => {
+      const next = withText(id, raw);
+      if (next) preview?.(next);
+    },
     onAdd: (after: string, raw: string) => tidy(raw) && change({ ...doc, added: [...doc.added, { id: `new-${Date.now()}`, after, text: mark(tidy(raw)) }] }),
     onLink: (f: Field, url: string) => change({ ...doc, links: { ...doc.links, [f.was]: url } }),
     onJob: (j: Job) => change(withJob(body, doc, j)),
@@ -228,17 +250,20 @@ export function Content({
   body,
   doc,
   change,
+  preview,
   busy,
   settings,
 }: {
   body: string;
   doc: Doc;
   change: (d: Doc) => void;
+  // typesets a document without saving it: what a field holds while it's being typed in
+  preview?: (d: Doc) => void;
   // whether the PDF is being typeset with the latest changes
   busy?: boolean;
   settings?: { href: string; label: string };
 }) {
-  const { sections, run, bullets, links, onRun, onBullet, onAdd, onLink, onJob, onDrop } = form(body, doc, change);
+  const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onLink, onJob, onDrop } = form(body, doc, change, preview);
   const saved = doc !== blank;
   // the entry a new bullet is being written for: "section/group"
   const [adding, setAdding] = useState<string | null>(null);
@@ -305,7 +330,7 @@ export function Content({
                             );
                           return (
                             <Labeled key={f.key} label={f.hint === "Title" ? "Job title" : f.hint!} className={span}>
-                              <Text value={run(f)} label={f.hint === "Title" ? "Job title" : f.hint!} onSave={(t) => onRun(f, t)} className={f === g.fields[0] ? "font-medium" : ""} />
+                              <Text value={run(f)} label={f.hint === "Title" ? "Job title" : f.hint!} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className={f === g.fields[0] ? "font-medium" : ""} />
                             </Labeled>
                           );
                         })}
@@ -316,7 +341,7 @@ export function Content({
                         <div key={f.key}>
                         <span className="mb-1 block text-xs font-medium text-ink/55">Link</span>
                         <div className="rounded-lg bg-white ring-1 ring-ink/10 focus-within:ring-2 focus-within:ring-accent-text">
-                          <Text value={run(f)} label="Link text" onSave={(t) => onRun(f, t)} className="!bg-transparent !ring-0" />
+                          <Text value={run(f)} label="Link text" onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent !ring-0" />
                           <div className="flex items-center gap-1.5 border-t border-ink/10 pl-2.5 text-ink/40">
                             <Link2 aria-hidden className="size-3.5 shrink-0" />
                             <Text
@@ -333,14 +358,14 @@ export function Content({
                         </div>
                       ) : (
                         <Labeled key={f.key} label={f === g.fields[0] ? "Title" : "Details"}>
-                          <Text value={run(f)} label={f === g.fields[0] ? "Title" : "Details"} onSave={(t) => onRun(f, t)} className={f === g.fields[0] && g.fields.length > 1 ? "font-medium" : ""} />
+                          <Text value={run(f)} label={f === g.fields[0] ? "Title" : "Details"} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className={f === g.fields[0] && g.fields.length > 1 ? "font-medium" : ""} />
                         </Labeled>
                       ),
                     )}
                     {(shown.length > 0 || adding === id) && <span className="block pt-1 text-xs font-medium text-ink/55">Bullets</span>}
                     {shown.map((b, n) => (
                       <div key={b.id} className="relative">
-                        <Text value={b.text} label={`Bullet ${n + 1}`} placeholder="Bullet" multiline onSave={(t) => onBullet(b.id, t)} className="pr-8" />
+                        <Text value={b.text} label={`Bullet ${n + 1}`} placeholder="Bullet" multiline onSave={(t) => onBullet(b.id, t)} onLive={(t) => liveBullet(b.id, t)} className="pr-8" />
                         <button
                           type="button"
                           aria-label={`Delete bullet ${n + 1}`}

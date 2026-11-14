@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFWorker } from "pdfjs-dist";
+
+// pdf.js's worker, made on the first PDF and kept: a document destroyed leaves a worker it was given running
+let worker: PDFWorker | undefined;
 import "./pdf.css";
 
 // the zoom buttons step through these; a pinch goes anywhere between the ends
@@ -139,8 +142,10 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
     let cancelled = false;
     const task = import("pdfjs-dist").then((pdfjs) => {
       pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+      // one worker for every PDF the page opens: without it each new render started a worker of its own
+      worker ??= new pdfjs.PDFWorker();
       // fontExtraProperties keeps each font's PostScript name, the only thing that says which face a TeX font is
-      return pdfjs.getDocument({ url: src, fontExtraProperties: true });
+      return pdfjs.getDocument({ url: src, fontExtraProperties: true, worker });
     });
     task
       .then((t) => t.promise)
