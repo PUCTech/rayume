@@ -20,7 +20,7 @@ import { master as masterSeed } from "./data";
 import { Overlay, label, type Target } from "./overlay";
 import { plain } from "./regions";
 import { Content } from "./content";
-import { blank, fonts, inline, margins, projectBullets, sizes, strip, styled, symbols, tidy, withBullet, withDoc, type Doc, type Setup } from "./tex";
+import { blank, fonts, inline, margins, projectBullets, sizes, strip, settle, styled, symbols, tidy, withBullet, withDoc, type Doc, type Setup } from "./tex";
 
 const serif = GeistSerifRegular.className;
 const only: Mode[] = ["refine", "add"];
@@ -309,7 +309,16 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     title: inPdf.runs[`0:${p.title}`] ?? p.title,
     bullets: p.bullets.map((text, i) => ({ id: `${p.id}-${i}`, text })),
   }));
-  const shown = [...added, ...entries].map((e) => ({
+  // jobs added from the form, like the body's own; the body's taken off the resume aren't on the page
+  const jobs = (inPdf.jobs ?? []).map((j) => ({
+    ...entries.find((e) => e.type === "professional")!,
+    id: j.id,
+    title: j.title,
+    organization: inPdf.runs[`0:${j.organization}`] ?? j.organization,
+    bullets: j.bullets.map((text, i) => ({ id: `${j.id}-${i}`, text })),
+  }));
+  const own = entries.filter((e) => e.type !== "professional" || !inPdf.hidden?.includes(`exp-${entries.filter((x) => x.type === "professional").indexOf(e)}`));
+  const shown = [...added, ...jobs, ...own].map((e) => ({
     ...e,
     bullets: e.bullets.flatMap((b) => {
       // bare text: the page is matched on what it says, not on what's bold
@@ -338,7 +347,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     const text = tidy(raw);
     if (unsaved(t)) return text && change({ ...doc, added: [...doc.added, { id: t.id, after: t.after, text }] });
     if (text === textIn(doc, t)) return;
-    if (t.kind === "run") return text && change({ ...doc, runs: { ...doc.runs, [t.key]: text } });
+    // settled: a date written on the page moves its job to its place in the date order
+    if (t.kind === "run") return text && change(settle(body, { ...doc, runs: { ...doc.runs, [t.key]: text } }, { ...doc, runs: { ...doc.runs, [t.key]: text } }));
     change(withBullet(doc, t.id, text));
   };
   const commit = (t: Target, raw: string) => {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Accordion } from "@base-ui/react/accordion";
 import { Check, ChevronDown, Link2, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import { entries } from "../app/data";
-import { blank, dates, mark, months, outline, projectBullets, strip, tidy, undates, withBullet, withJob, type Doc, type Field, type Group, type Job } from "./tex";
+import { blank, dates, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withoutJob, type Doc, type Field, type Group, type Job } from "./tex";
 
 const input =
   "w-full rounded-lg bg-white px-2.5 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text disabled:opacity-40 sm:text-[13px]";
@@ -63,7 +63,7 @@ function Dates({ start, end, onChange }: { start: string; end: string | null; on
   );
 }
 
-// A job that isn't on the resume yet, as a short form: it goes in, at the top of Experience, only once it has
+// A job that isn't on the resume yet, as a short form: it goes in, in its place by date, only once it has
 // what a \role line needs (title, company, place, dates) and a first bullet; after that it's edited like the rest.
 function NewJob({ onAdd, onCancel }: { onAdd: (j: Job) => void; onCancel: () => void }) {
   const [j, setJ] = useState<Job>({ id: "", title: "", organization: "", location: "", start: thisMonth(), end: null, bullets: [""] });
@@ -204,17 +204,17 @@ function form(body: string, doc: Doc, change: (d: Doc) => void) {
       const t = tidy(raw);
       const was = runKey(f);
       if (!t || t === (was ? doc.runs[was] : f.was)) return;
-      change({ ...doc, runs: { ...Object.fromEntries(Object.entries(doc.runs).filter(([k]) => k !== was)), [f.key]: t } });
+      // settled: a job whose dates changed moves to its place in the date order
+      const next = { ...doc, runs: { ...Object.fromEntries(Object.entries(doc.runs).filter(([k]) => k !== was)), [f.key]: t } };
+      change(settle(body, next, next));
     },
     // the form writes plain text: a bullet it changes loses its bold and italic
     onBullet: (id: string, raw: string) => tidy(raw) !== text(id) && change(withBullet(doc, id, mark(tidy(raw)))),
     onAdd: (after: string, raw: string) => tidy(raw) && change({ ...doc, added: [...doc.added, { id: `new-${Date.now()}`, after, text: mark(tidy(raw)) }] }),
     onLink: (f: Field, url: string) => change({ ...doc, links: { ...doc.links, [f.was]: url } }),
-    onJob: (j: Job) => change(withJob(body, doc, j, true)),
-    onDrop: (id: string) => {
-      const j = doc.jobs?.find((x) => x.id === id);
-      if (j) change(withJob(body, doc, j, false));
-    },
+    onJob: (j: Job) => change(withJob(body, doc, j)),
+    // any job, the resume's own too: the user says what's on their resume
+    onDrop: (id: string) => change(withoutJob(body, doc, id)),
   };
 }
 

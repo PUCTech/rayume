@@ -3,7 +3,7 @@ import { plain } from "./regions";
 // Every change written on the page, applied to the pristine LaTeX each time it's typeset:
 // bullets by id ("" deletes one), added bullets after the bullet they follow, any other run of text
 // (a title, a date, a skill line) by "occurrence:original text", the nth run with that text on the page,
-// projects added from the chat, at the top of Projects, and jobs added from the form, at the top of Experience.
+// projects added from the chat, at the top of Projects, and jobs added from the form, in Experience by date.
 // A project's or job's bullets are "<its id>-<n>". Either one's texts, once added, change as runs do.
 export type Added = { id: string; after: string; text: string };
 export type Project = { id: string; title: string; bullets: string[] };
@@ -14,7 +14,8 @@ export type Job = { id: string; title: string; organization: string; location: s
 // links are the URLs behind the header's underlined texts, by the text the body first had; setup is the
 // document's font, type size and margins, where they differ from the template's
 export type Setup = { font?: string; size?: string; margin?: string };
-export type Doc = { bullets: Record<string, string>; runs: Record<string, string>; added: Added[]; projects?: Project[]; jobs?: Job[]; links?: Record<string, string>; setup?: Setup };
+// order and hidden: Experience's jobs as shown and the body's taken off (see blocksOf)
+export type Doc = { bullets: Record<string, string>; runs: Record<string, string>; added: Added[]; projects?: Project[]; jobs?: Job[]; order?: string[]; hidden?: string[]; links?: Record<string, string>; setup?: Setup };
 export const blank: Doc = { bullets: {}, runs: {}, added: [], projects: [] };
 // a bullet's text written into the document: an added bullet's own, any other's by its id ("" deletes it)
 export const withBullet = (d: Doc, id: string, text: string): Doc =>
@@ -143,29 +144,31 @@ const roleOf = (j: Job) => [
 ];
 const experience = "\\ressection{Experience}";
 
-// Adding a job (at the top of Experience) or removing one moves every later run with one of its texts along
-// by as many matches, so an edit stays on the text it was made on ("n:text" counts in page order); removing
-// one drops its own runs too.
-export function withJob(body: string, doc: Doc, job: Job, add: boolean): Doc {
-  const jobs = doc.jobs ?? [];
-  const at = add ? 0 : jobs.findIndex((j) => j.id === job.id);
+// Experience as blocks, a job each with its lines: the body's own ("exp-<n>", in the body's order) and the ones
+// added from the form (by id). doc.order says the order they're shown in (newest first, see sorted), doc.hidden
+// which of the body's jobs were taken off the resume. Documents from before order existed keep the added jobs
+// on top, as they were.
+type Tagged = { line: string; tag: string; i: number };
+function blocksOf(body: string, doc: Doc) {
   const lines = body.split("\n");
-  const before = [...lines.slice(0, lines.indexOf(experience) + 1), ...jobs.slice(0, at).flatMap(roleOf)];
-  const count = (text: string, ls: string[]) => ls.reduce((n, l) => n + (l.startsWith("\\item ") ? 0 : [...l.matchAll(pattern(text))].length), 0);
-  const runs = Object.entries(doc.runs).flatMap(([k, v]) => {
-    const [, n, text] = k.match(/^(\d+):([\s\S]*)$/)!;
-    const b = count(text, before);
-    const m = count(text, roleOf(job));
-    if (Number(n) < b) return [[k, v]];
-    if (!add && Number(n) < b + m) return [];
-    return [[`${Number(n) + (add ? m : -m)}:${text}`, v]];
-  });
-  return { ...doc, runs: Object.fromEntries(runs), jobs: add ? [job, ...jobs] : jobs.filter((j) => j.id !== job.id) };
+  const from = lines.indexOf(experience);
+  if (from < 0) return { pre: lines, blocks: [] as { id: string; lines: string[] }[], post: [] as string[] };
+  const to = lines.findIndex((l, i) => i > from && l.startsWith("\\ressection"));
+  const end = to < 0 ? lines.length : to;
+  const own: { id: string; lines: string[] }[] = [];
+  const pre = lines.slice(0, from + 1);
+  for (const l of lines.slice(from + 1, end)) {
+    if (l.startsWith("\\role")) own.push({ id: `exp-${own.length}`, lines: [] });
+    (own.at(-1)?.lines ?? pre).push(l);
+  }
+  const rank = (id: string) => (doc.order?.includes(id) ? doc.order.indexOf(id) : Infinity);
+  const blocks = [...(doc.jobs ?? []).map((j) => ({ id: j.id, lines: roleOf(j) })), ...own].filter((b) => !doc.hidden?.includes(b.id)).sort((x, y) => rank(x.id) - rank(y.id));
+  return { pre, blocks, post: lines.slice(end) };
 }
-
-// the body's lines with the jobs added from the form, at the top of Experience, and the projects added from
-// the chat, at the top of Projects
-const sourceOf = (body: string, doc: Doc) => {
+// the body's lines with Experience's blocks in order and the projects added from the chat at the top of
+// Projects, each line tagged with where it came from (its block, or before or after Experience) and its place there
+function tagged(body: string, doc: Doc): Tagged[] {
+  const { pre, blocks, post } = blocksOf(body, doc);
   const projects = (doc.projects ?? []).flatMap((p) => [
     `\\textbf{${esc(p.title)}}`,
     "\\begin{itemize}",
@@ -173,9 +176,75 @@ const sourceOf = (body: string, doc: Doc) => {
     "\\end{itemize}",
     "\\vspace{3pt}",
   ]);
-  const jobs = (doc.jobs ?? []).flatMap(roleOf);
-  return body.split("\n").flatMap((line) => (line === "\\ressection{Projects}" ? [line, ...projects] : line === experience ? [line, ...jobs] : [line]));
-};
+  const after = post.flatMap((l) => (l === "\\ressection{Projects}" ? [l, ...projects] : [l]));
+  return [
+    ...pre.map((line, i) => ({ line, tag: "pre", i })),
+    ...blocks.flatMap((b) => b.lines.map((line, i) => ({ line, tag: b.id, i }))),
+    ...after.map((line, i) => ({ line, tag: "post", i })),
+  ];
+}
+const sourceOf = (body: string, doc: Doc) => tagged(body, doc).map((t) => t.line);
+// how many times a run's text is on a line, as withDoc counts them (bullets are matched by id instead)
+const matches = (line: string, text: string) => (line.startsWith("\\item ") ? 0 : [...line.matchAll(pattern(text))].length);
+
+// Runs are "n:text", the nth time the text is on the page, so a job added, removed or moved changes which
+// match an edit means. rekey finds each edit's line in from (its block and place) and counts it again in
+// to; an edit whose job is gone goes with it.
+export function rekey(body: string, from: Doc, to: Doc): Doc {
+  const a = tagged(body, from);
+  const b = tagged(body, to);
+  const runs = Object.entries(to.runs).flatMap(([k, v]) => {
+    const [, n, text] = k.match(/^(\d+):([\s\S]*)$/)!;
+    let seen = 0;
+    const at = a.find((l) => {
+      const c = matches(l.line, text);
+      if (Number(n) < seen + c) return true;
+      seen += c;
+      return false;
+    });
+    if (!at) return [[k, v]];
+    let before = 0;
+    for (const l of b) {
+      if (l.tag === at.tag && l.i === at.i) return [[`${before + Number(n) - seen}:${text}`, v]];
+      before += matches(l.line, text);
+    }
+    return [];
+  });
+  return { ...to, runs: Object.fromEntries(runs) };
+}
+
+// Experience newest first: current jobs, then by when they ended, then by when they started. A job's dates
+// are what the resume says now (its \role line with the edits on it); dates it can't read go last.
+function sorted(body: string, doc: Doc): string[] {
+  const counts = new Map<string, number>();
+  const when = new Map<string, string>();
+  for (const t of tagged(body, doc)) {
+    let out = t.line;
+    for (const [key, to] of Object.entries(doc.runs)) {
+      const [, n, text] = key.match(/^(\d+):([\s\S]*)$/)!;
+      if (t.line.startsWith("\\item ")) continue;
+      out = out.replace(pattern(text), (m) => {
+        const seen = counts.get(key) ?? 0;
+        counts.set(key, seen + 1);
+        return seen === Number(n) ? esc(to) : m;
+      });
+    }
+    const role = t.tag !== "pre" && t.tag !== "post" && t.i === 0 && out.match(/^\\role(?:\{[^}]*\}){3}\{([^}]*)\}/);
+    const d = role && undates(fromTex(role[1]));
+    if (role) when.set(t.tag, d ? `${d.end ?? "9999-99"}${d.start}` : "");
+  }
+  return blocksOf(body, doc).blocks.map((b) => b.id).sort((x, y) => (when.get(y) ?? "").localeCompare(when.get(x) ?? ""));
+}
+// to, put in date order with every edit still on its own text; from is to before the change that moved things
+// (to itself when only a date changed)
+export const settle = (body: string, from: Doc, to: Doc): Doc => rekey(body, from, { ...to, order: sorted(body, { ...to, runs: rekey(body, from, { ...to, order: from.order }).runs }) });
+// a job added from the form, or any job taken off: the form's own are deleted, the body's hidden
+export const withJob = (body: string, doc: Doc, job: Job) => settle(body, doc, { ...doc, jobs: [job, ...(doc.jobs ?? [])] });
+export const withoutJob = (body: string, doc: Doc, id: string) =>
+  settle(body, doc, doc.jobs?.some((j) => j.id === id) ? { ...doc, jobs: doc.jobs.filter((j) => j.id !== id) } : { ...doc, hidden: [...(doc.hidden ?? []), id] });
+// Experience's jobs as shown, by block id: the editor matches the body's against its entries
+export const jobOrder = (body: string, doc: Doc) => blocksOf(body, doc).blocks.map((b) => b.id);
+
 // which bullet an "\item" line is, by what it says
 const idOf = (line: string, bullets: { id: string; text: string }[]) => {
   const said = plain(fromTex(line.slice(6)));
@@ -225,7 +294,7 @@ export const inline = (template: string, body: string) => template.replace("\\in
 // gives it ("occurrence:text", counted the way withDoc finds it), so the form and the page write the same
 // changes; link marks a text the body underlines, which can carry a URL.
 export type Field = { key: string; was: string; hint?: string; link?: boolean };
-// job is the id of a job added from the form, which can be removed again
+// job is the id of an Experience entry (see blocksOf), which can be taken off the resume
 export type Group = { fields: Field[]; items: string[]; job?: string };
 export type Section = { title: string; groups: Group[] };
 const hints: Record<string, string[]> = { "\\role": ["Company", "Location", "Title", "Dates"], "\\resheader": ["Name"] };
@@ -264,9 +333,9 @@ export function outline(body: string, doc: Doc, bullets: { id: string; text: str
     }
     chunk(line.length);
   });
-  // the added jobs are Experience's first entries
-  const jobs = doc.jobs ?? [];
+  // Experience's entries are its jobs, in the order they're shown
+  const jobs = jobOrder(body, doc);
   return sections
-    .map((s) => ({ ...s, groups: s.groups.filter((g) => g.fields.length || g.items.length).map((g, i) => (s.title === "Experience" && jobs[i] ? { ...g, job: jobs[i].id } : g)) }))
+    .map((s) => ({ ...s, groups: s.groups.filter((g) => g.fields.length || g.items.length).map((g, i) => (s.title === "Experience" && jobs[i] ? { ...g, job: jobs[i] } : g)) }))
     .filter((s) => s.groups.length);
 }
