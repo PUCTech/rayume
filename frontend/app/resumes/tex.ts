@@ -3,16 +3,25 @@ import { plain } from "./regions";
 // Every change written on the page, applied to the pristine LaTeX each time it's typeset:
 // bullets by id ("" deletes one), added bullets after the bullet they follow, any other run of text
 // (a title, a date, a skill line) by "occurrence:original text", the nth run with that text on the page,
-// and projects added from the chat, at the top of Projects. A project's bullets are "<project id>-<n>".
+// projects added from the chat, at the top of Projects, and jobs added from the form, at the top of Experience.
+// A project's or job's bullets are "<its id>-<n>". Either one's texts, once added, change as runs do.
 export type Added = { id: string; after: string; text: string };
 export type Project = { id: string; title: string; bullets: string[] };
+// a job as the API's ExperienceData has it (start and end YYYY-MM, end null while it's current)
+// shortcut: no hard_skills or soft_skills yet, nothing on the page shows them; add them with POST /experiences
+export type Job = { id: string; title: string; organization: string; location: string; start: string; end: string | null; bullets: string[] };
 // projects is optional: documents kept in a browser before it existed don't have it
 // links are the URLs behind the header's underlined texts, by the text the body first had; setup is the
 // document's font, type size and margins, where they differ from the template's
 export type Setup = { font?: string; size?: string; margin?: string };
-export type Doc = { bullets: Record<string, string>; runs: Record<string, string>; added: Added[]; projects?: Project[]; links?: Record<string, string>; setup?: Setup };
+export type Doc = { bullets: Record<string, string>; runs: Record<string, string>; added: Added[]; projects?: Project[]; jobs?: Job[]; links?: Record<string, string>; setup?: Setup };
 export const blank: Doc = { bullets: {}, runs: {}, added: [], projects: [] };
-export const projectBullets = (d: Doc) => (d.projects ?? []).flatMap((p) => p.bullets.map((text, i) => ({ id: `${p.id}-${i}`, text })));
+// a bullet's text written into the document: an added bullet's own, any other's by its id ("" deletes it)
+export const withBullet = (d: Doc, id: string, text: string): Doc =>
+  d.added.some((a) => a.id === id) ? { ...d, added: d.added.map((a) => (a.id === id ? { ...a, text } : a)) } : { ...d, bullets: { ...d.bullets, [id]: text } };
+// single spaces, none at either end, not even inside the bold or italic a bullet opens or closes with
+export const tidy = (t: string) => t.replace(/\s+/g, " ").trim().replace(/^((?:<[biu]>)*) /, "$1").replace(/ ((?:<\/[biu]>)*)$/, "$1");
+export const projectBullets = (d: Doc) => [...(d.projects ?? []), ...(d.jobs ?? [])].flatMap((p) => p.bullets.map((text, i) => ({ id: `${p.id}-${i}`, text })));
 
 export const fromTex = (s: string) =>
   s
@@ -108,7 +117,54 @@ export function styled(template: string, setup: Setup = {}) {
   return extra.length ? sized.replace("\\begin{document}", () => `${extra.join("\n")}\n\\begin{document}`) : sized;
 }
 
-// the body's lines with the projects added from the chat, at the top of Projects
+// A job's dates as the body writes them ("February 2025 – Present"), and back: null when a text isn't dates
+// written that way.
+export const months = Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(2000, i)).toLocaleString("en-US", { month: "long", timeZone: "UTC" }));
+const month = (ym: string) => `${months[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+export const dates = (start: string, end: string | null) => `${month(start)} – ${end ? month(end) : "Present"}`;
+export function undates(s: string): { start: string; end: string | null } | null {
+  const ym = (m: string) => {
+    const [name, year] = m.split(" ");
+    const i = months.indexOf(name);
+    return i < 0 ? null : `${year}-${String(i + 1).padStart(2, "0")}`;
+  };
+  const m = s.trim().match(/^(\w+ \d{4})\s*[–-]+\s*(\w+ \d{4}|Present)$/);
+  const start = m && ym(m[1]);
+  if (!m || !start) return null;
+  const end = m[2] === "Present" ? null : ym(m[2]);
+  return end === null && m[2] !== "Present" ? null : { start, end };
+}
+
+// a job's lines, like the body's own: its \role line, then its bullets
+const roleOf = (j: Job) => [
+  `\\role{${esc(j.organization)}}{${esc(j.location)}}{${esc(j.title)}}{${esc(dates(j.start, j.end))}}`,
+  ...(j.bullets.length ? ["\\begin{itemize}", ...j.bullets.map((b) => `\\item ${esc(b)}`), "\\end{itemize}"] : []),
+  "\\vspace{3pt}",
+];
+const experience = "\\ressection{Experience}";
+
+// Adding a job (at the top of Experience) or removing one moves every later run with one of its texts along
+// by as many matches, so an edit stays on the text it was made on ("n:text" counts in page order); removing
+// one drops its own runs too.
+export function withJob(body: string, doc: Doc, job: Job, add: boolean): Doc {
+  const jobs = doc.jobs ?? [];
+  const at = add ? 0 : jobs.findIndex((j) => j.id === job.id);
+  const lines = body.split("\n");
+  const before = [...lines.slice(0, lines.indexOf(experience) + 1), ...jobs.slice(0, at).flatMap(roleOf)];
+  const count = (text: string, ls: string[]) => ls.reduce((n, l) => n + (l.startsWith("\\item ") ? 0 : [...l.matchAll(pattern(text))].length), 0);
+  const runs = Object.entries(doc.runs).flatMap(([k, v]) => {
+    const [, n, text] = k.match(/^(\d+):([\s\S]*)$/)!;
+    const b = count(text, before);
+    const m = count(text, roleOf(job));
+    if (Number(n) < b) return [[k, v]];
+    if (!add && Number(n) < b + m) return [];
+    return [[`${Number(n) + (add ? m : -m)}:${text}`, v]];
+  });
+  return { ...doc, runs: Object.fromEntries(runs), jobs: add ? [job, ...jobs] : jobs.filter((j) => j.id !== job.id) };
+}
+
+// the body's lines with the jobs added from the form, at the top of Experience, and the projects added from
+// the chat, at the top of Projects
 const sourceOf = (body: string, doc: Doc) => {
   const projects = (doc.projects ?? []).flatMap((p) => [
     `\\textbf{${esc(p.title)}}`,
@@ -117,7 +173,8 @@ const sourceOf = (body: string, doc: Doc) => {
     "\\end{itemize}",
     "\\vspace{3pt}",
   ]);
-  return body.split("\n").flatMap((line) => (line === "\\ressection{Projects}" ? [line, ...projects] : [line]));
+  const jobs = (doc.jobs ?? []).flatMap(roleOf);
+  return body.split("\n").flatMap((line) => (line === "\\ressection{Projects}" ? [line, ...projects] : line === experience ? [line, ...jobs] : [line]));
 };
 // which bullet an "\item" line is, by what it says
 const idOf = (line: string, bullets: { id: string; text: string }[]) => {
@@ -155,7 +212,8 @@ export function withDoc(body: string, doc: Doc, bullets: { id: string; text: str
     const at = lines.findIndex((l) => l.id === a.after);
     if (at >= 0) lines.splice(at + 1, 0, { id: a.id, line: a.text ? `\\item ${toTex(a.text)}` : null });
   }
-  return lines.flatMap((l) => (l.line === null ? [] : [l.line])).join("\n");
+  // an entry whose bullets are all deleted loses its list too: LaTeX won't set an empty one
+  return lines.flatMap((l) => (l.line === null ? [] : [l.line])).join("\n").replace(/\\begin\{itemize\}\n\\end\{itemize\}\n?/g, "");
 }
 
 // The template with its body written in, so Code shows the whole resume and compiles on its own.
@@ -167,7 +225,8 @@ export const inline = (template: string, body: string) => template.replace("\\in
 // gives it ("occurrence:text", counted the way withDoc finds it), so the form and the page write the same
 // changes; link marks a text the body underlines, which can carry a URL.
 export type Field = { key: string; was: string; hint?: string; link?: boolean };
-export type Group = { fields: Field[]; items: string[] };
+// job is the id of a job added from the form, which can be removed again
+export type Group = { fields: Field[]; items: string[]; job?: string };
 export type Section = { title: string; groups: Group[] };
 const hints: Record<string, string[]> = { "\\role": ["Company", "Location", "Title", "Dates"], "\\resheader": ["Name"] };
 export function outline(body: string, doc: Doc, bullets: { id: string; text: string }[]): Section[] {
@@ -205,5 +264,9 @@ export function outline(body: string, doc: Doc, bullets: { id: string; text: str
     }
     chunk(line.length);
   });
-  return sections.map((s) => ({ ...s, groups: s.groups.filter((g) => g.fields.length || g.items.length) })).filter((s) => s.groups.length);
+  // the added jobs are Experience's first entries
+  const jobs = doc.jobs ?? [];
+  return sections
+    .map((s) => ({ ...s, groups: s.groups.filter((g) => g.fields.length || g.items.length).map((g, i) => (s.title === "Experience" && jobs[i] ? { ...g, job: jobs[i].id } : g)) }))
+    .filter((s) => s.groups.length);
 }

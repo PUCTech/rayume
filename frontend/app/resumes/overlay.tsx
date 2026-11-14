@@ -10,7 +10,9 @@ import { strip, type Added } from "./tex";
 // entries get more room than their bullets, so a bullet's box sits inside its entry's
 const grow = (b: Box, pad: number): Box => ({ x: b.x - pad, y: b.y - pad / 2, w: b.w + pad * 2, h: b.h + pad });
 const inside = (b: Box, x: number, y: number) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-const at = (b: Box) => ({ left: b.x, top: b.y, width: b.w, height: b.h });
+const at = (b: Box, pad = 0) => ({ left: b.x - pad, top: b.y - pad, width: b.w + 2 * pad, height: b.h + 2 * pad });
+// the focused entry's frame stands this far off its text, so the text doesn't touch it
+const room = 6;
 const ease = "transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
 const small = "rounded-full px-3 py-1.5 text-[13px] font-medium transition pointer-coarse:py-2.5";
 
@@ -117,6 +119,18 @@ export function Overlay({
   // where the pointer went down: a click is a press that didn't travel, anything longer was a drag
   const down = useRef<[number, number] | null>(null);
   const focus = found.find((r) => r.id === selected);
+  // Focus dims the text around the entry, not the page: the sheet stays white and the rules as they are.
+  // shortcut: a page drawn as an image (fonts pdf.js couldn't load) has no text to dim, so nothing dims there
+  useEffect(() => {
+    if (!focus) return;
+    const rest = page.spans.filter((s) => !inside(focus, s.x + s.w / 2, s.y + s.h / 2)).map((s) => s.el);
+    rest.forEach((el) => {
+      el.style.transition = "opacity 300ms cubic-bezier(0.22, 1, 0.36, 1)";
+      el.style.opacity = "0.28";
+    });
+    return () => rest.forEach((el) => (el.style.opacity = ""));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focus is found afresh each render; its id says when it changed
+  }, [focus?.id, page]);
   const bullets = useMemo(() => found.flatMap((r) => r.bullets.map((b) => ({ ...b, right: r.x + r.w - 8 }))), [found]);
 
   // the page's hanging indent and line spacing, read off bullets that wrap
@@ -311,7 +325,7 @@ export function Overlay({
   });
 
   // the bar sits under the focused entry, or over it when there's no room below
-  const bar = focus && (focus.y + focus.h + 52 < page.height ? focus.y + focus.h + 8 : Math.max(8, focus.y - 48));
+  const bar = focus && (focus.y + focus.h + room + 52 < page.height ? focus.y + focus.h + room + 8 : Math.max(8, focus.y - 48));
   const all = focus && focus.bullets.length > 0 && focus.bullets.every((b) => picked.includes(b.id));
   const total = written.at(-1)?.moved ?? 0;
   const quiet = !!(selected || editing || written.length || writtenRuns.length);
@@ -374,10 +388,11 @@ export function Overlay({
           return (
             <div
               key={r.id}
-              style={at(r)}
+              // no room above: an entry's box already starts over the gap (and the rule) before its first line
+              style={on ? { ...at(r, room), top: r.y, height: r.h + room } : at(r)}
               className={`absolute rounded-lg ${ease} starting:opacity-0 ${
                 on
-                  ? "border-2 border-accent shadow-[0_0_0_200vmax_rgb(244_240_234/0.75)]"
+                  ? "bg-accent/[0.035] ring-1 ring-accent/45"
                   : // only the entry under the pointer shows its box, as an editor's text frames do
                     `border border-dashed ${quiet ? "opacity-0" : hover === r.id ? "border-accent/60 bg-accent/[0.04]" : "border-transparent"}`
               }`}
@@ -403,10 +418,11 @@ export function Overlay({
           const on = picked.includes(b.id);
           return (
             <div key={b.id}>
-              <div style={at(b)} className={`absolute rounded-md border ${ease} starting:opacity-0 ${on ? "border-accent bg-accent/10" : "border-dashed border-accent/40"}`} />
+              {/* a picked bullet is tinted; the rest are told apart by their checkbox alone */}
+              <div style={at(b, 2)} className={`absolute rounded-md ${ease} ${on ? "bg-accent/10" : "opacity-0"}`} />
               {/* in the margin left of the entry, clear of its border */}
               <span
-                style={{ left: focus.x - 20, top: b.y + 3 }}
+                style={{ left: focus.x - room - 20, top: b.y + 3 }}
                 className={`absolute grid size-3.5 place-items-center rounded-full border ${ease} starting:opacity-0 ${on ? "border-accent-deep bg-accent-deep text-white" : "border-ink/30 bg-white"}`}
               >
                 {on && (
@@ -425,7 +441,7 @@ export function Overlay({
             data-overlay-ui
             role="toolbar"
             aria-label={`${label(entries.find((e) => e.id === focus.id)!)} actions`}
-            style={{ left: Math.max(8, Math.min(focus.x, page.width - 372)), top: bar }}
+            style={{ left: Math.max(8, Math.min(focus.x - room, page.width - 372)), top: bar }}
             className={`pointer-events-auto absolute flex items-center gap-1 rounded-full bg-paper p-1 shadow-[0_10px_28px_-10px_rgb(22_27_34/0.45)] ring-1 ring-ink/10 ${ease} starting:translate-y-1 starting:opacity-0`}
           >
             {focus.bullets.length > 0 && (

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { master, resumes as seed, type Saved } from "./data";
+import { blank, type Doc } from "./tex";
 
 // The resume list as this browser has it: the demo resumes, plus what's been created, duplicated, renamed
 // or deleted here. The server and the first render see the demo list; the browser's copy takes over right
@@ -57,6 +58,23 @@ export const copyEdits = (from: string, to: string) => {
   try {
     const d = localStorage.getItem(editsOf(from));
     if (d) localStorage.setItem(editsOf(to), d);
+  } catch {}
+};
+
+// the changes this browser kept for a resume, or none; only read in the browser (see Open), and kept again
+// by whichever page changes them: the master's editor and the experience settings write the same ones
+// shortcut: two tabs open on the master overwrite each other's changes; the API's PATCH /experiences ends that.
+export const kept = (id: string): Doc => {
+  try {
+    const d = JSON.parse(localStorage.getItem(editsOf(id)) ?? "null") as Doc | null;
+    const some = (o?: object) => !!o && Object.values(o).some(Boolean);
+    if (d && (some(d.bullets) || some(d.runs) || d.added.length || d.projects?.length || d.jobs?.length || some(d.links) || some(d.setup))) return d;
+  } catch {}
+  return blank;
+};
+export const keep = (id: string, d: Doc) => {
+  try {
+    localStorage.setItem(editsOf(id), JSON.stringify(d));
   } catch {}
 };
 

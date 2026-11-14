@@ -15,12 +15,12 @@ import { answer } from "../app/workspace";
 import { entries, postings } from "../app/data";
 import type { Quote } from "../app/resume";
 import type { Saved } from "./data";
-import { editsOf, touch } from "./store";
+import { editsOf, kept, touch } from "./store";
 import { master as masterSeed } from "./data";
 import { Overlay, label, type Target } from "./overlay";
 import { plain } from "./regions";
 import { Content } from "./content";
-import { blank, fonts, inline, margins, mark, outline, projectBullets, sizes, strip, styled, symbols, withDoc, type Doc, type Field, type Setup } from "./tex";
+import { blank, fonts, inline, margins, projectBullets, sizes, strip, styled, symbols, tidy, withBullet, withDoc, type Doc, type Setup } from "./tex";
 
 const serif = GeistSerifRegular.className;
 const only: Mode[] = ["refine", "add"];
@@ -35,20 +35,8 @@ const textIn = (d: Doc, t: Target, draft = "") => {
   if (t.kind === "new") return draft;
   return d.bullets[t.id] ?? [...originals, ...projectBullets(d)].find((b) => b.id === t.id)?.text ?? "";
 };
-const withBullet = (d: Doc, id: string, text: string): Doc =>
-  d.added.some((a) => a.id === id) ? { ...d, added: d.added.map((a) => (a.id === id ? { ...a, text } : a)) } : { ...d, bullets: { ...d.bullets, [id]: text } };
-// the changes this browser kept for a resume, or none; the editor only renders in the browser (see Open)
-const kept = (key: string): Doc => {
-  try {
-    const d = JSON.parse(localStorage.getItem(key) ?? "null") as Doc | null;
-    const some = (o?: object) => !!o && Object.values(o).some(Boolean);
-    if (d && (some(d.bullets) || some(d.runs) || d.added.length || d.projects?.length || some(d.links) || some(d.setup))) return d;
-  } catch {}
-  return blank;
-};
 // toolbar buttons take the press without taking the caret out of the text
 const tool = "grid size-8 place-items-center rounded-md text-ink/70 transition hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30 aria-pressed:bg-accent/15 aria-pressed:text-accent-text pointer-coarse:size-10";
-// single spaces, none at either end, not even inside the bold or italic a bullet opens or closes with
 // the line between two panels: a hairline that lights up under the pointer, dragged to resize them
 const handle = "w-px bg-ink/10 outline-none transition-colors data-[separator=hover]:bg-accent data-[separator=active]:bg-accent focus-visible:bg-accent";
 
@@ -83,7 +71,6 @@ const fontItems = [{ value: "", label: "Template font" }, ...Object.entries(font
 const sizeItems = [{ value: "", label: "Size" }, ...sizes.map((value) => ({ value, label: `${value} pt` }))];
 const marginItems = [{ value: "", label: "Margins" }, ...Object.keys(margins).map((value) => ({ value, label: `${value[0].toUpperCase()}${value.slice(1)} margins` }))];
 
-const tidy = (t: string) => t.replace(/\s+/g, " ").trim().replace(/^((?:<[biu]>)*) /, "$1").replace(/ ((?:<\/[biu]>)*)$/, "$1");
 const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` : `${t.kind}:${t.id}`);
 
 // A resume's own page (/resumes/[id]): the templates' PDF/Code viewer across the width, with Rayume's chat in a
@@ -117,7 +104,13 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const right = usePanelRef();
   const [leftOpen, setLeftOpen] = useState(wide);
   const [chat, setChat] = useState(wide);
-  const fold = (p: typeof left) => (p.current?.isCollapsed() ? p.current.expand() : p.current?.collapse());
+  // a fold from a button slides: the panels' flex-grow eases for its length (a drag follows the pointer instead)
+  const [easing, setEasing] = useState(false);
+  const fold = (p: typeof left) => {
+    setEasing(true);
+    timers.current.push(window.setTimeout(() => setEasing(false), 320));
+    return p.current?.isCollapsed() ? p.current.expand() : p.current?.collapse();
+  };
   // the symbols menu under the toolbar
   const [sym, setSym] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -128,7 +121,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     },
   ]);
   const [mode, setMode] = useState<Mode>("refine");
-  const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pick, setPick] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -145,7 +137,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   // being swapped underneath
   const [live, setLive] = useState<{ key: string; text: string; at: number } | null>(null);
   // the document as written, and as the PDF on screen has it; the difference is drawn over the page
-  const [doc, setDoc] = useState<Doc>(() => kept(editsOf(r.id)));
+  const [doc, setDoc] = useState<Doc>(() => kept(r.id));
   const [inPdf, setInPdf] = useState<Doc>(blank);
   const past = useRef<Doc[]>([]);
   const future = useRef<Doc[]>([]);
@@ -246,15 +238,13 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       const [bold, italic, underline] = ["bold", "italic", "underline"].map((c) => document.queryCommandState(c));
       setFmt((f) => (f.bold === bold && f.italic === italic && f.underline === underline ? f : { bold, italic, underline }));
       if (dragging.current) return setPick(null);
-      const el = document.activeElement;
       let text = "";
       let { x, y } = pointer.current;
-      // the code editor's selection; the text being written on the page isn't a source of quotes
-      if (el instanceof HTMLTextAreaElement && el.id === "tpl-code") {
-        text = el.value.slice(el.selectionStart, el.selectionEnd);
-      } else {
+      // the code editor (CodeMirror, contenteditable too) keeps the DOM selection in step with its own; the
+      // text being written on the page isn't a source of quotes
+      {
         const sel = document.getSelection();
-        const writing = (sel?.anchorNode instanceof Element ? sel.anchorNode : sel?.anchorNode?.parentElement)?.closest("[contenteditable]");
+        const writing = (sel?.anchorNode instanceof Element ? sel.anchorNode : sel?.anchorNode?.parentElement)?.closest("[contenteditable]:not(#tpl-code)");
         if (sel && !sel.isCollapsed && !writing && view.current?.contains(sel.anchorNode)) {
           text = sel.toString();
           const r = sel.getRangeAt(0).getBoundingClientRect();
@@ -362,22 +352,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
   }, [mine?.text]);
-  // What the content form shows and writes (content.tsx). A text is found whatever its capitals: the page
-  // reads the name in the capitals the template sets it in, the form as the LaTeX has it.
-  const runKey = (f: Field) => Object.keys(doc.runs).find((k) => k.toLowerCase() === f.key.toLowerCase());
-  const chain = (id: string): { id: string; text: string }[] => {
-    const text = strip(textIn(doc, { kind: "bullet", id }));
-    const next = doc.added.filter((a) => a.after === id).reverse().flatMap((a) => chain(a.id));
-    return [...(text ? [{ id, text }] : []), ...next];
-  };
-  const setRun = (f: Field, raw: string) => {
-    const text = tidy(raw);
-    const was = runKey(f);
-    if (!text || text === (was ? doc.runs[was] : f.was)) return;
-    change({ ...doc, runs: { ...Object.fromEntries(Object.entries(doc.runs).filter(([k]) => k !== was)), [f.key]: text } });
-  };
-  // the form writes plain text: a bullet it changes loses its bold and italic
-  const setBullet = (id: string, raw: string) => tidy(raw) !== strip(textIn(doc, { kind: "bullet", id })) && change(withBullet(doc, id, mark(tidy(raw))));
   const setup = (s: Setup) => change({ ...doc, setup: { ...doc.setup, ...s } });
   // one history, as a document has: the field's own for typing not saved yet, the document's otherwise
   const history = (back: boolean) => (dirty ? document.execCommand(back ? "undo" : "redo") : step(back));
@@ -430,8 +404,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   };
 
   // Refine answers each pasted line on its own; Add experience reads them all as one story
-  const send = () => {
-    const text = draft.trim();
+  const send = (typed: string) => {
+    const text = typed.trim();
     say({ from: "you", text, quotes: quotes.length ? quotes : undefined });
     const replies =
       mode === "refine"
@@ -439,7 +413,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           ? quotes.map((q) => refine(q.text, q))
           : [refine(text, null)]
         : [answer(mode, text, quotes.length ? { text: quotes.map((q) => q.text).join(" ") } : null, entries)];
-    setDraft("");
     setQuotes([]);
     setTyping(true);
     timers.current.push(
@@ -586,26 +559,19 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       {stale && (
         <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink/10 bg-mist px-4 py-2 text-sm">
           <span className="text-ink/75">Your master resume changed since this one was last edited.</span>
-          <button type="button" onClick={() => change(kept(editsOf(masterSeed.id)))} className="font-medium text-accent-text">
+          <button type="button" onClick={() => change(kept(masterSeed.id))} className="font-medium text-accent-text">
             Update from master
           </button>
           <span className="text-xs text-ink/50">replaces this resume&apos;s text; ⌘Z brings it back</span>
         </div>
       )}
-      <Group orientation="horizontal" className="min-h-0 flex-1">
-        <Panel id="content" panelRef={left} collapsible collapsedSize={0} defaultSize={wide ? 320 : 0} minSize={260} maxSize={480} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setLeftOpen(size.inPixels > 1)} className="h-full bg-paper">
-          {/* a folded panel has no width for its content to wrap in: it's hidden rather than left to spill */}
-          <div hidden={!leftOpen} className="h-full">
-          <Content
-            sections={outline(body, doc, originals)}
-            run={(f) => doc.runs[runKey(f) ?? ""] ?? f.was}
-            bullets={chain}
-            links={doc.links ?? {}}
-            onRun={setRun}
-            onBullet={setBullet}
-            onAdd={(after, text) => tidy(text) && change({ ...doc, added: [...doc.added, { id: `new-${Date.now()}`, after, text: mark(tidy(text)) }] })}
-            onLink={(f, url) => change({ ...doc, links: { ...doc.links, [f.was]: url } })}
-          />
+      <Group orientation="horizontal" className={`min-h-0 flex-1 ${easing ? "*:data-panel:transition-[flex-grow] *:data-panel:duration-300 *:data-panel:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:*:data-panel:transition-none" : ""}`}>
+        <Panel id="content" panelRef={left} collapsible collapsedSize={0} defaultSize={wide ? 320 : 0} minSize={260} maxSize={480} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setLeftOpen(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
+          {/* a folded panel has no width for its content to wrap in: it's hidden rather than left to spill, and
+              while it slides it keeps its least width, clipped, instead of rewrapping at every step */}
+          <div hidden={!leftOpen && !easing} className="h-full min-w-[260px]">
+          {/* the master's content is your experience: settings edits the same, from outside any resume */}
+          <Content body={body} doc={doc} change={change} busy={busy} settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
           </div>
         </Panel>
         <Separator className={handle} />
@@ -656,16 +622,14 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
             </div>
         </Panel>
         <Separator className={handle} />
-        <Panel id="chat" panelRef={right} collapsible collapsedSize={0} defaultSize={wide ? 400 : 0} minSize={300} maxSize={560} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setChat(size.inPixels > 1)} className="h-full bg-paper">
-            <aside hidden={!chat} className="flex h-full flex-col">
+        <Panel id="chat" panelRef={right} collapsible collapsedSize={0} defaultSize={wide ? 400 : 0} minSize={300} maxSize={560} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setChat(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
+            <aside hidden={!chat && !easing} className="flex h-full min-w-[300px] flex-col">
               <div className="min-h-0 flex-1">
                 <Chat
                   messages={messages}
                   typing={typing}
                   mode={mode}
                   setMode={setMode}
-                  draft={draft}
-                  setDraft={setDraft}
                   quotes={quotes}
                   removeQuote={(i) => setQuotes((qs) => qs.filter((_, j) => j !== i))}
                   send={send}
