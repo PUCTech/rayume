@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
+import { share } from "../../share";
 import Link from "next/link";
 import { LegalDoc, Table, type Section } from "../doc";
 import { legal } from "../info";
 
-export const metadata: Metadata = {
-  title: "Cookie Policy · Rayume",
-  description: "The two strictly necessary cookies Rayume uses, and why there is no cookie banner.",
-};
+export const metadata: Metadata = share("Cookie Policy · Rayume", "The two strictly necessary cookies Rayume uses, and why there is no cookie banner.");
 
 const sections: Section[] = [
   {

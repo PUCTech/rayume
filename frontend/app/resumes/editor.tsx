@@ -5,22 +5,22 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import Image from "next/image";
 import Link from "next/link";
 import { Select } from "@base-ui/react/select";
-import { Check, ChevronDown, Omega, PanelLeft, Redo2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, MessageSquareQuote, Omega, PanelLeft, PanelRight, Redo2, Undo2 } from "lucide-react";
 import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { Mark } from "../logo";
 import { Viewer } from "../templates/viewer";
 import type { Page } from "../templates/pdf";
-import { Chat, type Message, type Mode } from "../app/chat";
+import { Chat, type Mode } from "../app/chat";
 import { answer } from "../app/workspace";
-import { entries, postings } from "../app/data";
+import { entries, postings, profile } from "../app/data";
 import type { Quote } from "../app/resume";
 import type { Saved } from "./data";
-import { editsOf, touch } from "./store";
+import { editsOf, kept, touch } from "./store";
 import { master as masterSeed } from "./data";
-import { Overlay, label, type Target } from "./overlay";
+import { Overlay, type Target } from "./overlay";
 import { plain } from "./regions";
 import { Content } from "./content";
-import { blank, fonts, inline, margins, mark, outline, projectBullets, sizes, strip, styled, symbols, withDoc, type Doc, type Field, type Setup } from "./tex";
+import { blank, fonts, inline, margins, projectBullets, sizes, strip, settle, styled, symbols, tidy, withBullet, withDoc, type Doc, type Setup } from "./tex";
 
 const serif = GeistSerifRegular.className;
 const only: Mode[] = ["refine", "add"];
@@ -35,20 +35,8 @@ const textIn = (d: Doc, t: Target, draft = "") => {
   if (t.kind === "new") return draft;
   return d.bullets[t.id] ?? [...originals, ...projectBullets(d)].find((b) => b.id === t.id)?.text ?? "";
 };
-const withBullet = (d: Doc, id: string, text: string): Doc =>
-  d.added.some((a) => a.id === id) ? { ...d, added: d.added.map((a) => (a.id === id ? { ...a, text } : a)) } : { ...d, bullets: { ...d.bullets, [id]: text } };
-// the changes this browser kept for a resume, or none; the editor only renders in the browser (see Open)
-const kept = (key: string): Doc => {
-  try {
-    const d = JSON.parse(localStorage.getItem(key) ?? "null") as Doc | null;
-    const some = (o?: object) => !!o && Object.values(o).some(Boolean);
-    if (d && (some(d.bullets) || some(d.runs) || d.added.length || d.projects?.length || some(d.links) || some(d.setup))) return d;
-  } catch {}
-  return blank;
-};
 // toolbar buttons take the press without taking the caret out of the text
 const tool = "grid size-8 place-items-center rounded-md text-ink/70 transition hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30 aria-pressed:bg-accent/15 aria-pressed:text-accent-text pointer-coarse:size-10";
-// single spaces, none at either end, not even inside the bold or italic a bullet opens or closes with
 // the line between two panels: a hairline that lights up under the pointer, dragged to resize them
 const handle = "w-px bg-ink/10 outline-none transition-colors data-[separator=hover]:bg-accent data-[separator=active]:bg-accent focus-visible:bg-accent";
 
@@ -83,7 +71,6 @@ const fontItems = [{ value: "", label: "Template font" }, ...Object.entries(font
 const sizeItems = [{ value: "", label: "Size" }, ...sizes.map((value) => ({ value, label: `${value} pt` }))];
 const marginItems = [{ value: "", label: "Margins" }, ...Object.keys(margins).map((value) => ({ value, label: `${value[0].toUpperCase()}${value.slice(1)} margins` }))];
 
-const tidy = (t: string) => t.replace(/\s+/g, " ").trim().replace(/^((?:<[biu]>)*) /, "$1").replace(/ ((?:<\/[biu]>)*)$/, "$1");
 const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` : `${t.kind}:${t.id}`);
 
 // A resume's own page (/resumes/[id]): the templates' PDF/Code viewer across the width, with Rayume's chat in a
@@ -96,8 +83,8 @@ const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` :
 // (tex.ts's styled), bold, italic, underline and symbols (bullets only), and says when changes are saved.
 // ⌘Z and ⇧⌘Z step through the changes, they're kept in this browser across reloads, Code shows the whole
 // LaTeX with them written in, and the bar says when the resume no longer fits on one page.
-// Text selected in the PDF or the code gets a "Paste into chat" button; an entry can be focused to send its
-// bullets to Rayume, whose suggestions go into the document like your own edits.
+// Text selected in the PDF or the code gets a "Send to chat" button, which quotes it in the composer (opening
+// the chat if it's folded); Rayume's suggestions go into the document like your own edits.
 // shortcut: the chat is scripted (app/workspace.tsx's answer); changes live in localStorage until the API
 // saves versions (POST /resumes/{id}/versions); edits made in Code and rendered there aren't part of the
 // document, so the next edit on the page typesets over them.
@@ -117,24 +104,21 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const right = usePanelRef();
   const [leftOpen, setLeftOpen] = useState(wide);
   const [chat, setChat] = useState(wide);
-  const fold = (p: typeof left) => (p.current?.isCollapsed() ? p.current.expand() : p.current?.collapse());
+  // a fold from a button slides: the panels' flex-grow eases for its length (a drag follows the pointer instead)
+  const [easing, setEasing] = useState(false);
+  const fold = (p: typeof left) => {
+    setEasing(true);
+    timers.current.push(window.setTimeout(() => setEasing(false), 320));
+    return p.current?.isCollapsed() ? p.current.expand() : p.current?.collapse();
+  };
   // the symbols menu under the toolbar
   const [sym, setSym] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 0,
-      from: "rayume",
-      text: "Hi Lucas. Click any text on your resume to change it, or paste a line here and I'll rewrite it.",
-    },
-  ]);
   const [mode, setMode] = useState<Mode>("refine");
-  const [draft, setDraft] = useState("");
-  const [typing, setTyping] = useState(false);
+  // set once a render fails: the PDF can't be typeset here, so changes are only drawn over it
+  const [offline, setOffline] = useState(false);
+  // quotes on their way to the chat's composer, which takes them from here
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pick, setPick] = useState<{ text: string; x: number; y: number } | null>(null);
-  // the entry focused on the PDF and its bullets picked for Rayume
-  const [selected, setSelected] = useState<string | null>(null);
-  const [picked, setPicked] = useState<string[]>([]);
   // what's being written, where the click was (for the caret), where the caret starts in a split-off bullet,
   // and that bullet's text until it's saved
   const [editing, setEditing] = useState<Target | null>(null);
@@ -145,7 +129,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   // being swapped underneath
   const [live, setLive] = useState<{ key: string; text: string; at: number } | null>(null);
   // the document as written, and as the PDF on screen has it; the difference is drawn over the page
-  const [doc, setDoc] = useState<Doc>(() => kept(editsOf(r.id)));
+  const [doc, setDoc] = useState<Doc>(() => kept(r.id));
   const [inPdf, setInPdf] = useState<Doc>(blank);
   const past = useRef<Doc[]>([]);
   const future = useRef<Doc[]>([]);
@@ -158,14 +142,13 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const [pages, setPages] = useState(1);
   // what a render that just landed contains, until its pages are drawn; and which render is the latest
   const landing = useRef<Doc | null>(null);
-  const renders = useRef(0);
-  const warned = useRef(false);
+  // whether a render is in flight, and the newest one asked for meanwhile
+  const flight = useRef<{ busy: boolean; next: Doc | null }>({ busy: false, next: null });
   const view = useRef<HTMLDivElement>(null);
   // where the pointer last was over the viewer: a textarea can't say where its selected text is on screen
   const pointer = useRef({ x: 0, y: 0 });
   // true while a drag is selecting: the button waits for the release, or it covers text the drag is heading to
   const dragging = useRef(false);
-  const nextId = useRef(1);
   const timers = useRef<number[]>([]);
   const store = editsOf(r.id);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -175,12 +158,12 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   // typing the document doesn't have yet
   const dirty = !!editing && !!mine && tidy(mine.text) !== tidy(textIn(doc, editing, fresh));
 
-  const say = (m: Omit<Message, "id">) => setMessages((ms) => [...ms, { ...m, id: nextId.current++ }]);
-  const update = (id: number, patch: Partial<Message>) => setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-
   // typesets the pristine LaTeX with the document's changes; the newest render wins if several overlap
+  // One render at a time: what's asked for meanwhile waits, the newest replacing anything older, and goes as
+  // soon as the page in flight lands. The typesetter never works on a page that's already out of date.
   const render = async (next: Doc) => {
-    const n = ++renders.current;
+    if (flight.current.busy) return void (flight.current.next = next);
+    flight.current.busy = true;
     setBusy(true);
     try {
       const res = await fetch("/api/render", {
@@ -188,16 +171,17 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ file: r.template, tex: inline(styled(template, next.setup), withDoc(body, next, originals)) }),
       });
-      if (n !== renders.current) return;
       if (!res.ok) throw new Error(await res.text());
       landing.current = next;
       setSrc(URL.createObjectURL(await res.blob()));
     } catch {
-      if (n !== renders.current || warned.current) return;
-      warned.current = true;
-      say({ from: "rayume", text: "Saved. I can't typeset the PDF here yet, so your changes are drawn over the page until I can." });
+      setOffline(true);
     } finally {
-      if (n === renders.current) setBusy(false);
+      flight.current.busy = false;
+      const queued = flight.current.next;
+      flight.current.next = null;
+      if (queued) render(queued);
+      else setBusy(false);
     }
   };
   const keep = (d: Doc) => {
@@ -246,15 +230,13 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       const [bold, italic, underline] = ["bold", "italic", "underline"].map((c) => document.queryCommandState(c));
       setFmt((f) => (f.bold === bold && f.italic === italic && f.underline === underline ? f : { bold, italic, underline }));
       if (dragging.current) return setPick(null);
-      const el = document.activeElement;
       let text = "";
       let { x, y } = pointer.current;
-      // the code editor's selection; the text being written on the page isn't a source of quotes
-      if (el instanceof HTMLTextAreaElement && el.id === "tpl-code") {
-        text = el.value.slice(el.selectionStart, el.selectionEnd);
-      } else {
+      // the code editor (CodeMirror, contenteditable too) keeps the DOM selection in step with its own; the
+      // text being written on the page isn't a source of quotes
+      {
         const sel = document.getSelection();
-        const writing = (sel?.anchorNode instanceof Element ? sel.anchorNode : sel?.anchorNode?.parentElement)?.closest("[contenteditable]");
+        const writing = (sel?.anchorNode instanceof Element ? sel.anchorNode : sel?.anchorNode?.parentElement)?.closest("[contenteditable]:not(#tpl-code)");
         if (sel && !sel.isCollapsed && !writing && view.current?.contains(sel.anchorNode)) {
           text = sel.toString();
           const r = sel.getRangeAt(0).getBoundingClientRect();
@@ -292,19 +274,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  // Esc lets go of the focused entry first, even from a text field (nothing typed is lost); the drawer only
-  // closes on the next one. While writing on the page, Esc belongs to that field: it cancels the edit.
-  useEffect(() => {
-    if (!selected || editing) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.stopPropagation();
-      setSelected(null);
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [selected, editing]);
-
   // the entries as the PDF on screen has them, added bullets in place and deleted ones gone: what the overlay
   // finds on the page
   const after = (id: string): { id: string; text: string }[] =>
@@ -318,7 +287,16 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     title: inPdf.runs[`0:${p.title}`] ?? p.title,
     bullets: p.bullets.map((text, i) => ({ id: `${p.id}-${i}`, text })),
   }));
-  const shown = [...added, ...entries].map((e) => ({
+  // jobs added from the form, like the body's own; the body's taken off the resume aren't on the page
+  const jobs = (inPdf.jobs ?? []).map((j) => ({
+    ...entries.find((e) => e.type === "professional")!,
+    id: j.id,
+    title: j.title,
+    organization: inPdf.runs[`0:${j.organization}`] ?? j.organization,
+    bullets: j.bullets.map((text, i) => ({ id: `${j.id}-${i}`, text })),
+  }));
+  const own = entries.filter((e) => e.type !== "professional" || !inPdf.hidden?.includes(`exp-${entries.filter((x) => x.type === "professional").indexOf(e)}`));
+  const shown = [...added, ...jobs, ...own].map((e) => ({
     ...e,
     bullets: e.bullets.flatMap((b) => {
       // bare text: the page is matched on what it says, not on what's bold
@@ -331,10 +309,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     runs: Object.keys({ ...doc.runs, ...inPdf.runs }).filter((k) => doc.runs[k] !== inPdf.runs[k]),
     added: doc.added.filter((a) => a.text && !inPdf.added.some((b) => b.id === a.id)),
   };
-  const entry = shown.find((e) => e.id === selected);
-  // writing on the page leaves the Rayume focus mode, so the page isn't dimmed while you type
   const edit = (t: Target, at?: { x: number; y: number }, start?: number) => {
-    select(null);
     setLive(null);
     setEditAt(at);
     setEditStart(start);
@@ -343,41 +318,38 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   // a blur commits a tick late (inplace.tsx), when another edit may have started: it ends only its own
   // a new bullet the document doesn't have yet
   const unsaved = (t: Target): t is Target & { kind: "new" } => t.kind === "new" && !doc.added.some((a) => a.id === t.id);
-  const save = (t: Target, raw: string) => {
+  // the document with what's written in a field, or null when that changes nothing; settled moves a job whose
+  // dates were written to its place by date (a save does, a live preview doesn't: half a date would send it last)
+  const edited = (t: Target, raw: string, settled = true): Doc | null => {
     const text = tidy(raw);
-    if (unsaved(t)) return text && change({ ...doc, added: [...doc.added, { id: t.id, after: t.after, text }] });
-    if (text === textIn(doc, t)) return;
-    if (t.kind === "run") return text && change({ ...doc, runs: { ...doc.runs, [t.key]: text } });
-    change(withBullet(doc, t.id, text));
+    if (unsaved(t)) return text ? { ...doc, added: [...doc.added, { id: t.id, after: t.after, text }] } : null;
+    if (text === textIn(doc, t)) return null;
+    if (t.kind === "run") {
+      const next = { ...doc, runs: { ...doc.runs, [t.key]: text } };
+      return text ? (settled ? settle(body, next, next) : next) : null;
+    }
+    return withBullet(doc, t.id, text);
+  };
+  const save = (t: Target, raw: string) => {
+    const next = edited(t, raw);
+    if (next) change(next);
   };
   const commit = (t: Target, raw: string) => {
     setEditing((cur) => (key(cur) === key(t) ? null : cur));
     save(t, raw);
   };
-  // Writing saves itself, as in a document: a pause in the typing saves what's there and typesets it, the
-  // field and its caret staying where they are over the new page. Never an empty bullet, which would delete it.
+  // Writing typesets as you type: each keystroke asks for the page with it (render keeps one in flight), the
+  // field and its caret staying where they are over the new page. A pause saves what's there, as a document
+  // does, so an undo step is a burst of typing, not a letter; that save typesets the same text, which the
+  // render route already has. Never an empty bullet, which would delete it.
   useEffect(() => {
     if (!editing || !dirty || !tidy(mine!.text)) return;
+    const live = edited(editing, mine!.text, false);
+    if (live) render(live);
     const id = window.setTimeout(() => save(editing, mine!.text), 700);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
   }, [mine?.text]);
-  // What the content form shows and writes (content.tsx). A text is found whatever its capitals: the page
-  // reads the name in the capitals the template sets it in, the form as the LaTeX has it.
-  const runKey = (f: Field) => Object.keys(doc.runs).find((k) => k.toLowerCase() === f.key.toLowerCase());
-  const chain = (id: string): { id: string; text: string }[] => {
-    const text = strip(textIn(doc, { kind: "bullet", id }));
-    const next = doc.added.filter((a) => a.after === id).reverse().flatMap((a) => chain(a.id));
-    return [...(text ? [{ id, text }] : []), ...next];
-  };
-  const setRun = (f: Field, raw: string) => {
-    const text = tidy(raw);
-    const was = runKey(f);
-    if (!text || text === (was ? doc.runs[was] : f.was)) return;
-    change({ ...doc, runs: { ...Object.fromEntries(Object.entries(doc.runs).filter(([k]) => k !== was)), [f.key]: text } });
-  };
-  // the form writes plain text: a bullet it changes loses its bold and italic
-  const setBullet = (id: string, raw: string) => tidy(raw) !== strip(textIn(doc, { kind: "bullet", id })) && change(withBullet(doc, id, mark(tidy(raw))));
   const setup = (s: Setup) => change({ ...doc, setup: { ...doc.setup, ...s } });
   // one history, as a document has: the field's own for typing not saved yet, the document's otherwise
   const history = (back: boolean) => (dirty ? document.execCommand(back ? "undo" : "redo") : step(back));
@@ -403,22 +375,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     if (t?.kind === "bullet") change(withBullet(doc, t.id, ""));
   };
 
-  const select = (id: string | null) => {
-    setSelected(id);
-    setPicked([]);
-  };
-  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const all = () => setPicked((p) => (entry && p.length === entry.bullets.length ? [] : (entry?.bullets.map((b) => b.id) ?? [])));
-  // the picked bullets, or all of them, go to the chat as quotes; an entry without bullets goes as its name
-  const ask = () => {
-    if (!entry) return;
-    const add = entry.bullets.length
-      ? entry.bullets.flatMap((b) => (!picked.length || picked.includes(b.id) ? [{ text: strip(textIn(doc, { kind: "bullet", id: b.id })), bulletId: b.id }] : []))
-      : [{ text: label(entry) }];
-    setQuotes((qs) => [...qs, ...add.filter((a) => !qs.some((q) => q.text === a.text))]);
-    setMode("refine");
-  };
-
   // neither the PDF nor the code knows bullet ids, so a quoted or typed line is matched to its bullet by
   // its first words; the PDF sets curly quotes where the data has straight ones
   const refine = (line: string, q: Quote | null) => {
@@ -429,26 +385,14 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     return answer("refine", "", bullet ? { text: clean, bulletId: bullet.id } : q, entries);
   };
 
-  // Refine answers each pasted line on its own; Add experience reads them all as one story
-  const send = () => {
-    const text = draft.trim();
-    say({ from: "you", text, quotes: quotes.length ? quotes : undefined });
-    const replies =
-      mode === "refine"
-        ? quotes.length
-          ? quotes.map((q) => refine(q.text, q))
-          : [refine(text, null)]
-        : [answer(mode, text, quotes.length ? { text: quotes.map((q) => q.text).join(" ") } : null, entries)];
-    setDraft("");
-    setQuotes([]);
-    setTyping(true);
-    timers.current.push(
-      window.setTimeout(() => {
-        setTyping(false);
-        replies.forEach((reply) => say({ from: "rayume", ...reply }));
-      }, 900),
-    );
-  };
+  // Rayume's answer to what was sent: Refine answers each quoted line on its own, Add experience reads them
+  // all as one story
+  const reply = (text: string, sent: Quote[]) =>
+    mode === "refine"
+      ? sent.length
+        ? sent.map((q) => refine(q.text, q))
+        : [refine(text, null)]
+      : [answer(mode, text, sent.length ? { text: sent.map((q) => q.text).join(" ") } : null, entries)];
 
   // the resume's LaTeX with its changes; a job's keyword counts as said when the text has it
   const latex = withDoc(body, doc, originals);
@@ -571,8 +515,12 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           )}
         </div>
         <span role="status" className="ml-auto text-xs text-ink/50">
-          {busy ? "Saving…" : doc === blank ? "" : "Saved in this browser"}
+          {busy ? "Saving…" : offline ? "Saved · the PDF can't be typeset here, so changes are drawn over it" : doc === blank ? "" : "Saved in this browser"}
         </span>
+        <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
+        <button type="button" aria-label="Chat" title={chat ? "Hide the chat" : "Show the chat"} aria-pressed={chat} onClick={() => fold(right)} className={tool}>
+          <PanelRight aria-hidden className="size-4" />
+        </button>
       </div>
       {!wired && (
         <div role="status" className="shrink-0 border-b border-ink/10 bg-error/15 px-4 py-2 text-sm text-ink/75">
@@ -582,26 +530,19 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       {stale && (
         <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink/10 bg-mist px-4 py-2 text-sm">
           <span className="text-ink/75">Your master resume changed since this one was last edited.</span>
-          <button type="button" onClick={() => change(kept(editsOf(masterSeed.id)))} className="font-medium text-accent-text">
+          <button type="button" onClick={() => change(kept(masterSeed.id))} className="font-medium text-accent-text">
             Update from master
           </button>
           <span className="text-xs text-ink/50">replaces this resume&apos;s text; ⌘Z brings it back</span>
         </div>
       )}
-      <Group orientation="horizontal" className="min-h-0 flex-1">
-        <Panel id="content" panelRef={left} collapsible collapsedSize={0} defaultSize={wide ? 320 : 0} minSize={260} maxSize={480} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setLeftOpen(size.inPixels > 1)} className="h-full bg-paper">
-          {/* a folded panel has no width for its content to wrap in: it's hidden rather than left to spill */}
-          <div hidden={!leftOpen} className="h-full">
-          <Content
-            sections={outline(body, doc, originals)}
-            run={(f) => doc.runs[runKey(f) ?? ""] ?? f.was}
-            bullets={chain}
-            links={doc.links ?? {}}
-            onRun={setRun}
-            onBullet={setBullet}
-            onAdd={(after, text) => tidy(text) && change({ ...doc, added: [...doc.added, { id: `new-${Date.now()}`, after, text: mark(tidy(text)) }] })}
-            onLink={(f, url) => change({ ...doc, links: { ...doc.links, [f.was]: url } })}
-          />
+      <Group orientation="horizontal" className={`min-h-0 flex-1 ${easing ? "*:data-panel:transition-[flex-grow] *:data-panel:duration-300 *:data-panel:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:*:data-panel:transition-none" : ""}`}>
+        <Panel id="content" panelRef={left} collapsible collapsedSize={0} defaultSize={wide ? 320 : 0} minSize={260} maxSize={480} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setLeftOpen(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
+          {/* a folded panel has no width for its content to wrap in: it's hidden rather than left to spill, and
+              while it slides it keeps its least width, clipped, instead of rewrapping at every step */}
+          <div hidden={!leftOpen && !easing} className="h-full min-w-[260px]">
+          {/* the master's content is your experience: settings edits the same, from outside any resume */}
+          <Content body={body} doc={doc} change={change} preview={render} busy={busy} settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
           </div>
         </Panel>
         <Separator className={handle} />
@@ -611,7 +552,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               onPointerDown={() => (dragging.current = true)}
               onPointerMove={(e) => (pointer.current = { x: e.clientX, y: e.clientY })}
               onScrollCapture={() => setPick(null)}
-              className="flex min-w-0 flex-1 flex-col"
+              // min-h-0 down to the viewer: otherwise Code grows to the whole LaTeX and pushes Preview off the panel
+              className="flex min-h-0 min-w-0 flex-1 flex-col *:min-h-0"
             >
               <Viewer
                 file={r.template}
@@ -622,8 +564,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                   <Overlay
                     page={page}
                     entries={shown}
-                    selected={selected}
-                    picked={picked}
                     pending={pending}
                     editing={editing}
                     editAt={mine ? undefined : editAt}
@@ -631,10 +571,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                     runKeys={inPdf.runs}
                     text={(t) => (mine && key(t) === mine.key ? mine.text : textIn(doc, t, fresh))}
                     busy={busy}
-                    onSelect={select}
-                    onToggle={toggle}
-                    onAll={all}
-                    onAsk={ask}
                     onEdit={edit}
                     onCommit={commit}
                     onCancel={() => {
@@ -651,32 +587,20 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
             </div>
         </Panel>
         <Separator className={handle} />
-        <Panel id="chat" panelRef={right} collapsible collapsedSize={0} defaultSize={wide ? 400 : 0} minSize={300} maxSize={560} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setChat(size.inPixels > 1)} className="h-full bg-paper">
-            <aside hidden={!chat} className="flex h-full flex-col">
+        <Panel id="chat" panelRef={right} collapsible collapsedSize={0} defaultSize={wide ? 400 : 0} minSize={300} maxSize={560} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setChat(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
+            <aside hidden={!chat && !easing} className="flex h-full min-w-[300px] flex-col">
               <div className="min-h-0 flex-1">
                 <Chat
-                  messages={messages}
-                  typing={typing}
+                  reply={reply}
                   mode={mode}
                   setMode={setMode}
-                  draft={draft}
-                  setDraft={setDraft}
                   quotes={quotes}
-                  removeQuote={(i) => setQuotes((qs) => qs.filter((_, j) => j !== i))}
-                  send={send}
-                  apply={(m) => {
-                    change(withBullet(doc, m.suggestion!.bulletId, m.suggestion!.text));
-                    update(m.id, { suggestion: { ...m.suggestion!, applied: true } });
-                  }}
-                  addEntry={(m) => {
-                    // a drafted experience goes in as a project, at the top of Projects
-                    const e = m.draft!.entry;
-                    change({ ...doc, projects: [{ id: e.id, title: e.title, bullets: e.bullets.map((b) => b.text) }, ...(doc.projects ?? [])] });
-                    update(m.id, { draft: { ...m.draft!, added: true } });
-                  }}
-                  tailor={() => {}}
-                  pickPosting={() => {}}
+                  takeQuotes={() => setQuotes([])}
+                  apply={(bulletId, text) => change(withBullet(doc, bulletId, text))}
+                  // a drafted experience goes in as a project, at the top of Projects
+                  addEntry={(title, bullets) => change({ ...doc, projects: [{ id: `new-${Date.now()}`, title, bullets }, ...(doc.projects ?? [])] })}
                   only={only}
+                  name={profile.name.split(" ")[0]}
                   addedTo={isMaster ? "your master resume, under Projects" : "this resume, under Projects"}
                 />
               </div>
@@ -691,16 +615,16 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               onClick={() => {
                 // the same text twice would be one chip answered twice
                 setQuotes((qs) => (qs.some((q) => q.text === pick.text) ? qs : [...qs, { text: pick.text }]));
+                setMode("refine");
+                if (!chat) fold(right);
                 document.getSelection()?.removeAllRanges();
                 setPick(null);
               }}
-              style={{ left: pick.x, top: Math.max(8, pick.y - 48) }}
-              className="fixed z-[60] inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-[13px] font-medium text-white shadow-[0_10px_28px_-10px_rgb(22_27_34/0.6)] transition duration-200 ease-out starting:translate-y-1 starting:opacity-0 pointer-coarse:py-2.5"
+              style={{ left: pick.x, top: Math.max(8, pick.y - 44) }}
+              className="fixed z-[60] inline-flex -translate-x-1/2 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-[13px] font-medium text-ink shadow-[0_8px_24px_-10px_rgb(22_27_34/0.45)] ring-1 ring-ink/10 transition duration-150 ease-out hover:bg-mist starting:translate-y-1 starting:opacity-0 pointer-coarse:py-2.5"
             >
-              <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 5h12v8H9l-4 3v-3H4z" />
-              </svg>
-              Paste into chat
+              <MessageSquareQuote aria-hidden className="size-4 text-accent-text" />
+              Send to chat
             </button>
           )}
     </div>

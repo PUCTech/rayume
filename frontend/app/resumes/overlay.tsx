@@ -10,11 +10,7 @@ import { strip, type Added } from "./tex";
 // entries get more room than their bullets, so a bullet's box sits inside its entry's
 const grow = (b: Box, pad: number): Box => ({ x: b.x - pad, y: b.y - pad / 2, w: b.w + pad * 2, h: b.h + pad });
 const inside = (b: Box, x: number, y: number) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-const at = (b: Box) => ({ left: b.x, top: b.y, width: b.w, height: b.h });
-const ease = "transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
-const small = "rounded-full px-3 py-1.5 text-[13px] font-medium transition pointer-coarse:py-2.5";
 
-export const label = (e: Entry) => (e.type === "professional" ? e.organization : e.title);
 
 // what's being written: a bullet on the page, any other run of text, or a bullet the PDF doesn't have yet
 export type Target = { kind: "bullet"; id: string } | { kind: "run"; key: string } | { kind: "new"; id: string; after: string };
@@ -56,19 +52,16 @@ function Band({ page, from, to, top }: { page: Page; from: number; to: number; t
   return <canvas ref={ref} aria-hidden style={{ left: 0, top, width: page.width, height: Math.max(0, to - from) }} className="absolute" />;
 }
 
-// Over each PDF page: the page as you write on it, and the entry under the pointer.
+// Over each PDF page: the page as you write on it.
 // Clicking any text writes there, the caret where you clicked: a bullet (inplace.tsx's Written), or any other
-// run, like a title or a date (Run). A press that travels is a drag, which selects text instead. The entry
-// under the pointer shows a dotted box and an Ask Rayume button, which focuses it: the rest of the page dims,
-// checkboxes in the margin pick its bullets, and a bar offers all of them, writing yourself or asking Rayume.
+// run, like a title or a date (Run). A press that travels is a drag, which selects text instead (the editor
+// offers to send a selection to the chat).
 // What's written replaces the PDF's own text, which is hidden; a bullet that gains or loses lines moves the
 // text under it and slides the rules in bands, and clicks are mapped back through the same offsets. It all
 // stays until the re-typeset PDF arrives. onDrawn reports each newly measured page.
 export function Overlay({
   page,
   entries,
-  selected,
-  picked,
   pending,
   editing,
   editAt,
@@ -76,10 +69,6 @@ export function Overlay({
   runKeys,
   text,
   busy,
-  onSelect,
-  onToggle,
-  onAll,
-  onAsk,
   onEdit,
   onCommit,
   onCancel,
@@ -90,8 +79,6 @@ export function Overlay({
 }: {
   page: Page;
   entries: Entry[];
-  selected: string | null;
-  picked: string[];
   pending: { bullets: string[]; runs: string[]; added: Added[] };
   editing: Target | null;
   editAt?: { x: number; y: number };
@@ -99,10 +86,6 @@ export function Overlay({
   runKeys: Record<string, string>;
   text: (t: Target) => string;
   busy: boolean;
-  onSelect: (id: string | null) => void;
-  onToggle: (bulletId: string) => void;
-  onAll: () => void;
-  onAsk: () => void;
   onEdit: (t: Target, at?: { x: number; y: number }, start?: number) => void;
   onCommit: (t: Target, text: string) => void;
   onCancel: () => void;
@@ -112,11 +95,9 @@ export function Overlay({
   onDrawn: (page: Page) => void;
 }) {
   const found = useMemo(() => regions(page.spans, entries).map((r) => ({ ...r, ...grow(r, 8), bullets: r.bullets.map((b) => ({ ...b, ...grow(b, 3) })) })), [page, entries]);
-  const [hover, setHover] = useState<string | null>(null);
   const [deltas, setDeltas] = useState<Record<string, number>>({});
   // where the pointer went down: a click is a press that didn't travel, anything longer was a drag
   const down = useRef<[number, number] | null>(null);
-  const focus = found.find((r) => r.id === selected);
   const bullets = useMemo(() => found.flatMap((r) => r.bullets.map((b) => ({ ...b, right: r.x + r.w - 8 }))), [found]);
 
   // the page's hanging indent and line spacing, read off bullets that wrap
@@ -281,40 +262,20 @@ export function Overlay({
       const { y, on } = unshift(raw);
       const where = { x: e.clientX, y: e.clientY };
       if (on) return onEdit(on, where);
-      // the checkboxes sit in the margin left of the focused entry
-      const box = focus?.bullets.find((b) => x >= focus.x - 24 && x < focus.x && y >= b.y && y <= b.y + b.h);
-      if (box) return onToggle(box.id);
       const bullet = bullets.find((b) => inside(b, x, y));
       if (bullet) return onEdit({ kind: "bullet", id: bullet.id }, where);
       const run = runs.find((r) => inside(grow(r.s, 2), x, y));
-      if (run) return onEdit({ kind: "run", key: run.key }, where);
-      if (focus && inside(focus, x, y)) return;
-      onSelect(found.find((r) => inside(r, x, y))?.id ?? null);
+      if (run) onEdit({ kind: "run", key: run.key }, where);
     };
-    const onMove = (e: PointerEvent) => {
-      const [x, raw] = point(e);
-      const { y } = unshift(raw);
-      // the margin left of an entry counts as the entry, so its Ask Rayume button can be reached
-      setHover(found.find((r) => inside({ ...r, x: r.x - 32, w: r.w + 32 }, x, y))?.id ?? null);
-    };
-    const onLeave = () => setHover(null);
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointerup", onUp);
-    el.addEventListener("pointermove", onMove);
-    el.addEventListener("pointerleave", onLeave);
     return () => {
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointerup", onUp);
-      el.removeEventListener("pointermove", onMove);
-      el.removeEventListener("pointerleave", onLeave);
     };
   });
 
-  // the bar sits under the focused entry, or over it when there's no room below
-  const bar = focus && (focus.y + focus.h + 52 < page.height ? focus.y + focus.h + 8 : Math.max(8, focus.y - 48));
-  const all = focus && focus.bullets.length > 0 && focus.bullets.every((b) => picked.includes(b.id));
   const total = written.at(-1)?.moved ?? 0;
-  const quiet = !!(selected || editing || written.length || writtenRuns.length);
   const run = (r: (typeof runs)[number]) => r.s as Span & { font: string; size: number };
 
   return (
@@ -326,7 +287,7 @@ export function Overlay({
         {total < 0 && <div aria-hidden style={{ left: 0, top: page.height + total, width: page.width, height: -total }} className="absolute bg-white" />}
       </div>
 
-      {/* over the text: what's written, the entry boxes, focus and its bar */}
+      {/* over the text: what's written */}
       <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden">
         {written.map((w) => (
           <Written
@@ -368,90 +329,6 @@ export function Overlay({
           />
         ))}
 
-        {found.map((r) => {
-          const entry = entries.find((e) => e.id === r.id)!;
-          const on = r.id === selected;
-          return (
-            <div
-              key={r.id}
-              style={at(r)}
-              className={`absolute rounded-lg ${ease} starting:opacity-0 ${
-                on
-                  ? "border-2 border-accent shadow-[0_0_0_200vmax_rgb(244_240_234/0.75)]"
-                  : // only the entry under the pointer shows its box, as an editor's text frames do
-                    `border border-dashed ${quiet ? "opacity-0" : hover === r.id ? "border-accent/60 bg-accent/[0.04]" : "border-transparent"}`
-              }`}
-            >
-              {/* in the page's left margin, where it covers none of the entry's text */}
-              <button
-                type="button"
-                data-overlay-ui
-                onClick={() => onSelect(r.id)}
-                aria-label={`Ask Rayume about ${label(entry)}`}
-                title="Ask Rayume"
-                className={`pointer-events-auto absolute top-0 -left-7 grid size-5 place-items-center rounded-full bg-accent-deep text-[11px] text-white shadow-sm transition duration-300 hover:scale-110 focus:opacity-100 motion-reduce:transition-none ${
-                  !quiet && hover === r.id ? "opacity-100" : "pointer-events-none opacity-0"
-                }`}
-              >
-                <span aria-hidden>✦</span>
-              </button>
-            </div>
-          );
-        })}
-
-        {focus?.bullets.map((b) => {
-          const on = picked.includes(b.id);
-          return (
-            <div key={b.id}>
-              <div style={at(b)} className={`absolute rounded-md border ${ease} starting:opacity-0 ${on ? "border-accent bg-accent/10" : "border-dashed border-accent/40"}`} />
-              {/* in the margin left of the entry, clear of its border */}
-              <span
-                style={{ left: focus.x - 20, top: b.y + 3 }}
-                className={`absolute grid size-3.5 place-items-center rounded-full border ${ease} starting:opacity-0 ${on ? "border-accent-deep bg-accent-deep text-white" : "border-ink/30 bg-white"}`}
-              >
-                {on && (
-                  <svg aria-hidden viewBox="0 0 12 12" className="size-2.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m3 6.2 2 1.8 4-4" />
-                  </svg>
-                )}
-              </span>
-            </div>
-          );
-        })}
-
-        {focus && (
-          <div
-            key={focus.id}
-            data-overlay-ui
-            role="toolbar"
-            aria-label={`${label(entries.find((e) => e.id === focus.id)!)} actions`}
-            style={{ left: Math.max(8, Math.min(focus.x, page.width - 372)), top: bar }}
-            className={`pointer-events-auto absolute flex items-center gap-1 rounded-full bg-paper p-1 shadow-[0_10px_28px_-10px_rgb(22_27_34/0.45)] ring-1 ring-ink/10 ${ease} starting:translate-y-1 starting:opacity-0`}
-          >
-            {focus.bullets.length > 0 && (
-              <button type="button" onClick={onAll} className={`${small} text-ink/70 hover:bg-ink/5 hover:text-ink`}>
-                {all ? "Clear" : "All bullets"}
-              </button>
-            )}
-            {focus.bullets.length > 0 && (
-              <button
-                type="button"
-                onClick={() => onEdit({ kind: "bullet", id: focus.bullets.find((b) => picked.includes(b.id))?.id ?? focus.bullets[0].id })}
-                className={`${small} text-ink/70 hover:bg-ink/5 hover:text-ink`}
-              >
-                Write it myself
-              </button>
-            )}
-            <button type="button" onClick={onAsk} className={`${small} bg-accent-deep text-white hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`}>
-              Ask Rayume{picked.length ? ` · ${picked.length}` : ""}
-            </button>
-            <button type="button" onClick={() => onSelect(null)} aria-label="Close" className="grid size-7 place-items-center rounded-full text-ink/50 transition hover:bg-ink/5 hover:text-ink pointer-coarse:size-9">
-              <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <path d="m6 6 8 8M14 6l-8 8" />
-              </svg>
-            </button>
-          </div>
-        )}
       </div>
     </>
   );

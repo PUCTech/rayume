@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
+import { share } from "../share";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { Browser } from "./browser";
 import { sources } from "./detail";
 
 const serif = GeistSerifRegular.className;
 
-export const metadata: Metadata = {
-  title: "Templates · Rayume",
-  description: "Every LaTeX resume template Rayume can typeset, shown filled in with a real resume.",
-};
+export const metadata: Metadata = share("Templates · Rayume", "Every LaTeX resume template Rayume can typeset, shown filled in with a real resume.");
 
 export default async function Templates() {
   const tex = await sources();

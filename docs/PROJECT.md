@@ -2,7 +2,7 @@
 
 > AI-oriented brief. Read this first to understand what Rayume is, what we are building, and what is in or out of scope.
 > Source of truth for the product pitch: `README.md` (Portuguese). This file restates it for agents, in English.
-> Last updated: 2026-11-08.
+> Last updated: 2026-11-14.
 
 ## What we are
 
@@ -80,8 +80,8 @@ Monorepo:
 | Path | What |
 |------|------|
 | `backend/` | Python ≥3.14, FastAPI, SQLAlchemy 2, psycopg 3 (PostgreSQL), pydantic-settings, `google-genai` (Gemini as the LLM provider). Managed with `uv`. Tests: pytest. |
-| `frontend/` | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 (theme tokens and glass utilities in `app/globals.css`), Geist Sans + Geist Serif (`geist`). |
-| `frontend/resumes/` | LaTeX sources of the sample resumes shown on the site, built with Tectonic and rendered by `render.py` (`uv`, PyMuPDF) into `frontend/public/resumes/`. |
+| `frontend/` | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 (theme tokens and glass utilities in `app/globals.css`), Geist Sans + Geist Serif (`geist`). `pdfjs-dist` for the PDF viewer and editor; `@base-ui/react`, `react-resizable-panels`, `motion`, `use-stick-to-bottom` and `lucide-react` in the editor. No test runner yet. |
+| `frontend/resumes/` | LaTeX sources of the sample resumes shown on the site, built with Tectonic and rendered by `render.py` (`uv`, PyMuPDF) into `frontend/public/resumes/`. In development, `app/api/render` compiles them on request with the local Tectonic (404 outside `next dev`). |
 | `postman/` | API collection plus local environment. |
 | `docs/` | Agent-facing docs (see the docs map above). |
 
@@ -100,7 +100,14 @@ Local dev: Next on `:3000`, FastAPI on `:8000` (CORS is already configured for t
 ## Current state
 
 - **Decided:** the database schema, the API surface (draft) and the visual design.
-- **Built:** the landing page at `/`, with real LaTeX renders in the hero and the template gallery. The backend has only `/health`.
-- **Next:** SQLAlchemy models and the in-house JWT auth, then the login and Master Resume pages.
+- **Built, frontend:**
+  - `/`: the landing page (lens hero, prism glass on the nav, band cards and buttons, an "Edit it like a document" section).
+  - `/templates` and `/templates/[id]`: the gallery with search, filters and a pdf.js viewer; "Use this template" goes to `/signup?template=…`.
+  - `/login`, `/signup` (forms only, not wired to an API) and `/legal/*`.
+  - `/resumes`: the signed-in home, a grid of resumes with the Master Resume first, new and tailored resumes, saved jobs. `/app` redirects here.
+  - `/resumes/[id]`: the editor. You write on the real LaTeX PDF (one caret across the page, bold/italic/underline in bullets, save while typing, undo), with a toolbar (font, size, margins, symbols), a collapsible content form on the left (including links) and a collapsible Rayume chat on the right. Changes are written into the LaTeX and re-typeset through the dev-only `/api/render`.
+  - Everything signed-in is a demo: resumes and edits live in localStorage and the chat is scripted, until the API has the routes.
+- **Built, backend:** `GET /health`, `GET /templates`, `GET /templates/{slug}`; SQLAlchemy models for the whole schema; templates seeded by `seed.py`. No migrations yet (`create_all`).
+- **Next:** the in-house JWT auth and the `/experiences` and `/resumes` routes, so the frontend can drop localStorage.
 
-Most of the MVP features above are still to be built.
+AI calls, job tailoring, the render worker, PDF export from the backend and the browser extension are still to be built.

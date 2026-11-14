@@ -1,10 +1,35 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
-import { ArrowDown } from "lucide-react";
-import { motion } from "motion/react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { Mark } from "../logo";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Popover } from "@base-ui/react/popover";
+import {
+  AssistantRuntimeProvider,
+  AuiConfig,
+  CompositeAttachmentAdapter,
+  InMemoryThreadListAdapter,
+  SimpleImageAttachmentAdapter,
+  SimpleTextAttachmentAdapter,
+  Suggestions,
+  WebSpeechDictationAdapter,
+  WebSpeechSynthesisAdapter,
+  defineToolkit,
+  Tools,
+  useAui,
+  useAuiState,
+  useLocalRuntime,
+  useRemoteThreadListRuntime,
+  type ChatModelAdapter,
+  type FeedbackAdapter,
+  type SuggestionAdapter,
+  type ThreadAssistantMessagePart,
+  type ThreadMessage,
+  type ToolCallMessagePartComponent,
+} from "@assistant-ui/react";
+import { createAssistantStream } from "assistant-stream";
+import { ChevronDown, MessagesSquare, SquarePen } from "lucide-react";
+import { Thread } from "@/components/assistant-ui/elements/thread.aui";
+import { ThreadList } from "@/components/assistant-ui/elements/thread-list.aui";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Entry, Posting } from "./data";
 import type { Quote } from "./resume";
 
@@ -16,6 +41,7 @@ export const modes = [
 ] as const;
 export type Mode = (typeof modes)[number]["id"];
 
+// a reply as the scripted Rayume writes it (app/workspace.tsx's answer): its text and what it offers
 export type Message = {
   id: number;
   from: "rayume" | "you";
@@ -27,6 +53,7 @@ export type Message = {
   postings?: Posting[];
   tailored?: { posting: Posting; created?: boolean };
 };
+export type Reply = Omit<Message, "id" | "from">;
 
 const small = "rounded-full px-3 py-1.5 text-[13px] font-medium transition pointer-coarse:py-2.5";
 const primary = `${small} bg-accent-deep text-white hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`;
@@ -42,274 +69,284 @@ function Done({ children }: { children: ReactNode }) {
   );
 }
 
-// a message comes in from just below where it lands
-const enter = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const } };
+// a quote rides as a composer attachment: its text is the name and the content, and its bullet (when the
+// page knows it) leads the id
+const quoteId = (q: Quote) => `${q.bulletId ?? ""}|${Math.random().toString(36).slice(2)}`;
+const asQuote = (a: { id: string; name: string }): Quote => {
+  const bulletId = a.id.slice(0, a.id.indexOf("|"));
+  return bulletId ? { text: a.name, bulletId } : { text: a.name };
+};
+const textOf = (m: ThreadMessage) => m.content.flatMap((p) => (p.type === "text" ? [p.text] : [])).join("");
 
-// the way back down, once you've scrolled up from the newest message
-function Newest() {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+// Rayume's replies as message parts: the text, a short note of what it looked at, and its offers as tool
+// calls (a rewrite to apply, a drafted entry to add), which the tool UIs below render with their buttons
+// shortcut: the reasoning is canned with the scripted answers; a real model streams its own
+function partsOf(replies: Reply[], quotes: Quote[]): ThreadAssistantMessagePart[] {
+  const id = () => `call-${Math.random().toString(36).slice(2)}`;
+  return [
+    ...(quotes.length ? [{ type: "reasoning" as const, text: `Reading ${quotes.length === 1 ? "the line" : `the ${quotes.length} lines`} for what changed because of ${quotes.length === 1 ? "it" : "them"}, to lead with that.` }] : []),
+    ...replies.flatMap((r): ThreadAssistantMessagePart[] => [
+      { type: "text", text: r.text },
+      ...(r.suggestion
+        ? [{ type: "tool-call" as const, toolCallId: id(), toolName: "rewrite_bullet", args: { bulletId: r.suggestion.bulletId, text: r.suggestion.text }, argsText: JSON.stringify(r.suggestion) }]
+        : []),
+      ...(r.draft
+        ? [{ type: "tool-call" as const, toolCallId: id(), toolName: "add_experience", args: { title: r.draft.entry.title, bullets: r.draft.entry.bullets.map((b) => b.text) }, argsText: JSON.stringify(r.draft.entry) }]
+        : []),
+    ]),
+  ];
+}
+// the parts as they'd stream in: the reasoning, then the text a few words at a time, then the tool calls
+function* frames(parts: ThreadAssistantMessagePart[]) {
+  const done: ThreadAssistantMessagePart[] = [];
+  for (const p of parts) {
+    if (p.type === "text" || p.type === "reasoning") {
+      const words = p.text.split(/(?<= )/);
+      for (let i = 3; i < words.length; i += 3) yield [...done, { ...p, text: words.slice(0, i).join("") }];
+    }
+    done.push(p);
+    yield [...done];
+  }
+}
+const wait = (ms: number, signal: AbortSignal) => new Promise<void>((ok) => (signal.aborted ? ok() : (setTimeout(ok, ms), signal.addEventListener("abort", () => ok(), { once: true }))));
+
+// The resume's actions, as assistant-ui tool UIs (a toolkit of render-only "backend" tools: Rayume, not
+// the browser, makes the calls). A press applies it to the resume and stores that as the tool's result, so
+// the card says it's done even after switching chats and back.
+type Actions = { apply: (bulletId: string, text: string) => void; addEntry: (title: string, bullets: string[]) => void; addedTo: string };
+const On = createContext<Actions>(null!);
+const Rewrite: ToolCallMessagePartComponent<{ bulletId: string; text: string }, { applied: boolean }> = ({ args, result, addResult }) => {
+  const on = useContext(On);
   return (
-    <button
-      type="button"
-      aria-label="Scroll to the newest message"
-      tabIndex={isAtBottom ? -1 : 0}
-      onClick={() => scrollToBottom()}
-      className={`absolute bottom-3 left-1/2 grid size-8 -translate-x-1/2 place-items-center rounded-full bg-white text-ink/70 shadow-[0_8px_20px_-8px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 hover:text-ink ${isAtBottom ? "pointer-events-none translate-y-2 opacity-0" : ""}`}
-    >
-      <ArrowDown aria-hidden className="size-4" />
-    </button>
+    <div className="my-2 rounded-2xl bg-white p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
+      <p>{args.text}</p>
+      <div className="mt-3">
+        {result?.applied ? (
+          <Done>Replaced in your resume</Done>
+        ) : (
+          <button type="button" onClick={() => (on.apply(args.bulletId, args.text), addResult({ applied: true }))} className={primary}>
+            Replace in resume
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+const Draft: ToolCallMessagePartComponent<{ title: string; bullets: string[] }, { added: boolean }> = ({ args, result, addResult }) => {
+  const on = useContext(On);
+  return (
+    <div className="my-2 rounded-2xl bg-white p-3.5 text-[14px] ring-1 ring-accent/25">
+      <p className="font-medium">{args.title}</p>
+      <ul className="mt-1.5 list-disc space-y-1 pl-5 text-ink/80">
+        {args.bullets.map((b) => (
+          <li key={b}>{b}</li>
+        ))}
+      </ul>
+      <div className="mt-3">
+        {result?.added ? (
+          <Done>Added to {on.addedTo}</Done>
+        ) : (
+          <button type="button" onClick={() => (on.addEntry(args.title, args.bullets), addResult({ added: true }))} className={primary}>
+            Add to resume
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+// standalone: each asks for a press, so it shows on its own rather than folded into the trace of tool calls
+const toolkit = defineToolkit({
+  rewrite_bullet: { type: "backend", display: "standalone", render: Rewrite },
+  add_experience: { type: "backend", display: "standalone", render: Draft },
+});
+
+// the modes, in the composer's action row
+function Modes({ mode, setMode, only }: { mode: Mode; setMode: (m: Mode) => void; only?: Mode[] }) {
+  return (
+    <div role="group" aria-label="Mode" className="flex gap-1 overflow-x-auto">
+      {modes.filter((m) => !only || only.includes(m.id)).map((m) => (
+        <button
+          key={m.id}
+          type="button"
+          aria-pressed={mode === m.id}
+          onClick={() => setMode(m.id)}
+          className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition ${mode === m.id ? "bg-ink text-white" : "text-ink/60 hover:bg-mist hover:text-ink"}`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
-// The assistant beside the resume: messages, the four modes, the pasted quotes, and the composer.
+// Quotes the page sends (a selection) go into the composer of the open thread, once each
+function Inbox({ quotes, taken }: { quotes: Quote[]; taken: () => void }) {
+  const aui = useAui();
+  useEffect(() => {
+    if (!quotes.length) return;
+    const composer = aui.composer;
+    const there = composer.getState().attachments.map((a) => a.name);
+    quotes
+      .filter((q) => !there.includes(q.text))
+      .forEach((q) => composer.addAttachment({ id: quoteId(q), type: "quote", name: q.text, contentType: "text/plain", content: [{ type: "text", text: q.text }] }));
+    taken();
+    document.querySelector<HTMLTextAreaElement>(".aui-composer-input")?.focus();
+  }, [quotes, aui, taken]);
+  return null;
+}
+
+// The chats above the thread: which one is open, the others (assistant-ui's ThreadList: switch, rename,
+// archive, delete, search) in a popover, and a new one
+function Header() {
+  const title = useAuiState((s) => s.threadListItem.title) || "New chat";
+  const aui = useAui();
+  return (
+    <div className="flex h-11 shrink-0 items-center gap-1 border-b border-ink/10 px-2">
+      <Popover.Root>
+        <Popover.Trigger aria-label={`Your chats: ${title}`} className="flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink data-popup-open:bg-ink/5">
+          <MessagesSquare aria-hidden className="size-4 shrink-0 text-ink/50" />
+          <span className="truncate">{title}</span>
+          <ChevronDown aria-hidden className="size-3.5 shrink-0 text-ink/40" />
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Positioner sideOffset={6} align="start" className="z-[70] outline-none">
+            <Popover.Popup className="max-h-[60vh] w-72 origin-(--transform-origin) overflow-y-auto rounded-xl bg-white p-2 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+              <ThreadList />
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+      <button type="button" aria-label="New chat" title="New chat" onClick={() => aui.threads.switchToNewThread()} className="ml-auto grid size-8 place-items-center rounded-lg text-ink/60 transition hover:bg-ink/5 hover:text-ink">
+        <SquarePen aria-hidden className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+// the chats, in memory, each titled by the first thing said in it
+// shortcut: lost on reload; with the API this is a RemoteThreadListAdapter on /chats
+class Chats extends InMemoryThreadListAdapter {
+  override async generateTitle(_id?: string, messages?: readonly ThreadMessage[]) {
+    const first = messages?.find((m) => m.role === "user");
+    const said = (first && (textOf(first) || first.attachments?.[0]?.name)) || "New chat";
+    return createAssistantStream((c) => c.appendText(said.length > 40 ? `${said.slice(0, 40).trimEnd()}…` : said));
+  }
+}
+
+// what Rayume opens with, in an empty chat
+function Welcome({ name }: { name: string }) {
+  return (
+    <div className="mb-6 flex flex-col gap-1.5 px-2">
+      <p className="animate-in fade-in slide-in-from-bottom-1 fill-mode-both text-xl font-medium tracking-tight duration-200">Hi {name}.</p>
+      <p className="text-[14px] leading-relaxed text-ink/60">Select any text on your resume and send it here, and I&apos;ll rewrite it around its impact. Or tell me about something you did and I&apos;ll draft it.</p>
+    </div>
+  );
+}
+
+// The assistant beside the resume: assistant-ui's Thread and ThreadList (components/assistant-ui, copied in
+// from its registry and ours to change), on a local runtime per chat under a thread list. Rayume is a model
+// adapter: it streams a reply (reasoning, text, then its offers as tool calls) that reply writes from what was
+// sent, the mode and the quotes attached. Branches, edit and resend, regenerate, stop, copy, read aloud,
+// dictation, feedback, files and follow-ups come from assistant-ui's runtime and adapters.
+// shortcut: chats live in memory (InMemoryThreadListAdapter) and Rayume is scripted (app/workspace.tsx); with
+// the API the list becomes a RemoteThreadListAdapter on /chats and run a call to the model; feedback goes nowhere yet
 export function Chat({
-  messages,
-  typing,
+  reply,
   mode,
   setMode,
-  draft,
-  setDraft,
   quotes,
-  removeQuote,
-  send,
+  takeQuotes,
   apply,
   addEntry,
-  tailor,
-  pickPosting,
   only,
+  name,
   addedTo = "your Master Resume",
 }: {
-  messages: Message[];
-  typing: boolean;
+  // Rayume's answer to what was sent: the text typed (with any text files attached) and the quotes
+  reply: (text: string, quotes: Quote[]) => Reply[];
   mode: Mode;
   setMode: (m: Mode) => void;
-  draft: string;
-  setDraft: (s: string) => void;
+  // quotes the page wants in the composer; takeQuotes empties the list once they're in
   quotes: Quote[];
-  removeQuote: (i: number) => void;
-  send: () => void;
-  apply: (m: Message) => void;
-  addEntry: (m: Message) => void;
-  tailor: (m: Message) => void;
-  pickPosting: (p: Posting) => void;
+  takeQuotes: () => void;
+  apply: (bulletId: string, text: string) => void;
+  addEntry: (title: string, bullets: string[]) => void;
   // the modes to offer; all of them when unset
   only?: Mode[];
+  // who Rayume greets
+  name: string;
   // where an added experience went, for its confirmation
   addedTo?: string;
 }) {
-  const box = useRef<HTMLTextAreaElement>(null);
-
-  // a paste or a mode change puts the cursor in the composer
+  // the adapters are made once; what they call is read fresh each run
+  const latest = useRef(reply);
   useEffect(() => {
-    box.current?.focus();
-  }, [quotes.length, mode]);
-
-  // grow the composer with its text, up to six lines
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 6 * 22 + 20)}px`;
-  }, [draft]);
-
-  const canSend = draft.trim() || quotes.length;
-
+    latest.current = reply;
+  });
+  const [adapters] = useState(() => {
+    const model: ChatModelAdapter = {
+      async *run({ messages, abortSignal }) {
+        const last = messages.at(-1)!;
+        // a run after a card was pressed (its result came in): nothing more to say
+        if (last.role !== "user") return;
+        const quotes = (last.attachments ?? []).filter((a) => a.type === "quote").map(asQuote);
+        const files = (last.attachments ?? []).filter((a) => a.type !== "quote").flatMap((a) => a.content?.flatMap((p) => (p.type === "text" ? [p.text] : [])) ?? []);
+        const parts = partsOf(latest.current([textOf(last), ...files].join("\n").trim(), quotes), quotes);
+        await wait(350, abortSignal);
+        for (const content of frames(parts)) {
+          if (abortSignal.aborted) return;
+          yield { content };
+          await wait(30, abortSignal);
+        }
+      },
+    };
+    // follow-ups under the newest reply, by what it offered
+    const suggestion: SuggestionAdapter = {
+      async generate({ messages }) {
+        const last = messages.at(-1);
+        const offered = last?.content.some((p) => p.type === "tool-call" && p.toolName === "rewrite_bullet");
+        return offered ? [{ prompt: "How do I rewrite another line?" }] : [{ prompt: "What makes a strong bullet?" }];
+      },
+    };
+    const feedback: FeedbackAdapter = { submit: () => {} };
+    return {
+      model,
+      local: {
+        attachments: new CompositeAttachmentAdapter([new SimpleImageAttachmentAdapter(), new SimpleTextAttachmentAdapter()]),
+        speech: new WebSpeechSynthesisAdapter(),
+        dictation: WebSpeechDictationAdapter.isSupported() ? new WebSpeechDictationAdapter() : undefined,
+        feedback,
+        suggestion,
+      },
+      list: new Chats(),
+    };
+  });
+  const runtime = useRemoteThreadListRuntime({
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- assistant-ui calls the hook once per chat
+    runtimeHook: () => useLocalRuntime(adapters.model, { adapters: adapters.local }),
+    adapter: adapters.list,
+  });
+  const config = useMemo(() => AuiConfig({ tools: Tools({ toolkit }), suggestions: Suggestions(["What makes a strong bullet?", "How do I rewrite a line?"]) }), []);
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {/* the newest message stays in view as the list grows, unless you've scrolled up to read */}
-      <StickToBottom resize="smooth" initial="instant" className="relative min-h-0 flex-1">
-        <StickToBottom.Content aria-live="polite" className="space-y-4 px-4 py-5 sm:px-5">
-        {messages.map((m) =>
-          m.from === "you" ? (
-            <motion.div key={m.id} {...enter} className="ml-8 flex justify-end">
-              <div className="rounded-2xl rounded-tr-md bg-accent-deep px-3.5 py-2.5 text-[14px] leading-relaxed text-white">
-                {m.quotes?.map((q, i) => (
-                  <p key={i} className="mb-1.5 border-l-2 border-white/40 pl-2 text-[13px] italic text-white/80">“{q.text}”</p>
-                ))}
-                {m.text && <p className="whitespace-pre-wrap">{m.text}</p>}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div key={m.id} {...enter} className="mr-6 flex gap-2.5">
-              <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-accent-deep text-white">
-                <Mark className="h-4 w-auto" />
-              </span>
-              <div className="min-w-0 space-y-2.5">
-                <p className="rounded-2xl rounded-tl-md bg-mist px-3.5 py-2.5 text-[14px] leading-relaxed">{m.text}</p>
-
-                {m.suggestion && (
-                  <div className="rounded-2xl bg-white p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
-                    <p>{m.suggestion.text}</p>
-                    <div className="mt-3">
-                      {m.suggestion.applied ? (
-                        <Done>Replaced in your resume</Done>
-                      ) : (
-                        <button type="button" onClick={() => apply(m)} className={primary}>
-                          Replace in resume
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {m.draft && (
-                  <div className="rounded-2xl bg-white p-3.5 text-[14px] ring-1 ring-accent/25">
-                    <p className="font-medium">{m.draft.entry.title}</p>
-                    <ul className="mt-1.5 list-disc space-y-1 pl-5 text-ink/80">
-                      {m.draft.entry.bullets.map((b) => (
-                        <li key={b.id}>{b.text}</li>
-                      ))}
-                    </ul>
-                    <div className="mt-3">
-                      {m.draft.added ? (
-                        <Done>Added to {addedTo}</Done>
-                      ) : (
-                        <button type="button" onClick={() => addEntry(m)} className={primary}>
-                          Add to resume
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {m.skills && (
-                  <div className="space-y-2">
-                    <ul aria-label="Hard skills" className="flex flex-wrap gap-1.5">
-                      {m.skills.hard.map(([s, n]) => (
-                        <li key={s} className="rounded-full bg-ink px-2.5 py-1 text-[12px] font-medium text-white">
-                          {s}
-                          {n > 1 && <span className="ml-1 text-white/60">×{n}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                    <ul aria-label="Soft skills" className="flex flex-wrap gap-1.5">
-                      {m.skills.soft.map((s) => (
-                        <li key={s} className="rounded-full bg-accent/15 px-2.5 py-1 text-[12px] font-medium text-accent-text">
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {m.postings && (
-                  <div className="flex flex-wrap gap-2">
-                    {m.postings.map((p) => (
-                      <button key={p.id} type="button" onClick={() => pickPosting(p)} className={`${small} bg-white ring-1 ring-ink/10 hover:ring-ink/25`}>
-                        {p.company}, {p.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {m.tailored && (
-                  <div>
-                    {m.tailored.created ? (
-                      <Done>Saved to My resumes</Done>
-                    ) : (
-                      <button type="button" onClick={() => tailor(m)} className={primary}>
-                        Create tailored resume
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          ),
-        )}
-        {typing && (
-          <motion.div {...enter} className="flex items-center gap-2.5" aria-label="Rayume is typing">
-            <span className="grid size-7 place-items-center rounded-full bg-accent-deep text-white">
-              <Mark className="h-4 w-auto" />
-            </span>
-            <span className="flex gap-1 rounded-2xl rounded-tl-md bg-mist px-3.5 py-3.5">
-              {[0, 1, 2].map((d) => (
-                <motion.span key={d} animate={{ y: [0, -3, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }} className="size-1.5 rounded-full bg-ink/50" />
-              ))}
-            </span>
-          </motion.div>
-        )}
-        </StickToBottom.Content>
-        <Newest />
-      </StickToBottom>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (canSend) send();
-        }}
-        className="border-t border-ink/10 p-3 sm:p-4"
-      >
-        <div role="group" aria-label="Mode" className="flex flex-wrap gap-1.5 pb-3">
-          {modes.filter((m) => !only || only.includes(m.id)).map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              aria-pressed={mode === m.id}
-              onClick={() => setMode(m.id)}
-              className={`${small} whitespace-nowrap ${mode === m.id ? "bg-ink text-white" : "bg-mist text-ink/70 hover:text-ink"}`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-        <div className="rounded-2xl bg-white ring-1 ring-ink/10 focus-within:ring-2 focus-within:ring-accent-text">
-          {/* each pasted text as a chip above the input; rows 0fr to 1fr grows the composer to fit as one fades
-              up. Past a few the chips scroll, so the input stays on screen */}
-          <div className="max-h-44 overflow-y-auto">
-            {quotes.map((quote, i) => (
-              <div
-                key={quote.text}
-                className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity,translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none starting:translate-y-1 starting:grid-rows-[0fr] starting:opacity-0"
-              >
-                <div className="min-h-0 overflow-hidden">
-                  <div className="mx-2 mt-2 flex items-start gap-2.5 rounded-xl bg-accent/[0.07] py-2 pl-3 pr-1.5">
-                    <svg aria-hidden viewBox="0 0 20 20" className="mt-0.5 size-3.5 shrink-0 text-accent-text" fill="currentColor">
-                      <path d="M3 11.5C3 8 4.8 5.8 7.6 4.6l.6 1.2C6.6 6.7 5.8 8 5.6 9.6H8V15H3zm8.5 0c0-3.5 1.8-5.7 4.6-6.9l.6 1.2c-1.6.9-2.4 2.2-2.6 3.8h2.4V15h-5z" />
-                    </svg>
-                    <p className="line-clamp-2 flex-1 text-[13px] leading-snug text-ink/75">{quote.text}</p>
-                    <button type="button" onClick={() => removeQuote(i)} aria-label="Remove the pasted text" className="-my-0.5 grid size-6 shrink-0 place-items-center rounded-full text-ink/45 transition hover:bg-ink/5 hover:text-ink pointer-coarse:size-9">
-                      <svg aria-hidden viewBox="0 0 20 20" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="m6 6 8 8M14 6l-8 8" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+    <AssistantRuntimeProvider runtime={runtime} config={config}>
+      <TooltipProvider>
+        <On.Provider value={{ apply, addEntry, addedTo }}>
+          <Inbox quotes={quotes} taken={takeQuotes} />
+          <div className="flex h-full flex-col">
+            <Header />
+            <div className="min-h-0 flex-1">
+              <Thread
+                autoFocus={false}
+                components={{
+                  Welcome: () => <Welcome name={name} />,
+                  ComposerExtra: () => <Modes mode={mode} setMode={setMode} only={only} />,
+                  placeholder: modes.find((m) => m.id === mode)!.hint,
+                }}
+              />
+            </div>
           </div>
-          <div className="flex items-end gap-2 p-2">
-            <label htmlFor="chat-box" className="sr-only">
-              Message Rayume
-            </label>
-            <textarea
-              ref={box}
-              id="chat-box"
-              rows={1}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (canSend) send();
-                }
-              }}
-              placeholder={modes.find((m) => m.id === mode)!.hint}
-              className="min-h-10 flex-1 resize-none bg-transparent px-1.5 py-2 text-base leading-[22px] outline-none placeholder:text-ink/40 sm:text-[14px]"
-            />
-            <button
-              type="submit"
-              disabled={!canSend}
-              aria-label="Send"
-              className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-deep text-white transition hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))] disabled:bg-ink/15"
-            >
-              <svg aria-hidden viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 15V5m-4.5 4.5L10 5l4.5 4.5" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+        </On.Provider>
+      </TooltipProvider>
+    </AssistantRuntimeProvider>
   );
 }

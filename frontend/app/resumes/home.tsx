@@ -138,9 +138,10 @@ export function Home() {
               </div>
             )}
           </div>
-          <span aria-label={profile.name} title={profile.name} className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white">
+          {/* your account: for now, the experiences every resume is made from */}
+          <Link href="/settings/experience" aria-label={`${profile.name}: your experience`} title="Your experience" className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white transition hover:bg-ink/85">
             {initials}
-          </span>
+          </Link>
         </div>
       </header>
 
