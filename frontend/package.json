@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.15.36",
     "@base-ui/react": "^1.9.0",
     "geist": "^1.9.2",
     "lucide-react": "^1.72.0",
@@ -17,8 +18,7 @@
     "pdfjs-dist": "6.4.299",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-resizable-panels": "^4.22.1",
-    "use-stick-to-bottom": "^1.1.6"
+    "react-resizable-panels": "^4.22.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

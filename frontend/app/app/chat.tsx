@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
+import {
+  AssistantRuntimeProvider,
+  ComposerPrimitive,
+  getExternalStoreMessages,
+  MessagePrimitive,
+  ThreadPrimitive,
+  useAui,
+  useAuiState,
+  useExternalStoreRuntime,
+} from "@assistant-ui/react";
 import { ArrowDown } from "lucide-react";
 import { motion } from "motion/react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { Mark } from "../logo";
 import type { Entry, Posting } from "./data";
 import type { Quote } from "./resume";
@@ -45,30 +54,139 @@ function Done({ children }: { children: ReactNode }) {
 // a message comes in from just below where it lands
 const enter = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const } };
 
-// the way back down, once you've scrolled up from the newest message
-function Newest() {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+// what a message's buttons do, for the messages assistant-ui renders
+type Actions = { apply: (m: Message) => void; addEntry: (m: Message) => void; tailor: (m: Message) => void; pickPosting: (p: Posting) => void; addedTo: string };
+const On = createContext<Actions>(null!);
+
+// the message assistant-ui is rendering, as ours: its cards need more than its text
+const useOurs = () => useAuiState((s) => getExternalStoreMessages<Message>(s.message)[0]);
+
+function Yours() {
+  const m = useOurs();
   return (
-    <button
-      type="button"
-      aria-label="Scroll to the newest message"
-      tabIndex={isAtBottom ? -1 : 0}
-      onClick={() => scrollToBottom()}
-      className={`absolute bottom-3 left-1/2 grid size-8 -translate-x-1/2 place-items-center rounded-full bg-white text-ink/70 shadow-[0_8px_20px_-8px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 hover:text-ink ${isAtBottom ? "pointer-events-none translate-y-2 opacity-0" : ""}`}
-    >
-      <ArrowDown aria-hidden className="size-4" />
-    </button>
+    <MessagePrimitive.Root>
+      <motion.div {...enter} className="ml-8 flex justify-end">
+        <div className="rounded-2xl rounded-tr-md bg-accent-deep px-3.5 py-2.5 text-[14px] leading-relaxed text-white">
+          {m.quotes?.map((q, i) => (
+            <p key={i} className="mb-1.5 border-l-2 border-white/40 pl-2 text-[13px] italic text-white/80">“{q.text}”</p>
+          ))}
+          {m.text && <p className="whitespace-pre-wrap">{m.text}</p>}
+        </div>
+      </motion.div>
+    </MessagePrimitive.Root>
   );
 }
 
-// The assistant beside the resume: messages, the four modes, the pasted quotes, and the composer.
+function Avatar() {
+  return (
+    <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-accent-deep text-white">
+      <Mark className="h-4 w-auto" />
+    </span>
+  );
+}
+
+function Rayumes() {
+  const m = useOurs();
+  const on = useContext(On);
+  return (
+    <MessagePrimitive.Root>
+      <motion.div {...enter} className="mr-6 flex gap-2.5">
+        <Avatar />
+        <div className="min-w-0 space-y-2.5">
+          <p className="rounded-2xl rounded-tl-md bg-mist px-3.5 py-2.5 text-[14px] leading-relaxed">{m.text}</p>
+
+            {m.suggestion && (
+              <div className="rounded-2xl bg-white p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
+                <p>{m.suggestion.text}</p>
+                <div className="mt-3">
+                  {m.suggestion.applied ? (
+                    <Done>Replaced in your resume</Done>
+                  ) : (
+                    <button type="button" onClick={() => on.apply(m)} className={primary}>
+                      Replace in resume
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {m.draft && (
+              <div className="rounded-2xl bg-white p-3.5 text-[14px] ring-1 ring-accent/25">
+                <p className="font-medium">{m.draft.entry.title}</p>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5 text-ink/80">
+                  {m.draft.entry.bullets.map((b) => (
+                    <li key={b.id}>{b.text}</li>
+                  ))}
+                </ul>
+                <div className="mt-3">
+                  {m.draft.added ? (
+                    <Done>Added to {on.addedTo}</Done>
+                  ) : (
+                    <button type="button" onClick={() => on.addEntry(m)} className={primary}>
+                      Add to resume
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {m.skills && (
+              <div className="space-y-2">
+                <ul aria-label="Hard skills" className="flex flex-wrap gap-1.5">
+                  {m.skills.hard.map(([s, n]) => (
+                    <li key={s} className="rounded-full bg-ink px-2.5 py-1 text-[12px] font-medium text-white">
+                      {s}
+                      {n > 1 && <span className="ml-1 text-white/60">×{n}</span>}
+                    </li>
+                  ))}
+                </ul>
+                <ul aria-label="Soft skills" className="flex flex-wrap gap-1.5">
+                  {m.skills.soft.map((s) => (
+                    <li key={s} className="rounded-full bg-accent/15 px-2.5 py-1 text-[12px] font-medium text-accent-text">
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {m.postings && (
+              <div className="flex flex-wrap gap-2">
+                {m.postings.map((p) => (
+                  <button key={p.id} type="button" onClick={() => on.pickPosting(p)} className={`${small} bg-white ring-1 ring-ink/10 hover:ring-ink/25`}>
+                    {p.company}, {p.title}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {m.tailored && (
+              <div>
+                {m.tailored.created ? (
+                  <Done>Saved to My resumes</Done>
+                ) : (
+                  <button type="button" onClick={() => on.tailor(m)} className={primary}>
+                    Create tailored resume
+                  </button>
+                )}
+              </div>
+            )}
+        </div>
+      </motion.div>
+    </MessagePrimitive.Root>
+  );
+}
+const components = { UserMessage: Yours, AssistantMessage: Rayumes };
+
+// The assistant beside the resume: messages, the four modes, the pasted quotes, and the composer, on
+// assistant-ui's primitives (thread, viewport that follows the newest message, composer). The messages stay
+// ours, held by the page: assistant-ui reads them through an external store and hands what's typed to send.
+// shortcut: no isRunning, the typing dots are ours; with a streaming API, pass isRunning and let it show the run
 export function Chat({
   messages,
   typing,
   mode,
   setMode,
-  draft,
-  setDraft,
   quotes,
   removeQuote,
   send,
@@ -83,11 +201,10 @@ export function Chat({
   typing: boolean;
   mode: Mode;
   setMode: (m: Mode) => void;
-  draft: string;
-  setDraft: (s: string) => void;
   quotes: Quote[];
   removeQuote: (i: number) => void;
-  send: () => void;
+  // what was typed (empty when only quotes go)
+  send: (text: string) => void;
   apply: (m: Message) => void;
   addEntry: (m: Message) => void;
   tailor: (m: Message) => void;
@@ -97,146 +214,81 @@ export function Chat({
   // where an added experience went, for its confirmation
   addedTo?: string;
 }) {
+  const runtime = useExternalStoreRuntime<Message>({
+    messages,
+    convertMessage: (m) => ({ id: String(m.id), role: m.from === "you" ? "user" : "assistant", content: [{ type: "text", text: m.text }] }),
+    onNew: async (m) => send(m.content.flatMap((p) => (p.type === "text" ? [p.text] : [])).join("")),
+  });
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <On.Provider value={{ apply, addEntry, tailor, pickPosting, addedTo }}>
+        <Thread typing={typing} mode={mode} setMode={setMode} quotes={quotes} removeQuote={removeQuote} send={send} only={only} />
+      </On.Provider>
+    </AssistantRuntimeProvider>
+  );
+}
+
+function Thread({
+  typing,
+  mode,
+  setMode,
+  quotes,
+  removeQuote,
+  send,
+  only,
+}: {
+  typing: boolean;
+  mode: Mode;
+  setMode: (m: Mode) => void;
+  quotes: Quote[];
+  removeQuote: (i: number) => void;
+  send: (text: string) => void;
+  only?: Mode[];
+}) {
+  const aui = useAui();
+  const text = useAuiState((s) => s.composer.text);
   const box = useRef<HTMLTextAreaElement>(null);
+  // quotes go on their own: the composer won't send empty text, so they skip it
+  const go = () => (text.trim() ? aui.composer().send() : quotes.length && send(""));
 
   // a paste or a mode change puts the cursor in the composer
   useEffect(() => {
     box.current?.focus();
   }, [quotes.length, mode]);
 
-  // grow the composer with its text, up to six lines
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 6 * 22 + 20)}px`;
-  }, [draft]);
-
-  const canSend = draft.trim() || quotes.length;
-
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col">
       {/* the newest message stays in view as the list grows, unless you've scrolled up to read */}
-      <StickToBottom resize="smooth" initial="instant" className="relative min-h-0 flex-1">
-        <StickToBottom.Content aria-live="polite" className="space-y-4 px-4 py-5 sm:px-5">
-        {messages.map((m) =>
-          m.from === "you" ? (
-            <motion.div key={m.id} {...enter} className="ml-8 flex justify-end">
-              <div className="rounded-2xl rounded-tr-md bg-accent-deep px-3.5 py-2.5 text-[14px] leading-relaxed text-white">
-                {m.quotes?.map((q, i) => (
-                  <p key={i} className="mb-1.5 border-l-2 border-white/40 pl-2 text-[13px] italic text-white/80">“{q.text}”</p>
+      <div className="relative min-h-0 flex-1">
+        <ThreadPrimitive.Viewport aria-live="polite" className="h-full space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
+          <ThreadPrimitive.Messages components={components} />
+          {typing && (
+            <motion.div {...enter} className="flex items-center gap-2.5" aria-label="Rayume is typing">
+              <Avatar />
+              <span className="flex gap-1 rounded-2xl rounded-tl-md bg-mist px-3.5 py-3.5">
+                {[0, 1, 2].map((d) => (
+                  <motion.span key={d} animate={{ y: [0, -3, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }} className="size-1.5 rounded-full bg-ink/50" />
                 ))}
-                {m.text && <p className="whitespace-pre-wrap">{m.text}</p>}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div key={m.id} {...enter} className="mr-6 flex gap-2.5">
-              <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-accent-deep text-white">
-                <Mark className="h-4 w-auto" />
               </span>
-              <div className="min-w-0 space-y-2.5">
-                <p className="rounded-2xl rounded-tl-md bg-mist px-3.5 py-2.5 text-[14px] leading-relaxed">{m.text}</p>
-
-                {m.suggestion && (
-                  <div className="rounded-2xl bg-white p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
-                    <p>{m.suggestion.text}</p>
-                    <div className="mt-3">
-                      {m.suggestion.applied ? (
-                        <Done>Replaced in your resume</Done>
-                      ) : (
-                        <button type="button" onClick={() => apply(m)} className={primary}>
-                          Replace in resume
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {m.draft && (
-                  <div className="rounded-2xl bg-white p-3.5 text-[14px] ring-1 ring-accent/25">
-                    <p className="font-medium">{m.draft.entry.title}</p>
-                    <ul className="mt-1.5 list-disc space-y-1 pl-5 text-ink/80">
-                      {m.draft.entry.bullets.map((b) => (
-                        <li key={b.id}>{b.text}</li>
-                      ))}
-                    </ul>
-                    <div className="mt-3">
-                      {m.draft.added ? (
-                        <Done>Added to {addedTo}</Done>
-                      ) : (
-                        <button type="button" onClick={() => addEntry(m)} className={primary}>
-                          Add to resume
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {m.skills && (
-                  <div className="space-y-2">
-                    <ul aria-label="Hard skills" className="flex flex-wrap gap-1.5">
-                      {m.skills.hard.map(([s, n]) => (
-                        <li key={s} className="rounded-full bg-ink px-2.5 py-1 text-[12px] font-medium text-white">
-                          {s}
-                          {n > 1 && <span className="ml-1 text-white/60">×{n}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                    <ul aria-label="Soft skills" className="flex flex-wrap gap-1.5">
-                      {m.skills.soft.map((s) => (
-                        <li key={s} className="rounded-full bg-accent/15 px-2.5 py-1 text-[12px] font-medium text-accent-text">
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {m.postings && (
-                  <div className="flex flex-wrap gap-2">
-                    {m.postings.map((p) => (
-                      <button key={p.id} type="button" onClick={() => pickPosting(p)} className={`${small} bg-white ring-1 ring-ink/10 hover:ring-ink/25`}>
-                        {p.company}, {p.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {m.tailored && (
-                  <div>
-                    {m.tailored.created ? (
-                      <Done>Saved to My resumes</Done>
-                    ) : (
-                      <button type="button" onClick={() => tailor(m)} className={primary}>
-                        Create tailored resume
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
             </motion.div>
-          ),
-        )}
-        {typing && (
-          <motion.div {...enter} className="flex items-center gap-2.5" aria-label="Rayume is typing">
-            <span className="grid size-7 place-items-center rounded-full bg-accent-deep text-white">
-              <Mark className="h-4 w-auto" />
-            </span>
-            <span className="flex gap-1 rounded-2xl rounded-tl-md bg-mist px-3.5 py-3.5">
-              {[0, 1, 2].map((d) => (
-                <motion.span key={d} animate={{ y: [0, -3, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }} className="size-1.5 rounded-full bg-ink/50" />
-              ))}
-            </span>
-          </motion.div>
-        )}
-        </StickToBottom.Content>
-        <Newest />
-      </StickToBottom>
+          )}
+        </ThreadPrimitive.Viewport>
+        {/* the way back down, once you've scrolled up from the newest message */}
+        <ThreadPrimitive.ScrollToBottom
+          aria-label="Scroll to the newest message"
+          className="absolute bottom-3 left-1/2 grid size-8 -translate-x-1/2 place-items-center rounded-full bg-white text-ink/70 shadow-[0_8px_20px_-8px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 hover:text-ink disabled:pointer-events-none disabled:translate-y-2 disabled:opacity-0"
+        >
+          <ArrowDown aria-hidden className="size-4" />
+        </ThreadPrimitive.ScrollToBottom>
+      </div>
 
-      <form
+      <ComposerPrimitive.Root
         onSubmit={(e) => {
-          e.preventDefault();
-          if (canSend) send();
+          // the composer sends text itself; this catches quotes going on their own
+          if (!text.trim()) {
+            e.preventDefault();
+            go();
+          }
         }}
         className="border-t border-ink/10 p-3 sm:p-4"
       >
@@ -279,27 +331,25 @@ export function Chat({
             ))}
           </div>
           <div className="flex items-end gap-2 p-2">
-            <label htmlFor="chat-box" className="sr-only">
-              Message Rayume
-            </label>
-            <textarea
+            <ComposerPrimitive.Input
               ref={box}
-              id="chat-box"
-              rows={1}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              aria-label="Message Rayume"
+              submitMode="enter"
+              maxRows={6}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                // Enter with only quotes: the composer ignores empty text, so they're sent here
+                if (e.key === "Enter" && !e.shiftKey && !text.trim()) {
                   e.preventDefault();
-                  if (canSend) send();
+                  go();
                 }
               }}
               placeholder={modes.find((m) => m.id === mode)!.hint}
               className="min-h-10 flex-1 resize-none bg-transparent px-1.5 py-2 text-base leading-[22px] outline-none placeholder:text-ink/40 sm:text-[14px]"
             />
             <button
-              type="submit"
-              disabled={!canSend}
+              type="button"
+              onClick={go}
+              disabled={!text.trim() && !quotes.length}
               aria-label="Send"
               className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-deep text-white transition hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))] disabled:bg-ink/15"
             >
@@ -309,7 +359,7 @@ export function Chat({
             </button>
           </div>
         </div>
-      </form>
-    </div>
+      </ComposerPrimitive.Root>
+    </ThreadPrimitive.Root>
   );
 }
