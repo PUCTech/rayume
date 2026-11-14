@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import Image from "next/image";
 import Link from "next/link";
+import { Select } from "@base-ui/react/select";
+import { Check, ChevronDown, Omega, PanelLeft, Redo2, Undo2 } from "lucide-react";
+import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { Mark } from "../logo";
 import { Viewer } from "../templates/viewer";
 import type { Page } from "../templates/pdf";
@@ -16,7 +19,8 @@ import { editsOf, touch } from "./store";
 import { master as masterSeed } from "./data";
 import { Overlay, label, type Target } from "./overlay";
 import { plain } from "./regions";
-import { blank, inline, projectBullets, strip, withDoc, type Doc } from "./tex";
+import { Content } from "./content";
+import { blank, fonts, inline, margins, mark, outline, projectBullets, sizes, strip, styled, symbols, withDoc, type Doc, type Field, type Setup } from "./tex";
 
 const serif = GeistSerifRegular.className;
 const only: Mode[] = ["refine", "add"];
@@ -37,14 +41,49 @@ const withBullet = (d: Doc, id: string, text: string): Doc =>
 const kept = (key: string): Doc => {
   try {
     const d = JSON.parse(localStorage.getItem(key) ?? "null") as Doc | null;
-    if (d && (Object.keys(d.bullets).length || Object.keys(d.runs).length || d.added.length || d.projects?.length)) return d;
+    const some = (o?: object) => !!o && Object.values(o).some(Boolean);
+    if (d && (some(d.bullets) || some(d.runs) || d.added.length || d.projects?.length || some(d.links) || some(d.setup))) return d;
   } catch {}
   return blank;
 };
 // toolbar buttons take the press without taking the caret out of the text
 const tool = "grid size-8 place-items-center rounded-md text-ink/70 transition hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30 aria-pressed:bg-accent/15 aria-pressed:text-accent-text pointer-coarse:size-10";
 // single spaces, none at either end, not even inside the bold or italic a bullet opens or closes with
-const tidy = (t: string) => t.replace(/\s+/g, " ").trim().replace(/^((?:<[bi]>)*) /, "$1").replace(/ ((?:<\/[bi]>)*)$/, "$1");
+// the line between two panels: a hairline that lights up under the pointer, dragged to resize them
+const handle = "w-px bg-ink/10 outline-none transition-colors data-[separator=hover]:bg-accent data-[separator=active]:bg-accent focus-visible:bg-accent";
+
+// One of the document's settings in the toolbar (font, size, margins). "" is the template's own.
+function Pick({ label, value, items, disabled, onChange }: { label: string; value: string; items: { value: string; label: string }[]; disabled: boolean; onChange: (v: string) => void }) {
+  return (
+    <Select.Root items={items} value={value} disabled={disabled} onValueChange={(v) => onChange(v ?? "")}>
+      <Select.Trigger aria-label={label} title={label} className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] text-ink/75 transition hover:bg-ink/5 hover:text-ink data-disabled:pointer-events-none data-disabled:opacity-30 data-popup-open:bg-ink/5">
+        <Select.Value />
+        <Select.Icon>
+          <ChevronDown aria-hidden className="size-3.5 text-ink/40" />
+        </Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Positioner sideOffset={6} alignItemWithTrigger={false} className="z-[70] outline-none">
+          <Select.Popup className="min-w-(--anchor-width) origin-(--transform-origin) rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+            {items.map((i) => (
+              <Select.Item key={i.value} value={i.value} className="flex cursor-default items-center justify-between gap-4 rounded-lg px-2.5 py-1.5 text-[13px] outline-none select-none data-highlighted:bg-ink/5">
+                <Select.ItemText>{i.label}</Select.ItemText>
+                <Select.ItemIndicator>
+                  <Check aria-hidden className="size-3.5 text-accent-text" />
+                </Select.ItemIndicator>
+              </Select.Item>
+            ))}
+          </Select.Popup>
+        </Select.Positioner>
+      </Select.Portal>
+    </Select.Root>
+  );
+}
+const fontItems = [{ value: "", label: "Template font" }, ...Object.entries(fonts).map(([value, f]) => ({ value, label: f.label }))];
+const sizeItems = [{ value: "", label: "Size" }, ...sizes.map((value) => ({ value, label: `${value} pt` }))];
+const marginItems = [{ value: "", label: "Margins" }, ...Object.keys(margins).map((value) => ({ value, label: `${value[0].toUpperCase()}${value.slice(1)} margins` }))];
+
+const tidy = (t: string) => t.replace(/\s+/g, " ").trim().replace(/^((?:<[biu]>)*) /, "$1").replace(/ ((?:<\/[biu]>)*)$/, "$1");
 const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` : `${t.kind}:${t.id}`);
 
 // A resume's own page (/resumes/[id]): the templates' PDF/Code viewer across the width, with Rayume's chat in a
@@ -52,7 +91,9 @@ const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` :
 // You write on the PDF itself (overlay.tsx): any text, bullets included; Enter splits a bullet into a new one,
 // Backspace in an empty bullet removes it. Each change goes into the document (tex.ts), and the PDF is typeset
 // again from the pristine LaTeX with every change (dev only, through /api/render), in well under a second.
-// A toolbar under the bar has undo, redo, bold and italic (bullets only) and says when changes are saved.
+// Left of the page is the content as a form (content.tsx), right of it the chat; both are panels that resize
+// and fold away. A toolbar under the bar has undo and redo, the document's font, type size and margins
+// (tex.ts's styled), bold, italic, underline and symbols (bullets only), and says when changes are saved.
 // ⌘Z and ⇧⌘Z step through the changes, they're kept in this browser across reloads, Code shows the whole
 // LaTeX with them written in, and the bar says when the resume no longer fits on one page.
 // Text selected in the PDF or the code gets a "Paste into chat" button; an entry can be focused to send its
@@ -69,7 +110,16 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const isMaster = r.id === masterSeed.id;
   const job = postings.find((p) => p.id === r.job);
   const [jobOpen, setJobOpen] = useState(false);
-  const [chat, setChat] = useState(true);
+  // the panels either side of the page: the content form and the chat. Both fold away, from their buttons or
+  // by dragging them shut; on a narrow screen they start folded
+  const [wide] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const left = usePanelRef();
+  const right = usePanelRef();
+  const [leftOpen, setLeftOpen] = useState(wide);
+  const [chat, setChat] = useState(wide);
+  const fold = (p: typeof left) => (p.current?.isCollapsed() ? p.current.expand() : p.current?.collapse());
+  // the symbols menu under the toolbar
+  const [sym, setSym] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
@@ -104,7 +154,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const [src, setSrc] = useState<string>();
   const [busy, setBusy] = useState(false);
   // whether the caret is in bold or italic text, for the toolbar
-  const [fmt, setFmt] = useState({ bold: false, italic: false });
+  const [fmt, setFmt] = useState({ bold: false, italic: false, underline: false });
   const [pages, setPages] = useState(1);
   // what a render that just landed contains, until its pages are drawn; and which render is the latest
   const landing = useRef<Doc | null>(null);
@@ -136,7 +186,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       const res = await fetch("/api/render", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ file: r.template, tex: inline(template, withDoc(body, next, originals)) }),
+        body: JSON.stringify({ file: r.template, tex: inline(styled(template, next.setup), withDoc(body, next, originals)) }),
       });
       if (n !== renders.current) return;
       if (!res.ok) throw new Error(await res.text());
@@ -193,8 +243,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
 
   useEffect(() => {
     const onChange = () => {
-      const [bold, italic] = [document.queryCommandState("bold"), document.queryCommandState("italic")];
-      setFmt((f) => (f.bold === bold && f.italic === italic ? f : { bold, italic }));
+      const [bold, italic, underline] = ["bold", "italic", "underline"].map((c) => document.queryCommandState(c));
+      setFmt((f) => (f.bold === bold && f.italic === italic && f.underline === underline ? f : { bold, italic, underline }));
       if (dragging.current) return setPick(null);
       const el = document.activeElement;
       let text = "";
@@ -312,6 +362,23 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
   }, [mine?.text]);
+  // What the content form shows and writes (content.tsx). A text is found whatever its capitals: the page
+  // reads the name in the capitals the template sets it in, the form as the LaTeX has it.
+  const runKey = (f: Field) => Object.keys(doc.runs).find((k) => k.toLowerCase() === f.key.toLowerCase());
+  const chain = (id: string): { id: string; text: string }[] => {
+    const text = strip(textIn(doc, { kind: "bullet", id }));
+    const next = doc.added.filter((a) => a.after === id).reverse().flatMap((a) => chain(a.id));
+    return [...(text ? [{ id, text }] : []), ...next];
+  };
+  const setRun = (f: Field, raw: string) => {
+    const text = tidy(raw);
+    const was = runKey(f);
+    if (!text || text === (was ? doc.runs[was] : f.was)) return;
+    change({ ...doc, runs: { ...Object.fromEntries(Object.entries(doc.runs).filter(([k]) => k !== was)), [f.key]: text } });
+  };
+  // the form writes plain text: a bullet it changes loses its bold and italic
+  const setBullet = (id: string, raw: string) => tidy(raw) !== strip(textIn(doc, { kind: "bullet", id })) && change(withBullet(doc, id, mark(tidy(raw))));
+  const setup = (s: Setup) => change({ ...doc, setup: { ...doc.setup, ...s } });
   // one history, as a document has: the field's own for typing not saved yet, the document's otherwise
   const history = (back: boolean) => (dirty ? document.execCommand(back ? "undo" : "redo") : step(back));
   // Enter: the text before the caret stays, the rest starts a new bullet under it, the caret at its start
@@ -392,7 +459,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const stale = wired && !isMaster && master.updated > r.updated;
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ink/10 bg-paper px-3 sm:px-4">
         <Link href="/resumes" aria-label="Back to your resumes" className="grid size-9 shrink-0 place-items-center rounded-full text-ink/60 transition hover:bg-ink/5 hover:text-ink">
           <svg aria-hidden viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -456,7 +523,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         <button
           type="button"
           aria-pressed={chat}
-          onClick={() => setChat((c) => !c)}
+          onClick={() => fold(right)}
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition ${chat ? "bg-ink text-white" : "text-ink/75 ring-1 ring-ink/10 hover:text-ink hover:ring-ink/25"}`}
         >
           <Mark className="h-3.5 w-auto" />
@@ -464,16 +531,20 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         </button>
       </header>
       <div role="toolbar" aria-label="Editing" onMouseDown={(e) => e.preventDefault()} className="flex h-10 shrink-0 items-center gap-0.5 border-b border-ink/10 bg-paper px-3 sm:px-4">
+        <button type="button" aria-label="Content" title={leftOpen ? "Hide the content panel" : "Show the content panel"} aria-pressed={leftOpen} onClick={() => fold(left)} className={tool}>
+          <PanelLeft aria-hidden className="size-4" />
+        </button>
+        <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
         <button type="button" aria-label="Undo" title="Undo (⌘Z)" disabled={!dirty && !steps[0]} onClick={() => history(true)} className={tool}>
-          <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 4 3.5 7.5 7 11M4 7.5h7.5a4.5 4.5 0 0 1 0 9H8" />
-          </svg>
+          <Undo2 aria-hidden className="size-4" />
         </button>
         <button type="button" aria-label="Redo" title="Redo (⇧⌘Z)" disabled={!dirty && !steps[1]} onClick={() => history(false)} className={tool}>
-          <svg aria-hidden viewBox="0 0 20 20" className="size-4 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 4 3.5 7.5 7 11M4 7.5h7.5a4.5 4.5 0 0 1 0 9H8" />
-          </svg>
+          <Redo2 aria-hidden className="size-4" />
         </button>
+        <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
+        <Pick label="Font" value={doc.setup?.font ?? ""} items={fontItems} disabled={!wired} onChange={(font) => setup({ font })} />
+        <Pick label="Type size" value={doc.setup?.size ?? ""} items={sizeItems} disabled={!wired} onChange={(size) => setup({ size })} />
+        <Pick label="Margins" value={doc.setup?.margin ?? ""} items={marginItems} disabled={!wired} onChange={(margin) => setup({ margin })} />
         <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
         <button type="button" aria-label="Bold" title={rich ? "Bold (⌘B)" : "Bold: click into a bullet first"} aria-pressed={rich && fmt.bold} disabled={!rich} onClick={() => document.execCommand("bold")} className={`${tool} ${serif} text-[17px] font-bold`}>
           B
@@ -481,6 +552,24 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         <button type="button" aria-label="Italic" title={rich ? "Italic (⌘I)" : "Italic: click into a bullet first"} aria-pressed={rich && fmt.italic} disabled={!rich} onClick={() => document.execCommand("italic")} className={`${tool} ${serif} text-[17px] italic`}>
           I
         </button>
+        <button type="button" aria-label="Underline" title={rich ? "Underline (⌘U)" : "Underline: click into a bullet first"} aria-pressed={rich && fmt.underline} disabled={!rich} onClick={() => document.execCommand("underline")} className={`${tool} ${serif} text-[17px] underline underline-offset-2`}>
+          U
+        </button>
+        <div className="relative">
+          <button type="button" aria-label="Symbols" title={rich ? "Insert a symbol" : "Symbols: click into a bullet first"} aria-expanded={rich && sym} disabled={!rich} onClick={() => setSym((o) => !o)} className={tool}>
+            <Omega aria-hidden className="size-4" />
+          </button>
+          {/* plain buttons, not a menu: a menu would take the caret out of the text the symbol goes into */}
+          {rich && sym && (
+            <div className="absolute left-0 top-full z-40 mt-1.5 flex gap-0.5 rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-150 starting:-translate-y-1 starting:opacity-0">
+              {symbols.map((c) => (
+                <button key={c} type="button" aria-label={`Insert ${c}`} onClick={() => document.execCommand("insertText", false, c)} className={`${tool} ${serif} text-[15px]`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <span role="status" className="ml-auto text-xs text-ink/50">
           {busy ? "Saving…" : doc === blank ? "" : "Saved in this browser"}
         </span>
@@ -499,8 +588,24 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           <span className="text-xs text-ink/50">replaces this resume&apos;s text; ⌘Z brings it back</span>
         </div>
       )}
-          <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-            {/* scrolling moves the selection away from its button, so the button goes until the next selection */}
+      <Group orientation="horizontal" className="min-h-0 flex-1">
+        <Panel id="content" panelRef={left} collapsible collapsedSize={0} defaultSize={wide ? 320 : 0} minSize={260} maxSize={480} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setLeftOpen(size.inPixels > 1)} className="h-full bg-paper">
+          {/* a folded panel has no width for its content to wrap in: it's hidden rather than left to spill */}
+          <div hidden={!leftOpen} className="h-full">
+          <Content
+            sections={outline(body, doc, originals)}
+            run={(f) => doc.runs[runKey(f) ?? ""] ?? f.was}
+            bullets={chain}
+            links={doc.links ?? {}}
+            onRun={setRun}
+            onBullet={setBullet}
+            onAdd={(after, text) => tidy(text) && change({ ...doc, added: [...doc.added, { id: `new-${Date.now()}`, after, text: mark(tidy(text)) }] })}
+            onLink={(f, url) => change({ ...doc, links: { ...doc.links, [f.was]: url } })}
+          />
+          </div>
+        </Panel>
+        <Separator className={handle} />
+        <Panel id="page" minSize={280} className="flex h-full flex-col">
             <div
               ref={view}
               onPointerDown={() => (dragging.current = true)}
@@ -511,7 +616,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               <Viewer
                 file={r.template}
                 name={r.title}
-                tex={inline(template, latex)}
+                tex={inline(styled(template, doc.setup), latex)}
                 src={src}
                 overlay={(page) => (
                   <Overlay
@@ -544,7 +649,10 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                 )}
               />
             </div>
-            <aside hidden={!chat} className="flex h-[70vh] shrink-0 flex-col border-t border-ink/10 bg-paper lg:h-auto lg:w-[26rem] lg:border-l lg:border-t-0">
+        </Panel>
+        <Separator className={handle} />
+        <Panel id="chat" panelRef={right} collapsible collapsedSize={0} defaultSize={wide ? 400 : 0} minSize={300} maxSize={560} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setChat(size.inPixels > 1)} className="h-full bg-paper">
+            <aside hidden={!chat} className="flex h-full flex-col">
               <div className="min-h-0 flex-1">
                 <Chat
                   messages={messages}
@@ -573,7 +681,8 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                 />
               </div>
             </aside>
-          </div>
+        </Panel>
+      </Group>
           {pick && (
             <button
               type="button"

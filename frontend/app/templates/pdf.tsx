@@ -29,7 +29,8 @@ const zoomButton = "grid size-8 place-items-center rounded-full text-ink/70 tran
 // The browser's own PDF viewer (an iframe) frames the page in its grey background, which no CSS can reach.
 // overlay, when given, is rendered over each page (through a portal into the sheet) once its text is laid out,
 // and again after every zoom with the new positions.
-// shortcut: pages are drawn at the box width they open with; redraw on resize if the drawer becomes resizable.
+// Pages are drawn again when the box changes width (a panel beside it opened, closed or was dragged), once
+// the resizing pauses.
 export function Pdf({ src, title, overlay }: { src: string; title: string; overlay?: (page: Page) => ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy>();
@@ -37,6 +38,24 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
   const [failed, setFailed] = useState(false);
   const [pages, setPages] = useState<Page[]>([]);
   const vector = !!overlay;
+  // the box's width the pages are drawn for; 0 until it's measured
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    let wait = 0;
+    const fit = () => setWidth((w) => (Math.abs(el.clientWidth - w) > 2 ? el.clientWidth : w));
+    fit();
+    const ro = new ResizeObserver(() => {
+      clearTimeout(wait);
+      wait = window.setTimeout(fit, 150);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      clearTimeout(wait);
+    };
+  }, []);
   // the text layers on screen; each holds a global selection listener until it's cancelled
   const layers = useRef<{ cancel(): void }[]>([]);
   useEffect(() => () => layers.current.forEach((l) => l.cancel()), []);
@@ -59,13 +78,13 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
   }, [src]);
 
   useEffect(() => {
-    if (!doc) return;
+    if (!doc || !width) return;
     let cancelled = false;
     (async () => {
       // the viewer kit reads the pdf.js library from this global instead of importing it
       (globalThis as { pdfjsLib?: unknown }).pdfjsLib = await import("pdfjs-dist");
       const { TextLayerBuilder } = await import("pdfjs-dist/web/pdf_viewer.mjs");
-      const fit = box.current?.clientWidth ?? 0;
+      const fit = width;
       const pages: HTMLElement[] = [];
       const built: { cancel(): void }[] = [];
       const runs: { font: string; size: number; base: number; bold: boolean; italic: boolean }[][] = [];
@@ -182,7 +201,7 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
     return () => {
       cancelled = true;
     };
-  }, [doc, zoom, vector]);
+  }, [doc, zoom, vector, width]);
 
   if (failed) {
     return (

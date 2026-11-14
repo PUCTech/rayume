@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { ArrowDown } from "lucide-react";
+import { motion } from "motion/react";
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { Mark } from "../logo";
 import type { Entry, Posting } from "./data";
 import type { Quote } from "./resume";
@@ -36,6 +39,25 @@ function Done({ children }: { children: ReactNode }) {
       </svg>
       {children}
     </span>
+  );
+}
+
+// a message comes in from just below where it lands
+const enter = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const } };
+
+// the way back down, once you've scrolled up from the newest message
+function Newest() {
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+  return (
+    <button
+      type="button"
+      aria-label="Scroll to the newest message"
+      tabIndex={isAtBottom ? -1 : 0}
+      onClick={() => scrollToBottom()}
+      className={`absolute bottom-3 left-1/2 grid size-8 -translate-x-1/2 place-items-center rounded-full bg-white text-ink/70 shadow-[0_8px_20px_-8px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 hover:text-ink ${isAtBottom ? "pointer-events-none translate-y-2 opacity-0" : ""}`}
+    >
+      <ArrowDown aria-hidden className="size-4" />
+    </button>
   );
 }
 
@@ -75,13 +97,7 @@ export function Chat({
   // where an added experience went, for its confirmation
   addedTo?: string;
 }) {
-  const list = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
-
-  // keep the newest message in view
-  useEffect(() => {
-    list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, typing]);
 
   // a paste or a mode change puts the cursor in the composer
   useEffect(() => {
@@ -100,19 +116,21 @@ export function Chat({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={list} aria-live="polite" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
+      {/* the newest message stays in view as the list grows, unless you've scrolled up to read */}
+      <StickToBottom resize="smooth" initial="instant" className="relative min-h-0 flex-1">
+        <StickToBottom.Content aria-live="polite" className="space-y-4 px-4 py-5 sm:px-5">
         {messages.map((m) =>
           m.from === "you" ? (
-            <div key={m.id} className="ml-8 flex justify-end">
+            <motion.div key={m.id} {...enter} className="ml-8 flex justify-end">
               <div className="rounded-2xl rounded-tr-md bg-accent-deep px-3.5 py-2.5 text-[14px] leading-relaxed text-white">
                 {m.quotes?.map((q, i) => (
                   <p key={i} className="mb-1.5 border-l-2 border-white/40 pl-2 text-[13px] italic text-white/80">“{q.text}”</p>
                 ))}
                 {m.text && <p className="whitespace-pre-wrap">{m.text}</p>}
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div key={m.id} className="mr-6 flex gap-2.5">
+            <motion.div key={m.id} {...enter} className="mr-6 flex gap-2.5">
               <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-accent-deep text-white">
                 <Mark className="h-4 w-auto" />
               </span>
@@ -196,22 +214,24 @@ export function Chat({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ),
         )}
         {typing && (
-          <div className="flex items-center gap-2.5" aria-label="Rayume is typing">
+          <motion.div {...enter} className="flex items-center gap-2.5" aria-label="Rayume is typing">
             <span className="grid size-7 place-items-center rounded-full bg-accent-deep text-white">
               <Mark className="h-4 w-auto" />
             </span>
             <span className="flex gap-1 rounded-2xl rounded-tl-md bg-mist px-3.5 py-3.5">
               {[0, 1, 2].map((d) => (
-                <span key={d} style={{ animationDelay: `${d * 150}ms` }} className="size-1.5 animate-pulse rounded-full bg-ink/40" />
+                <motion.span key={d} animate={{ y: [0, -3, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }} className="size-1.5 rounded-full bg-ink/50" />
               ))}
             </span>
-          </div>
+          </motion.div>
         )}
-      </div>
+        </StickToBottom.Content>
+        <Newest />
+      </StickToBottom>
 
       <form
         onSubmit={(e) => {

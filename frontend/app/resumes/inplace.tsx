@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
-import { safe } from "./tex";
+import { mark, safe } from "./tex";
 
 // where the caret leaves a field for the text next to it: a line up or down, or past its start or end
 export type Dir = "up" | "down" | "left" | "right";
@@ -24,11 +24,11 @@ const offsetIn = (el: HTMLElement) => {
   return r.toString().length;
 };
 
-// what a field holds as the document keeps it (tex.ts): text with <b> and <i>, "&" and "<" spelled out
+// what a field holds as the document keeps it (tex.ts): text with <b>, <i> and <u>, "&" and "<" spelled out
 export const marked = (n: Node): string => {
-  if (n.nodeType === Node.TEXT_NODE) return n.textContent!.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  if (n.nodeType === Node.TEXT_NODE) return mark(n.textContent!);
   const inner = [...n.childNodes].map(marked).join("");
-  const tag = { B: "b", STRONG: "b", I: "i", EM: "i" }[n.nodeName];
+  const tag = { B: "b", STRONG: "b", I: "i", EM: "i", U: "u" }[n.nodeName];
   return tag && inner ? `<${tag}>${inner}</${tag}>` : inner;
 };
 

@@ -145,7 +145,8 @@ export function Overlay({
     return page.spans
       .filter((s) => !ofBullets.has(s.el) && s.text.trim() !== "•")
       .map((s) => {
-        const was = Object.entries(runKeys).find(([k, v]) => v === s.text && !used.has(k))?.[0];
+        // a run the template sets in capitals reads in capitals, whatever was written
+        const was = Object.entries(runKeys).find(([k, v]) => (v === s.text || v.toUpperCase() === s.text) && !used.has(k))?.[0];
         if (was) used.add(was);
         let n = counts.get(s.text) ?? 0;
         while (`${n}:${s.text}` in runKeys) n++;
