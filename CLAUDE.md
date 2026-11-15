@@ -8,6 +8,7 @@ This file loads at the start of every session, including after `/clear`. Before 
 2. **Read that doc in full** before you act. The summary is only a map: the docs hold the contracts, limits and edge cases.
 3. Read the latest session report in `docs/sessions/` (see the index in `docs/sessions/README.md`) to see what was left open.
 4. If the code and a doc disagree, say so. Update the doc in the same PR that changes the behaviour.
+5. Check `docs/todo/` for open items in the area you're touching. `/docs-check` logs new mismatches there.
 
 | Task | Read first |
 |------|------------|
@@ -120,6 +121,10 @@ This file loads at the start of every session, including after `/clear`. Before 
   - Rate-limit AI routes and set `max_output_tokens`.
 - **Usual web threats:** 404 against IDOR, a strict JWT, cookie-only refresh tokens, `oauth_state` checks, no `dangerouslySetInnerHTML` (except the editor field behind `safe`), byte-checked uploads, no fetching of user URLs (SSRF), signed URLs.
 - Review checklists for render-worker PRs and AI-call PRs are at the end of the doc.
+
+### Docs to-do (`docs/todo/README.md`)
+
+- One file per mismatch between code and docs (contradiction, missing column/route/doc, scope drift, security gap), written by `/docs-check`. Resolve an item in the same PR that fixes it, then delete its file and its index row.
 
 ### Sessions (`docs/sessions/README.md`)
 
