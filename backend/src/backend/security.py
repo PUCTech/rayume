@@ -2,7 +2,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 import jwt
 from datetime import datetime, timedelta, timezone
-from backend.db import settings
+from backend.config import settings
 
 hasher = PasswordHasher()
 
