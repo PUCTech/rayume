@@ -228,7 +228,7 @@ A generated resume. **Each row is one version**; old versions are kept.
 
 ### resume_renders
 One row per LaTeX compilation of a resume version (the PDF export or a gallery preview). From Lorenzo's proposal, with `timestamptz` timestamps added. Replaces Raul's `resumes.pdf_url`.
-- Compilation is **asynchronous**: LaTeX can't run on a serverless host, so a separate worker (Docker + TeX Live) does it. The API inserts a row with `status = queued`; the worker claims it (`FOR UPDATE SKIP LOCKED`), compiles in a sandbox, uploads the file and sets `ok` or `failed`.
+- Compilation is **asynchronous**: LaTeX can't run on a serverless host, so a separate dispatcher does it. The API inserts a row with `status = queued`; the dispatcher claims it (`FOR UPDATE SKIP LOCKED`), has the compile sandbox (Tectonic) compile it, uploads the file and sets `ok` or `failed`. See [`../backend/architecture/render-worker.md`](../backend/architecture/render-worker.md).
 - `kind = preview` rows feed the live preview gallery (page 1 as an image); `kind = pdf` rows are the exports.
 - `content_hash` (hash of `content` + template source) avoids recompiling identical input: `unique (resume_id, kind, content_hash)`.
 - `file_url` is the path in object storage (private bucket, served through short-lived signed URLs); null until `ok`.
