@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     database_url: str
     # frontend origins allowed by CORS; in env as JSON: CORS_ORIGINS='["https://rayume.app"]'
     cors_origins: list[str] = ["http://localhost:3000"]
-
+    jwt_secret: str
+    access_token_ttl_seconds: int=900 # 15 minutes
+    refresh_token_ttl_days: int=30
 
 settings = Settings()
 engine = create_engine(settings.database_url)
