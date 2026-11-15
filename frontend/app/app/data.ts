@@ -149,6 +149,17 @@ export const entries: Entry[] = [
     hard_skills: ["AWS"],
     soft_skills: [],
   },
+  {
+    id: "meta",
+    type: "certification",
+    title: "Meta Front-End Developer Professional Certificate",
+    organization: "Coursera",
+    start: "2023-01",
+    end: "2023-01",
+    bullets: [],
+    hard_skills: ["React"],
+    soft_skills: [],
+  },
 ];
 
 export const skillGroups: [string, string][] = [
@@ -174,19 +185,15 @@ export const refined: Record<string, string> = {
   "rota-1": "Led a team of four to 2nd place at HackPUC with a mobile app, built in 36 hours, that routes students along well-lit streets.",
 };
 
-export type Saved = { id: string; title: string; template: string; version: number; job?: string; updated: string };
-export const resumes: Saved[] = [
-  { id: "r1", title: "Orbita, Full Stack Engineer", template: "Jake's Resume", version: 3, job: "orbita", updated: "2026-11-09" },
-  { id: "r2", title: "Vela Pay, Backend Engineer", template: "Classic", version: 1, job: "vela", updated: "2026-11-04" },
-  { id: "r3", title: "General, one page", template: "Modern", version: 5, updated: "2026-10-28" },
-];
-
-export type Posting = { id: string; title: string; company: string; keywords: string[]; missing: string[] };
+// Job postings, shaped like the API's JobPosting (docs/backend/endpoints/job-postings.md) minus url and
+// description; logo is a demo asset in public/logos/, not part of the schema.
+export type Posting = { id: string; title: string; company: string; keywords: string[]; missing: string[]; logo?: string };
 export const postings: Posting[] = [
   {
     id: "orbita",
     title: "Full Stack Engineer",
     company: "Orbita",
+    logo: "orbita",
     keywords: ["React", "TypeScript", "Node.js", "PostgreSQL", "design collaboration", "testing", "GraphQL", "Kubernetes", "mentoring"],
     missing: ["GraphQL", "Kubernetes"],
   },
@@ -194,11 +201,32 @@ export const postings: Posting[] = [
     id: "vela",
     title: "Backend Engineer, Payments",
     company: "Vela Pay",
+    logo: "vela",
     keywords: ["Node.js", "Stripe", "idempotency", "PostgreSQL", "Redis", "AWS", "on-call", "Go"],
     missing: ["Go", "on-call"],
   },
+  {
+    id: "nimbo",
+    title: "Frontend Developer",
+    company: "Nimbo",
+    logo: "nimbo",
+    keywords: ["React", "TypeScript", "Next.js", "accessibility", "design systems", "Figma", "testing"],
+    missing: ["design systems"],
+  },
+  {
+    id: "pacto",
+    title: "Software Engineer II",
+    company: "Pacto",
+    logo: "pacto",
+    keywords: ["TypeScript", "NestJS", "PostgreSQL", "Docker", "AWS", "code review", "Kafka"],
+    missing: ["Kafka"],
+  },
+  {
+    id: "kairo",
+    title: "Junior Data Engineer",
+    company: "Kairo",
+    keywords: ["Python", "SQL", "PostgreSQL", "Airflow", "dbt", "AWS", "data modeling"],
+    missing: ["Airflow", "dbt"],
+  },
 ];
 
-const month = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" });
-export const when = (ym: string) => month.format(new Date(`${ym}-01T00:00:00Z`));
-export const span = (e: Entry) => (e.start === e.end ? when(e.start) : `${when(e.start)} – ${e.end ? when(e.end) : "Present"}`);

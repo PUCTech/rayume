@@ -1,6 +1,6 @@
 # Renders (PDF and previews)
 
-Table: `resume_renders`. LaTeX can't run on the API host, so compilation is asynchronous: the API queues a row, a separate worker (Docker + TeX Live) compiles it. Render rows have no public id; the API addresses them by **resume + version + kind (+ template)**.
+Table: `resume_renders`. LaTeX can't run on the API host, so compilation is asynchronous: the API queues a row, a dispatcher claims it and has the compile sandbox (Tectonic, isolated, no secrets) compile it. How the sandbox works: [`../architecture/render-worker.md`](../architecture/render-worker.md). Render rows have no public id; the API addresses them by **resume + version + kind (+ template)**.
 
 ```mermaid
 sequenceDiagram
@@ -22,7 +22,7 @@ sequenceDiagram
   end
   loop worker poll
     W->>DB: claim oldest queued FOR UPDATE SKIP LOCKED, set running
-    W->>W: compile in sandbox
+    W->>W: POST /compile to the sandbox
     W->>S: upload file
     W->>DB: set ok + file_url (or failed + error)
   end

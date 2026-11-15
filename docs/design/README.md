@@ -123,14 +123,14 @@ flowchart TB
   hero["Hero · paper · text left, lens right"]
   band["Ultramarine band · white text · dark glass cards over an animated ocean"]
   how["How it works · paper · heading row, three mist step cards that play when seen"]
-  tpl["Templates · mist · real LaTeX renders in glass frames"]
+  ed["Editor · mist · a real render with a bullet being edited and Rayume's rewrite"]
   why["Comparison · paper · table, Rayume row first"]
   cta["Closing panel · ink · ultramarine glow from below"]
   foot["Footer · paper · brand + four columns"]
-  nav --> hero --> band --> how --> tpl --> why --> cta --> foot
+  nav --> hero --> band --> how --> ed --> why --> cta --> foot
 
   style band fill:#4338F5,color:#FFFFFF,stroke:#4338F5
-  style tpl fill:#E9E3D9,color:#161B22,stroke:#E9E3D9
+  style ed fill:#E9E3D9,color:#161B22,stroke:#E9E3D9
   style cta fill:#161B22,color:#F4F0EA,stroke:#161B22
   style hero fill:#F4F0EA,color:#161B22
   style how fill:#F4F0EA,color:#161B22
@@ -238,13 +238,14 @@ flowchart LR
 ```
 
 - **Refraction** comes from `<Refraction />` in `lens.tsx`: it injects the SVG filter `#lg-refract` and sets `data-refract` on `<html>` in Chromium, where `backdrop-filter: url()` works. Safari and Firefox keep the plain blur instead of losing the backdrop.
+- **Prism glass** (`glass-prism`, in `prism.css`) goes over `glass` on the nav pill and its phone menu, the four band cards, the hero's "See the templates", the lens toggle and "Get the extension": an uneven rainbow rim, pink light from the top left and cyan from the bottom right, a lighter 4px blur (bent through `#lg-refract` in Chromium) and no cursor light. Only there: everywhere it read as too much. On paper it keeps the white frosting so text stays readable.
 - **Readability over busy colour:** when glass carries text over ultramarine or ink (the compact nav), raise the tint: `bg-paper/75!`.
 
 | Use glass | Don't use glass |
 |---|---|
 | The nav (content scrolls under it) | Cards on flat paper (use `bg-mist` or white) |
 | Cards and chips on the ultramarine band | Body text containers on paper |
-| Frames around real content (the lens bezel, gallery cards) | Stacked glass on glass |
+| Frames around real content (the lens bezel) | Stacked glass on glass |
 | Secondary buttons over colour (`glass glass-dark` on ink) | Anything that needs to be read at small size over a busy image |
 
 ---
@@ -256,7 +257,7 @@ flowchart LR
 - **Everything interactive is a pill** (`rounded-full`): buttons, chips, filter tabs, the nav.
 - Radius grows with size: thumbnails `rounded-xl`, inner panels `rounded-2xl`, cards `rounded-[26px]`/`rounded-[28px]`, big frames `rounded-[34px]`/`rounded-[36px]`.
 - **Shadows are tinted, never grey.** Navy shadows for objects on paper (`shadow-[0_12px_32px_-16px_rgb(22_27_34/0.3)]`), ultramarine glow for the primary button and the highlighted table row (`shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent)]`).
-- Big soft colour glows (`bg-accent/25 blur-[120px]`) sit behind the hero visual, the gallery and the closing panel so the glass has colour to pick up.
+- Big soft colour glows (`bg-accent/25 blur-[120px]`) sit behind the hero visual, the editor section and the closing panel so the glass has colour to pick up.
 
 ---
 
@@ -315,7 +316,7 @@ flowchart TD
 | **Step card** | `flex flex-col rounded-[28px] bg-mist p-5 sm:p-6` | Numbered sequences on paper, three in a row (`lg:grid-cols-3`). A thin ultramarine bar on top fills in turn, the numeral (Geist Serif `text-3xl text-accent`) sits inline with the title, and the demo is pinned to the bottom (`mt-auto`). |
 | **Glass card** | `glass glass-dark rounded-[28px] p-6 sm:p-7` | On the accent band, white text. Serif quote, navy chips. |
 | **Demo panel** | `rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgb(22_27_34/0.08)]` | Small fake UI inside a card (chat, job post, PDF row). |
-| **Gallery card** | `glass rounded-[26px] p-3` + `ring-2 ring-accent` when selected | Frames a resume thumbnail. |
+| **Template card** | `rounded-xl bg-white ring-1 ring-ink/10` + navy shadow, `group-hover:-translate-y-1` | A resume thumbnail on `/templates`; "Use this template" fades in on hover (always shown on touch). |
 
 Numbering (1, 2, 3) is only for real sequences.
 
@@ -344,15 +345,13 @@ flowchart TB
   B["Show the PDF button"] -->|"data-full: --r 900px, --zoom 1"| stage
 ```
 
-### Template gallery
+### Template gallery (`/templates`)
 
-![Six real templates in glass frames](images/gallery.png)
+The landing page no longer has a gallery section; the templates live on their own page (`templates/browser.tsx`). Every thumbnail is a real compile of the same person (see [Assets](#assets)): the team's Classic and Modern plus Jake's Resume, Awesome CV, AltaCV and moderncv from Overleaf.
 
-Every thumbnail is a real compile of the same person (see [Assets](#assets)): the team's template plus Jake's Resume, Awesome CV, AltaCV and moderncv from Overleaf.
-
-- The filter tabs (`gallery.tsx`) filter by layout; each card is a button (`aria-pressed`) that moves the **Selected** badge.
+- A one-row header with the search, then a filter bar that sticks under the nav: ATS-friendly, layout, colour, density, and sort. Four columns on wide screens, two on phones.
+- A card opens the template in a drawer over the grid (`/templates/[id]` on a direct visit), with the pdf.js viewer.
 - Filtering animates with the View Transitions API (`document.startViewTransition`, one `view-transition-name` per card) where the browser has it; elsewhere, and with reduced motion, it switches instantly.
-- Cards lift 4 px on hover and the thumbnail zooms 2%.
 
 ### Comparison table
 
@@ -382,7 +381,7 @@ Brand column (mark, wordmark, tagline) plus four columns. Entries are plain text
 | Lens drift | Lens wanders over the page until the visitor moves the mouse | `requestAnimationFrame`, slow sine path | Static |
 | Lens toggle | Radius and zoom open to the full page | 700 ms `cubic-bezier(0.2,0.8,0.2,1)` | Instant |
 | Nav compact | Width, wordmark and "Sign in" collapse | 300 ms `ease-out` | Instant (no transition needed) |
-| Gallery | Grid re-flows when filtering; cards lift on hover | View Transitions; `hover:-translate-y-1` | Instant, no lift |
+| Templates grid (`/templates`) | Grid re-flows when filtering; cards lift on hover | View Transitions; `group-hover:-translate-y-1` | Instant, no lift |
 | Buttons | Press shrinks to 97% | `active:scale-[0.97]` | Kept (it is feedback) |
 
 Rules:
@@ -422,6 +421,7 @@ Written for an English-speaking Gen Z developer hunting their first tech job.
 | Manta mark | `logo.tsx` (`MARK_D`, `<Mark />`) | Traced from the README banner. Uses `currentColor`. Eyes are holes (`fill-rule: evenodd`). |
 | Competitor marks | `brands.tsx` | Simple Icons (CC0). The Word tile is hand-drawn because Simple Icons dropped Microsoft marks. |
 | Resumes | `frontend/resumes/` → `public/resumes/` | Lucas Mendes, a fictional full-stack dev. Companies are invented. |
+| Favicon | `app/icon.svg` | The manta mark in white on an ultramarine tile, solid so it reads at 16 px on light and dark tabs. Replaces Next's `favicon.ico`. |
 | Ocean creatures | `ocean.tsx` | Drawn from scratch (mantas, fish, seagrass), not the brand mark. Manta wings are 12 precomputed path frames morphed with `<animate attributeName="d">`. |
 
 ### Resume pipeline
@@ -453,6 +453,8 @@ flowchart TB
     U["@utility glass / glass-dark"]
     X["[data-refract] .glass<br/>@property --r --zoom<br/>:focus-visible"]
   end
+  PR["prism.css<br/>.glass.glass-prism"] --> NV
+  PR --> PG
   T --> TW["Tailwind classes<br/>bg-paper, text-ink/60, ring-accent …"]
   U --> TW
   TW --> PG["page.tsx · sections"]
@@ -461,13 +463,12 @@ flowchart TB
   TW --> BR["brands.tsx · BrandMark"]
   TW --> LG["logo.tsx · Mark"]
   TW --> ST["steps.tsx · Steps"]
-  TW --> GA["gallery.tsx · Gallery"]
   TW --> OC["ocean.tsx · OceanScene"]
   X --> LN
 ```
 
-- **Tailwind first.** Plain CSS is only for what Tailwind can't express: the glass utilities, the Chromium refraction rule and the registered `@property` values the lens animates.
-- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `gallery.tsx` (filter and selection), `ocean.tsx` (pause off screen and for reduced motion), `hero-phone.tsx` (the phone story's timeline).
+- **Tailwind first.** Plain CSS is only for what Tailwind can't express: the glass utilities, the Chromium refraction rule and the registered `@property` values the lens animates. CSS that belongs to one component sits next to it (`prism.css`, `templates/pdf.css`).
+- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `ocean.tsx` (pause off screen and for reduced motion), `hero-phone.tsx` (the phone story's timeline).
 - New pages reuse the tokens, the `glass` utilities and the component class strings above; they don't add new colours, fonts or radii.
 
 ---

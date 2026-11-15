@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { share } from "../../share";
 import Link from "next/link";
 import { templates } from "../data";
 import { TemplateDetail, load } from "../detail";
@@ -9,7 +10,14 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/templates/[id]">): Promise<Metadata> {
   const { t } = await load((await params).id);
-  return { title: `${t.name} · Rayume templates`, description: t.abstract };
+  // a sentence for whoever the link is sent to; the page itself shows the template's own abstract
+  const by = t.source === "Rayume" ? "" : ` by ${t.author}`;
+  return share(`${t.name} · Rayume templates`, `${t.name}, a ${t.layout.toLowerCase()} LaTeX resume template${by}, shown filled in with a real resume. Make yours with Rayume.`, {
+    // its own banner (opengraph-image.tsx here, the "card" its generateImageMetadata names)
+    og: `/templates/${t.file}/opengraph-image/card`,
+    x: `/templates/${t.file}/twitter-image/card`,
+    alt: `The ${t.name} resume template, filled in with a real resume, on Rayume`,
+  });
 }
 
 export default function TemplatePage({ params }: PageProps<"/templates/[id]">) {

@@ -50,3 +50,6 @@ Bugs caught, wrong assumptions, things that didn't work.
 |---------|--------|---------|
 | [`2026-11-12-1130`](2026-11-12-1130/README.md) | `feat/backend-db` | Local Postgres, SQLAlchemy models for the full schema, CORS, backend docs reorganised |
 | [`2026-11-12-2036`](2026-11-12-2036/README.md) | `feat/backend-db` | Backend README for interns (setup, Windows, file guide), schema verified, templates seeded |
+| [`2026-11-13-2150`](2026-11-13-2150/README.md) | `feat/frontend-polish` | Signup confirm password; edit-the-PDF resume editor; `/resumes` home replaces `/app`; templates and landing redesign |
+| [`2026-11-13-2306`](2026-11-13-2306/README.md) | `feat/frontend-polish` | Editor as one document: caret across the page, save as you write, bold/italic/underline, toolbar with font/size/margins; content form and chat as collapsible panels; links |
+| [`2026-11-14-1334`](2026-11-14-1334/README.md) | `feat/frontend-polish` | Rayume as an assistant-ui chatbot; Experience management (any job removable, date order, settings page); CodeMirror Code mode; live rendering ~3.5x faster; link previews; render worker design; PR #16 |

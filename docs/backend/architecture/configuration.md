@@ -31,6 +31,8 @@ A required field with no value stops the app at startup with a validation error,
 | `JWT_AUDIENCE` | no | `rayume-api` | `aud` claim: which API the token is for. Tokens with another audience are rejected |
 | `ACCESS_TOKEN_TTL_SECONDS` | no | `900` | Access token lifetime in seconds (15 min). Used for the JWT `exp` and for `expires_in` in `TokenResponse` |
 | `REFRESH_TOKEN_TTL_DAYS` | no | `30` | Lifetime of a refresh token family in days. Used for `refresh_tokens.expires_at`; the cookie's `Max-Age` is this value converted to seconds |
+| `GITHUB_CLIENT_ID` | no | `""` | GitHub OAuth app (`rayume-dev` locally, callback `http://localhost:8000/auth/github/callback`). Declared for [`auth.md`](../endpoints/auth.md); no route reads it yet |
+| `GITHUB_CLIENT_SECRET` | no | `""` | That app's secret. Real secret: only in `backend/.env`, never in `.env.example` |
 
 Never commit real secrets. The password in `compose.yaml` and `.env.example` is for the local database only.
 

@@ -8,6 +8,7 @@
 |-----|-----------------|
 | [`data-layer.md`](data-layer.md) | `db.py`, `models.py`, `schemas.py`: how data gets from Postgres to JSON, and why "schema" means two things |
 | [`configuration.md`](configuration.md) | Settings, `.env`, environment variables, CORS |
+| [`render-worker.md`](render-worker.md) | How LaTeX is compiled in production: the compile sandbox, its isolation, keeping it fast (design, not built) |
 
 ## Code layout
 

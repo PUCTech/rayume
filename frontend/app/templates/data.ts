@@ -1,10 +1,18 @@
 // Real renders of Lucas's resume, compiled from resumes/*.tex: the team's template, four of the
 // most used resume templates on Overleaf, and a vermilion variant of ours. All six are open source.
 // file is the id in /templates/{file} and the basename in resumes/ and public/resumes/.
+// ats: a single reading order a parser can follow (two columns can scramble it); color: accent colour or
+// black only; density: how much fits per page; popular: rank by use on Overleaf, our two after theirs.
+// shortcut: these are set by hand here; move them to the API's template tags (backend seed.py) when
+// the page reads templates from GET /templates.
 export const templates = [
   {
     name: "Classic",
     file: "classic",
+    ats: true,
+    color: "Black & white",
+    density: "Compact",
+    popular: 5,
     layout: "One column",
     source: "Rayume",
     author: "Rayume",
@@ -15,6 +23,10 @@ export const templates = [
   {
     name: "Jake's Resume",
     file: "jake",
+    ats: true,
+    color: "Black & white",
+    density: "Compact",
+    popular: 1,
     layout: "One column",
     source: "Overleaf",
     author: "Jake Gutierrez",
@@ -25,6 +37,10 @@ export const templates = [
   {
     name: "Awesome CV",
     file: "awesome",
+    ats: true,
+    color: "Color",
+    density: "Roomy",
+    popular: 2,
     layout: "One column",
     source: "Overleaf",
     author: "Byungjin Park",
@@ -35,6 +51,10 @@ export const templates = [
   {
     name: "AltaCV",
     file: "altacv",
+    ats: false,
+    color: "Color",
+    density: "Compact",
+    popular: 4,
     layout: "Two column",
     source: "Overleaf",
     author: "LianTze Lim",
@@ -47,6 +67,10 @@ export const templates = [
   {
     name: "moderncv",
     file: "moderncv",
+    ats: true,
+    color: "Black & white",
+    density: "Roomy",
+    popular: 3,
     layout: "One column",
     source: "Overleaf",
     author: "Xavier Danaus",
@@ -57,6 +81,10 @@ export const templates = [
   {
     name: "Modern",
     file: "modern",
+    ats: true,
+    color: "Color",
+    density: "Compact",
+    popular: 6,
     layout: "One column",
     source: "Rayume",
     author: "Rayume",

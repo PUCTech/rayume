@@ -5,6 +5,8 @@ Table: `templates`. Written by the team, read-only through the API (seeded by mi
 ## Template object
 
 > **Built without `author` and `license`:** the `templates` table has no columns for them yet. Whether to add them is an open team question; until then the API leaves them out.
+>
+> **Seeded:** the six gallery templates (`classic`, `modern`, `jake`, `awesome`, `altacv`, `moderncv`) come from [`seed.py`](../../../backend/src/backend/seed.py), run with `uv run python -m backend.seed`. Their `preview_url` is the frontend's `/resumes/<slug>.png` until renders go to object storage.
 
 ```json
 {

@@ -45,7 +45,7 @@ This matters most for AI output, which is sometimes malformed: the database docs
 | `users.links` | `list[Link]` |
 | `job_postings.keywords` | `list[str]` (inline, no class needed) |
 
-**2. HTTP bodies.** What a route accepts and returns is never the raw table. `UserOut` will drop `id` and `password_hash`; `ExperienceCreate` will cap `raw_text` at 5000 characters. These classes are added to `schemas.py` in the PR that adds their route.
+**2. HTTP bodies.** What a route accepts and returns is never the raw table. `UserOut` will drop `id` and `password_hash`; `ExperienceCreate` will cap `raw_text` at 5000 characters. These classes are added to `schemas.py` in the PR that adds their route; so far that is `TemplateOut` and `TemplateDetail` (adds `tex_source`) for [`routers/templates.py`](../../../backend/src/backend/routers/templates.py).
 
 ```
 models.py   the column "data" exists and is jsonb           outer shape, enforced by Postgres

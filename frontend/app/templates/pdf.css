@@ -1,0 +1,83 @@
+/* pdf.js's text layer, the invisible selectable text over each page drawn by pdf.tsx: the rules it needs
+   from pdfjs-dist/web/pdf_viewer.css. Without them the text shows as plain lines under the page.
+   The page element sets --total-scale-factor and the --scale-round vars. */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+
+  :is(span, br) {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+  }
+  > :not(.markedContent),
+  .markedContent span:not(.markedContent) {
+    z-index: 1;
+    --font-height: 0;
+    font-size: calc(var(--text-scale-factor) * var(--font-height));
+    --scale-x: 1;
+    --rotate: 0deg;
+    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+  }
+  .markedContent {
+    display: contents;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+    color: transparent;
+  }
+  /* the layer is the page's text (pdf.tsx sets each run in the PDF's own font); over the overlay's sliding
+     bands, under its editing and focus layer */
+  &.drawn {
+    z-index: 2;
+    :is(span, br) {
+      color: #000;
+    }
+    ::selection {
+      color: #000;
+    }
+  }
+  br::selection {
+    background: transparent;
+  }
+  .endOfContent {
+    display: block;
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+    cursor: default;
+    user-select: none;
+  }
+  &.selecting .endOfContent {
+    top: 0;
+  }
+}
+
+/* A bullet being written on the page (resumes/inplace.tsx): bold and italic in the PDF's own faces, when it
+   has them (--bold, --italic), or Times'. No synthesis: the PDF's bold face is already bold. */
+.written :is(b, i) {
+  font-synthesis: none;
+}
+.written b {
+  font-family: var(--bold, "Times New Roman"), "Times New Roman", Times, serif;
+}
+.written i {
+  font-family: var(--italic, "Times New Roman"), "Times New Roman", Times, serif;
+}
+.written :is(b i, i b) {
+  font-family: "Times New Roman", Times, serif;
+}

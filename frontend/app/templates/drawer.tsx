@@ -4,17 +4,19 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 // The template opened from the grid: a panel on the right, leaving a strip of the grid to click off.
-// Closing goes back in history, so the URL returns to /templates with the grid as it was.
-export function Drawer({ children }: { children: ReactNode }) {
+// Closing goes back in history, so the URL returns to /templates with the grid as it was; a drawer that
+// didn't push a history entry passes onClose instead.
+export function Drawer({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
   const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
   // fade out first, then go back in history, which unmounts the drawer
   const close = () => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return router.back();
+    const done = onClose ?? router.back;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return done();
     root.current?.setAttribute("data-closing", "");
-    setTimeout(() => router.back(), 200);
+    setTimeout(done, 200);
   };
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export function Drawer({ children }: { children: ReactNode }) {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
     };
-    // close only reads refs and the router
+    // close only reads refs, the router and onClose, which callers don't change while it's open
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
