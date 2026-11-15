@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # `aud` claim: which API the token is for
     jwt_audience: str = "rayume-api"
 
+    # For Github using OAuth credentials, living empty for now
+    github_client_id: str = ""
+    github_client_secret: str = ""
+
 
 settings = Settings()
 
