@@ -68,10 +68,12 @@ class TemplateDetail(TemplateOut):
 
     tex_source: str
 
+# Class for a existing user to Login
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+# Class for a non-existing user to register
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email: EmailStr
@@ -95,5 +97,19 @@ class RegisterRequest(BaseModel):
 
         return username
 
-# UserOut
-# TokenResponse
+# Class for the backend  to return to the frontend (user information)
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str
+    name: str
+    email: EmailStr
+    username: str
+    language: str
+
+# Class for the backend to return to the frontend (containg acess token and user information)
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"]
+    expires_in: int
+    user: UserOut
