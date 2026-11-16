@@ -99,11 +99,6 @@ class RegisterRequest(BaseModel):
     def lower_email(cls, v: str) -> str:
         return v.lower()
 
-    @field_validator("links", mode="before")
-    @classmethod
-    def normalize_links(cls, v: object) -> object:
-        return [] if v is None else v
-
 # Class for the backend  to return to the frontend (user information)
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -127,6 +122,11 @@ class UserOut(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("links", mode="before")
+    @classmethod
+    def normalize_links(cls, v: object) -> object:
+        return [] if v is None else v
 
 # Class for the backend to return to the frontend (containg acess token and user information)
 class TokenResponse(BaseModel):
