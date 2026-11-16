@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Accordion } from "@base-ui/react/accordion";
-import { Check, ChevronDown, Link2, LoaderCircle, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Link2, Plus, Trash2, X } from "lucide-react";
 import { entries } from "../app/data";
 import { blank, dates, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withoutJob, type Doc, type Field, type Group, type Job } from "./tex";
 
@@ -14,6 +14,13 @@ const quiet = "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-mediu
 const originals = entries.flatMap((e) => e.bullets);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 const years = Array.from({ length: 50 }, (_, i) => String(new Date().getFullYear() + 1 - i));
+// what a header link is, by its text: an email, a phone number, or anything else, with the address it takes
+const linkKind = (text: string) =>
+  text.includes("@")
+    ? { name: "Email", address: "Email address link", placeholder: "mailto:you@example.com" }
+    : /^\+?[\d\s().-]{7,}$/.test(text.trim())
+      ? { name: "Phone", address: "Phone number link", placeholder: "tel:+5511987654321" }
+      : { name: "Link", address: `Link address for ${text}`, placeholder: "https://" };
 
 // A field's name, always shown above it: a placeholder goes once the field is filled, and then nothing says
 // which box is the company and which the place.
@@ -295,14 +302,15 @@ function form(body: string, doc: Doc, change: (d: Doc) => void, preview?: (d: Do
 // each entry a card with its texts and its bullets (tex.ts's outline reads them off the LaTeX). It writes the
 // same changes the page does, so either can be used and both stay in step. Every field has its name above
 // it; a job's dates are picked as months; Experience takes new jobs. Texts the resume underlines in its header
-// (email, LinkedIn) also take the address they link to in the PDF. It saves as you type, and says so at the
-// top, with the PDF being typeset again when busy says it is; settings links to where else it can be edited.
+// (email, phone, LinkedIn) also take the address they link to in the PDF, each named for what it is. It saves
+// as you type, and says so at the top unless status is off (the editor says it by the resume's name);
+// settings links to where else it can be edited.
 export function Content({
   body,
   doc,
   change,
   preview,
-  busy,
+  status = true,
   settings,
 }: {
   body: string;
@@ -310,8 +318,8 @@ export function Content({
   change: (d: Doc) => void;
   // typesets a document without saving it: what a field holds while it's being typed in
   preview?: (d: Doc) => void;
-  // whether the PDF is being typeset with the latest changes
-  busy?: boolean;
+  // whether it says that changes are saved
+  status?: boolean;
   settings?: { href: string; label: string };
 }) {
   const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onMove, onLink, onJob, onDrop } = form(body, doc, change, preview);
@@ -340,17 +348,21 @@ export function Content({
   const panel = "h-(--accordion-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none";
   return (
     <div className="flex h-full flex-col">
+    {(status || settings) && (
     <div className="flex shrink-0 items-center justify-between gap-2 border-b border-ink/10 px-4 py-2 text-xs text-ink/55">
+      {status && (
       <span role="status" className="flex items-center gap-1.5">
-        {busy ? <LoaderCircle aria-hidden className="size-3.5 animate-spin motion-reduce:animate-none" /> : saved && <Check aria-hidden className="size-3.5 text-accent-text" />}
-        {busy ? "Saved, updating the PDF" : saved ? "Saved in this browser" : "Changes save as you type"}
+        {saved && <Check aria-hidden className="size-3.5 text-accent-text" />}
+        {saved ? "Saved in this browser" : "Changes save as you type"}
       </span>
+      )}
       {settings && (
-        <Link href={settings.href} className="font-medium text-accent-text hover:underline">
+        <Link href={settings.href} className="ml-auto font-medium text-accent-text hover:underline">
           {settings.label}
         </Link>
       )}
     </div>
+    )}
     <Accordion.Root multiple defaultValue={sections.map((s) => s.title)} className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
       {sections.map((s) => (
         <Accordion.Item key={s.title} value={s.title} className="border-b border-ink/10">
@@ -423,18 +435,19 @@ export function Content({
                         })}
                       </div>
                     )}
-                    {rest.map((f) =>
-                      f.link ? (
+                    {rest.map((f) => {
+                      const kind = linkKind(run(f));
+                      return f.link ? (
                         <div key={f.key}>
-                        <span className="mb-1 block text-xs font-medium text-ink/55">Link</span>
+                        <span className="mb-1 block text-xs font-medium text-ink/55">{kind.name}</span>
                         <div className="rounded-2xl bg-white ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
-                          <Text value={run(f)} label="Link text" onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent !ring-0" />
+                          <Text value={run(f)} label={kind.name === "Link" ? "Link text" : kind.name} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent !ring-0" />
                           <div className="flex items-center gap-1.5 border-t border-ink/10 pl-3 text-ink/40">
                             <Link2 aria-hidden className="size-3.5 shrink-0" />
                             <Text
                               value={links[f.was] ?? ""}
-                              label={`Address for ${run(f)}`}
-                              placeholder={f.was.includes("@") ? "mailto:you@example.com" : "https://"}
+                              label={kind.address}
+                              placeholder={kind.placeholder}
                               // an emptied address takes the link off
                               empty
                               onSave={(t) => onLink(f, t.trim())}
@@ -447,8 +460,8 @@ export function Content({
                         <Labeled key={f.key} label={f === g.fields[0] ? "Title" : "Details"}>
                           <Text value={run(f)} label={f === g.fields[0] ? "Title" : "Details"} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className={f === g.fields[0] && g.fields.length > 1 ? "font-medium" : ""} />
                         </Labeled>
-                      ),
-                    )}
+                      );
+                    })}
                     {(shown.length > 0 || open) && (
                       <span className="flex items-baseline justify-between gap-2 pt-1 text-xs">
                         <span className="font-medium text-ink/55">Bullets</span>

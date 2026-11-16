@@ -75,7 +75,7 @@ def tex_escape(s: str) -> str:
 
 - Escaping `^` also kills the `^^5c` trick; escaping `\` kills every command.
 - Strip control characters. Collapse blank lines inside one field, so a field can't start a new paragraph the template didn't expect.
-- **Links** are validated as `http(s)` or `mailto:` URLs at the API (Pydantic `HttpUrl`). Then they are passed to `\href` with `%`, `#`, `\`, `{` and `}` percent-encoded, because `\url` and `\href` treat those characters specially.
+- **Links** are validated as `http(s)`, `mailto:` or `tel:` URLs at the API (Pydantic `HttpUrl` for web links), the same three schemes the editor's `href` allows. Then they are passed to `\href` with `%`, `#`, `\`, `{` and `}` percent-encoded, because `\url` and `\href` treat those characters specially.
 - **The profile picture** is written into the job directory as `picture.<ext>` by the worker. Its path comes from our storage, never from user text. Uploads are already type-checked from their bytes (`PUT /me/picture`).
 - **Templates** (`templates.tex_source`) are written by the team and reviewed in PRs. A template may only use the escaped fields; nothing that disables escaping (`\detokenize` on raw input, verbatim of user text) is allowed.
 

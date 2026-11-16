@@ -5,7 +5,7 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import Image from "next/image";
 import Link from "next/link";
 import { Select } from "@base-ui/react/select";
-import { Check, ChevronDown, Download, MessageSquareQuote, Omega, PanelLeft, PanelRight, Redo2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, Download, LoaderCircle, MessageSquareQuote, Omega, PanelLeft, Redo2, Undo2 } from "lucide-react";
 import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { Mark } from "../logo";
 import { Viewer } from "../templates/viewer";
@@ -104,14 +104,18 @@ const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` :
 // Backspace in an empty bullet removes it. Each change goes into the document (tex.ts), and the PDF is typeset
 // again from the pristine LaTeX with every change (dev only, through /api/render), in well under a second.
 // Left of the page is the content as a form (content.tsx), right of it the chat; both are panels that resize
-// and fold away. A toolbar under the bar has undo and redo, the document's font, type size and margins
-// (tex.ts's styled), bold, italic, underline and symbols (bullets only), and says when changes are saved.
+// and fold away (the bar's Rayume button folds the chat). The page is shown at its real size, as a document's
+// is, fitted to the width on opening and then kept whatever the panels do (pdf.tsx). A toolbar under the bar
+// has undo and redo, the document's font, type size and margins (tex.ts's styled), and bold, italic,
+// underline, symbols and Ask Rayume (bullets only).
 // ⌘Z and ⇧⌘Z step through the changes, they're kept in this browser across reloads, Code shows the whole
 // LaTeX with them written in, and the bar says when the resume no longer fits on one page.
-// The name in the bar renames the resume where it stands. ⌘S saves at once, and typing not saved yet is saved
-// when the tab is hidden or closed or the editor left, so nothing typed is lost to the pause before a save.
+// The name in the bar renames the resume where it stands, and says beside it when changes are saved, once.
+// ⌘S saves at once, and typing not saved yet is saved when the tab is hidden or closed or the editor left,
+// so nothing typed is lost to the pause before a save. In a bullet on the page ⌥↑ ⌥↓ move it, as in the form.
 // Text selected in the PDF or the code gets a "Send to chat" button, which quotes it in the composer (opening
-// the chat if it's folded); Rayume's suggestions go into the document like your own edits.
+// the chat if it's folded); Ask Rayume (⌘J) does the same with the bullet the caret is in, no selecting
+// needed. Rayume's suggestions go into the document like your own edits.
 // shortcut: the chat is scripted (app/workspace.tsx's answer); changes live in localStorage until the API
 // saves versions (POST /resumes/{id}/versions); edits made in Code and rendered there aren't part of the
 // document, so the next edit on the page typesets over them.
@@ -292,36 +296,39 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     };
   }, []);
 
-  // the entries as the PDF on screen has them, added bullets in place and deleted ones gone: what the overlay
-  // finds on the page
+  // the entries as a document has them, added bullets in place and deleted ones gone: as the PDF on screen has
+  // them, what the overlay finds on the page; as written, where a moved bullet goes
+  const entriesOf = (d: Doc) => {
   const after = (id: string): { id: string; text: string }[] =>
-    inPdf.added
+    d.added
       .filter((a) => a.after === id)
       .reverse()
       .flatMap((a) => [...(a.text ? [{ id: a.id, text: a.text }] : []), ...after(a.id)]);
-  const added = (inPdf.projects ?? []).map((p) => ({
+  const added = (d.projects ?? []).map((p) => ({
     ...entries.find((e) => e.type === "project")!,
     id: p.id,
-    title: inPdf.runs[`0:${p.title}`] ?? p.title,
+    title: d.runs[`0:${p.title}`] ?? p.title,
     bullets: p.bullets.map((text, i) => ({ id: `${p.id}-${i}`, text })),
   }));
   // jobs added from the form, like the body's own; the body's taken off the resume aren't on the page
-  const jobs = (inPdf.jobs ?? []).map((j) => ({
+  const jobs = (d.jobs ?? []).map((j) => ({
     ...entries.find((e) => e.type === "professional")!,
     id: j.id,
     title: j.title,
-    organization: inPdf.runs[`0:${j.organization}`] ?? j.organization,
+    organization: d.runs[`0:${j.organization}`] ?? j.organization,
     bullets: j.bullets.map((text, i) => ({ id: `${j.id}-${i}`, text })),
   }));
-  const own = entries.filter((e) => e.type !== "professional" || !inPdf.hidden?.includes(`exp-${entries.filter((x) => x.type === "professional").indexOf(e)}`));
-  const shown = [...added, ...jobs, ...own].map((e) => ({
+  const own = entries.filter((e) => e.type !== "professional" || !d.hidden?.includes(`exp-${entries.filter((x) => x.type === "professional").indexOf(e)}`));
+  return [...added, ...jobs, ...own].map((e) => ({
     ...e,
     bullets: e.bullets.flatMap((b) => {
       // bare text: the page is matched on what it says, not on what's bold
-      const text = strip(inPdf.bullets[b.id] ?? b.text);
+      const text = strip(d.bullets[b.id] ?? b.text);
       return [...(text ? [{ ...b, text }] : []), ...after(b.id).map((a) => ({ ...b, ...a, text: strip(a.text) }))];
     }),
   }));
+  };
+  const shown = entriesOf(inPdf);
   const pending = {
     bullets: [...originals.map((b) => b.id), ...projectBullets(inPdf).map((b) => b.id), ...inPdf.added.map((a) => a.id)].filter((id) => textIn(doc, { kind: "bullet", id }) !== textIn(inPdf, { kind: "bullet", id })),
     runs: Object.keys({ ...doc.runs, ...inPdf.runs }).filter((k) => doc.runs[k] !== inPdf.runs[k]),
@@ -384,6 +391,25 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       on();
     };
   }, []);
+  // a quote into the chat's composer, in Refine, opening the chat if it's folded
+  const send = (q: Quote) => {
+    // the same text twice would be one chip answered twice
+    setQuotes((qs) => (qs.some((x) => x.text === q.text) ? qs : [...qs, q]));
+    setMode("refine");
+    if (!chat) fold(right);
+  };
+  // Ask Rayume: the bullet the caret is in, as it reads now, without selecting it first. Its id goes along only
+  // for one of the resume's own bullets, which refine and answer know; typing not saved yet is saved first,
+  // before the composer takes the focus
+  const ask = () => {
+    const t = editing;
+    if (!t || t.kind === "run") return;
+    const text = strip(tidy(mine?.text ?? textIn(doc, t, fresh)));
+    if (!text) return;
+    flush.current();
+    send(originals.some((b) => b.id === t.id) ? { text, bulletId: t.id } : { text });
+  };
+
   // ⌘Z / Ctrl+Z undoes a change and ⇧ redoes it, unless a text field has the keys for its own undo; ⌘S saves
   // now instead of opening the browser's save dialog
   useEffect(() => {
@@ -391,6 +417,10 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
         return void flush.current();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j" && rich) {
+        e.preventDefault();
+        return ask();
       }
       const field = (e.target as Element).closest("input, textarea, [contenteditable]:not([contenteditable=false])");
       // a field on the page keeps the keys only while it holds typing that isn't saved yet
@@ -429,6 +459,27 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     setLive(null);
     if (t?.kind === "bullet") change(withBullet(doc, t.id, ""));
   };
+  // ⌥↑ / ⌥↓: the bullet trades places with the one above or below in its entry, the caret going with it at the
+  // same place. As in the form (content.tsx's onMove, and its shortcut: about a bold label), the texts swap,
+  // since the page matches bullets by their place; unlike the form's, they keep their bold and italic, and
+  // typing not saved yet goes with them. One change, so one undo puts both back.
+  const move = (up: boolean, typed: string, at: number) => {
+    const t = editing;
+    if (!t || t.kind === "run" || unsaved(t) || !tidy(typed)) return false;
+    const list = entriesOf(doc).find((e) => e.bullets.some((b) => b.id === t.id))?.bullets ?? [];
+    const i = list.findIndex((b) => b.id === t.id);
+    const to = i < 0 ? undefined : list[i + (up ? -1 : 1)];
+    if (!to) return false;
+    // a bullet added since the PDF was typeset is written on the page as a new one
+    const a = doc.added.find((x) => x.id === to.id);
+    const there: Target = a && !inPdf.added.some((x) => x.id === a.id) ? { kind: "new", id: a.id, after: a.after } : { kind: "bullet", id: to.id };
+    change(withBullet(withBullet(doc, t.id, textIn(doc, there)), to.id, tidy(typed)));
+    setLive(null);
+    setEditAt(undefined);
+    setEditStart(at);
+    setEditing(there);
+    return true;
+  };
 
   // neither the PDF nor the code knows bullet ids, so a quoted or typed line is matched to its bullet by
   // its first words; the PDF sets curly quotes where the data has straight ones
@@ -466,11 +517,29 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           </svg>
         </Link>
         <div className="min-w-0 flex-1">
-          <h1>
-            <Title key={r.title} r={r} />
-          </h1>
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="min-w-0">
+              <Title key={r.title} r={r} />
+            </h1>
+            {/* Saved once, by the name, as a document says it. Saving is the document catching up with the typing;
+                typesetting the PDF after it isn't, so the word stays and only its icon turns. A phone shows the icon */}
+            <span
+              role="status"
+              title={dirty || doc === blank ? undefined : offline ? "Saved in this browser. The PDF can't be typeset here, so changes are drawn over it." : busy ? "Saved in this browser, updating the PDF" : "Saved in this browser"}
+              className="flex shrink-0 items-center gap-1.5 text-xs text-ink/50"
+            >
+              {(dirty || doc !== blank) && (
+                <>
+                  {dirty || busy ? <LoaderCircle aria-hidden className="size-3.5 animate-spin motion-reduce:animate-none" /> : <Check aria-hidden className="size-3.5 text-accent-text" />}
+                  <span className="max-sm:sr-only">{dirty ? "Saving…" : "Saved"}</span>
+                  {!dirty && offline && <span className="text-ink/40 max-sm:sr-only"><span className="sr-only">, </span>PDF preview is off</span>}
+                </>
+              )}
+            </span>
+          </div>
           <p className="hidden truncate text-xs text-ink/50 md:block">
-            {isMaster ? "Everything you've done · new resumes start from here" : "Click any text to change it · it saves as you write · Enter adds a bullet · ⌘B bold"}
+            {/* the keys for a bullet: ⌥↑ ⌥↓ as in the form, with the same caveat (content.tsx's onMove) */}
+            {isMaster ? "Everything you've done · new resumes start from here" : "Click any text to change it. In a bullet, Enter adds one, ⌥↑ ⌥↓ move it, ⌘B bolds, ⌘J asks Rayume"}
           </p>
         </div>
         {job && (
@@ -576,13 +645,15 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
             </div>
           )}
         </div>
-        <span role="status" className="ml-auto min-w-0 truncate pl-2 text-xs text-ink/50">
-          {/* saving is the document catching up with the typing; typesetting the PDF after it isn't */}
-          {dirty ? "Saving…" : offline ? "Saved · the PDF can't be typeset here, so changes are drawn over it" : busy ? "Saved · updating the PDF" : doc === blank ? "" : <>Saved<span className="max-sm:hidden"> in this browser</span></>}
-        </span>
-        <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
-        <button type="button" aria-label="Chat" title={chat ? "Hide the chat" : "Show the chat"} aria-pressed={chat} onClick={() => fold(right)} className={tool}>
-          <PanelRight aria-hidden className="size-4" />
+        <button
+          type="button"
+          title={rich ? "Ask Rayume about this bullet (⌘J)" : "Ask Rayume: click into a bullet first"}
+          disabled={!rich}
+          onClick={ask}
+          className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] text-ink/75 transition hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30 max-sm:w-8 max-sm:justify-center max-sm:px-0 pointer-coarse:h-10 max-sm:pointer-coarse:w-10"
+        >
+          <MessageSquareQuote aria-hidden className="size-4 shrink-0 text-accent-text" />
+          <span className="max-sm:sr-only">Ask Rayume</span>
         </button>
       </div>
       {!wired && (
@@ -605,7 +676,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               while it slides it keeps its least width, clipped, instead of rewrapping at every step */}
           <div hidden={!leftOpen && !easing} className="h-full min-w-[260px]">
           {/* the master's content is your experience: settings edits the same, from outside any resume */}
-          <Content body={body} doc={doc} change={change} preview={render} busy={busy} settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
+          <Content body={body} doc={doc} change={change} preview={render} status={false} settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
           </div>
         </Panel>
         <Separator className={handle} />
@@ -638,6 +709,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                     onCommit={commit}
                     onSplit={split}
                     onRemove={remove}
+                    onMove={move}
                     onLive={(text, at) => setLive({ key: key(editing), text, at })}
                     onDrawn={drawn}
                   />
@@ -672,10 +744,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               // keep the selection alive while the button takes the click
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
-                // the same text twice would be one chip answered twice
-                setQuotes((qs) => (qs.some((q) => q.text === pick.text) ? qs : [...qs, { text: pick.text }]));
-                setMode("refine");
-                if (!chat) fold(right);
+                send({ text: pick.text });
                 document.getSelection()?.removeAllRanges();
                 setPick(null);
               }}

@@ -73,6 +73,7 @@ export function Overlay({
   onCommit,
   onSplit,
   onRemove,
+  onMove,
   onLive,
   onDrawn,
 }: {
@@ -89,6 +90,7 @@ export function Overlay({
   onCommit: (t: Target, text: string) => void;
   onSplit: (before: string, after: string) => void;
   onRemove: () => void;
+  onMove: (up: boolean, text: string, at: number) => boolean;
   onLive: (text: string, at: number) => void;
   onDrawn: (page: Page) => void;
 }) {
@@ -300,6 +302,7 @@ export function Overlay({
             onCommit={(t) => onCommit(w.t, t)}
             onSplit={onSplit}
             onRemove={onRemove}
+            onMove={onMove}
             onLive={onLive}
             onNav={(dir, x) => nav(w.t, dir, x)}
             faces={faces}

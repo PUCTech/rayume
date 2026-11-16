@@ -2,7 +2,7 @@
 
 > AI-oriented brief. Read this first to understand what Rayume is, what we are building, and what is in or out of scope.
 > Source of truth for the product pitch: `README.md` (Portuguese). This file restates it for agents, in English.
-> Last updated: 2026-11-14.
+> Last updated: 2026-11-16.
 
 ## What we are
 
@@ -106,7 +106,7 @@ Local dev: Next on `:3000`, FastAPI on `:8000` (CORS is already configured for t
   - `/templates` and `/templates/[id]`: the gallery with search, filters and a pdf.js viewer; "Use this template" goes to `/signup?template=…`.
   - `/login`, `/signup` (forms only, not wired to an API) and `/legal/*`.
   - `/resumes`: the signed-in home, a grid of resumes with the Master Resume first, new and tailored resumes, saved jobs. `/app` redirects here.
-  - `/resumes/[id]`: the editor. You write on the real LaTeX PDF (one caret across the page, bold/italic/underline in bullets, save while typing and on leaving, Esc keeps what was typed, undo), the resume renamed in place from its title, with a toolbar (font, size, margins, symbols), a collapsible content form on the left (including links; in its bullets Enter splits or adds one, Backspace in an empty one removes it, Alt+↑/↓ moves it) and a collapsible Rayume chat on the right. Below `lg` each panel opens over the whole width, one at a time. The page keeps its size while a panel opens or folds, shrinking only when it no longer fits. Changes are written into the LaTeX and re-typeset through the dev-only `/api/render`.
+  - `/resumes/[id]`: the editor. You write on the real LaTeX PDF (one caret across the page, bold/italic/underline in bullets, Alt+↑/↓ moves a bullet within its entry, save while typing and on leaving, Esc keeps what was typed, undo), the resume renamed in place from its title with the save status beside it (`Saving…`, then `Saved`, its icon turning while the PDF is typeset), with a toolbar (font, size, margins, symbols, and Ask Rayume, ⌘J, which quotes the bullet the caret is in into the chat), a collapsible content form on the left (including links, labelled Email, Phone or Link by their text; in its bullets Enter splits or adds one, Backspace in an empty one removes it, Alt+↑/↓ moves it) and a collapsible Rayume chat on the right, folded from the bar's Rayume button. Below `lg` each panel opens over the whole width, one at a time. The page is shown at its real size (100% is the sheet's 816 CSS px), fitted to the width on opening, never above 100%, with a blank sheet in its place until it's drawn; after that it keeps its size whatever the panels do, scrolling sideways inside its box when wider, and refits to a window resize until you zoom yourself (the zoom's middle button fits it again). Changes are written into the LaTeX and re-typeset through the dev-only `/api/render`.
   - Everything signed-in is a demo: resumes and edits live in localStorage and the chat is scripted, until the API has the routes.
 - **Built, backend:** `GET /health`, `GET /templates`, `GET /templates/{slug}`; SQLAlchemy models for the whole schema; templates seeded by `seed.py`. No migrations yet (`create_all`).
 - **Next:** the in-house JWT auth and the `/experiences` and `/resumes` routes, so the frontend can drop localStorage.
