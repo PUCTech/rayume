@@ -677,7 +677,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               while it slides it keeps its least width, clipped, instead of rewrapping at every step */}
           <div hidden={!leftOpen && !easing} className="h-full min-w-[260px]">
           {/* the master's content is your experience: settings edits the same, from outside any resume */}
-          <Content body={body} doc={doc} change={change} preview={render} status={false} settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
+          <Content body={body} doc={doc} change={change} preview={render} status={false} undo settings={isMaster ? { href: "/settings/experience", label: "Open in settings" } : undefined} />
           </div>
         </Panel>
         <Separator className={handle} />

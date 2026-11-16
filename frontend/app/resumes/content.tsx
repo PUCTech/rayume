@@ -6,7 +6,7 @@ import { Accordion } from "@base-ui/react/accordion";
 import { Popover } from "@base-ui/react/popover";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Link2, Plus, Trash2, X } from "lucide-react";
 import { entries } from "../app/data";
-import { blank, dates, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withoutJob, type Doc, type Field, type Group, type Job } from "./tex";
+import { blank, dates, kinds, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withLine, withLink, withoutEntry, withoutJob, withoutLink, withProject, type Doc, type Field, type Group, type Job } from "./tex";
 
 // rounded-2xl: a one-line field is a pill, a bullet's box keeps soft corners (the sign-in form's fields)
 const input =
@@ -133,6 +133,44 @@ function Dates({ start, end, onChange }: { start: string; end: string | null; on
     </div>
   );
 }
+
+// what an entry of each section is called on its buttons; the sections the form can add to and take from
+const nouns: Record<string, string> = { Projects: "project", Education: "education", Certifications: "certification", "Technical Skills": "skill line" };
+
+// Anything else that isn't on the resume yet, as a short form like a new job's: the texts its line needs, a
+// name above each, and it goes in once the ones not optional are filled
+function NewEntry({ title, fields, submit, onAdd, onCancel }: { title: string; fields: { label: string; placeholder: string; optional?: boolean }[]; submit: string; onAdd: (values: string[]) => void; onCancel: () => void }) {
+  const [values, setValues] = useState(fields.map(() => ""));
+  const ready = fields.every((f, i) => f.optional || values[i].trim());
+  return (
+    <form
+      aria-label={title}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready) onAdd(values.map(tidy));
+      }}
+      className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-accent-text/30"
+    >
+      <p className="text-[13px] font-medium">{title}</p>
+      {fields.map((f, i) => (
+        <Labeled key={f.label} label={f.optional ? `${f.label} (optional)` : f.label}>
+          <input autoFocus={i === 0} value={values[i]} onChange={(e) => setValues((v) => v.map((x, j) => (j === i ? e.target.value : x)))} placeholder={f.placeholder} className={input} />
+        </Labeled>
+      ))}
+      <div className="flex items-center justify-end gap-1.5 pt-1">
+        <button type="button" onClick={onCancel} className="rounded-full px-3 py-1.5 text-[13px] font-medium text-ink/65 transition hover:bg-ink/5 hover:text-ink pointer-coarse:py-2.5">
+          Cancel
+        </button>
+        <button type="submit" disabled={!ready} className="rounded-full bg-accent-deep px-3.5 py-1.5 text-[13px] font-medium text-white transition hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 pointer-coarse:py-2.5">
+          {submit}
+        </button>
+      </div>
+    </form>
+  );
+}
+const placeholders: Record<string, string> = { Degree: "B.S. in Computer Science", School: "University", Dates: "2022 -- 2026", Name: "AWS Certified Developer", Issuer: "Amazon Web Services", Year: "2025", Label: "Languages", Skills: "TypeScript, Python, SQL" };
+// the dashed row that opens a new entry's form
+const addRow = "flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink/20 px-3 py-2.5 text-[13px] font-medium text-ink/70 transition hover:border-accent-text/50 hover:bg-white hover:text-accent-text pointer-coarse:min-h-11";
 
 // A job that isn't on the resume yet, as a short form: it goes in, in its place by date, only once it has
 // what a \role line needs (title, company, place, dates) and a first bullet; after that it's edited like the rest.
@@ -358,22 +396,31 @@ function form(body: string, doc: Doc, change: (d: Doc) => void, preview?: (d: Do
     onJob: (j: Job) => change(withJob(body, doc, j)),
     // any job, the resume's own too: the user says what's on their resume
     onDrop: (id: string) => change(withoutJob(body, doc, id)),
+    // any other entry or link put on or taken off; texts go into the LaTeX through esc, addresses through href
+    onLine: (section: string, fields: string[]) => change(withLine(body, doc, { id: `line-${Date.now()}`, section, fields })),
+    onProject: (title: string, stack: string, bullet: string) => change(withProject(body, doc, { id: `new-${Date.now()}`, title, ...(stack ? { stack } : {}), bullets: bullet ? [bullet] : [] })),
+    onEntryDrop: (id: string) => change(withoutEntry(body, doc, id)),
+    onLinkAdd: (text: string, url: string) => change(withLink(body, doc, text, url.trim())),
+    onLinkDrop: (f: Field) => change(withoutLink(body, doc, f.was)),
   };
 }
 
 // The resume's content as a form, beside the page: a section of the accordion per section of the resume,
 // each entry a card with its texts and its bullets (tex.ts's outline reads them off the LaTeX). It writes the
 // same changes the page does, so either can be used and both stay in step. Every field has its name above
-// it; a job's dates are picked as months; Experience takes new jobs. Texts the resume underlines in its header
-// (email, phone, LinkedIn) also take the address they link to in the PDF, each named for what it is. It saves
-// as you type, and says so at the top unless status is off (the editor says it by the resume's name);
-// settings links to where else it can be edited.
+// it; a job's dates are picked as months. Texts the resume underlines in its header (email, phone, LinkedIn)
+// also take the address they link to in the PDF, each named for what it is. Links, jobs, projects, schools,
+// certifications and skill lines are put on and taken off here too; a section left empty loses its heading in
+// the PDF, and keeps its add button here. With undo (the editor's ⌘Z) a remove is one press, without (settings)
+// it asks for a second. It saves as you type, and says so at the top unless status is off (the editor says
+// it by the resume's name); settings links to where else it can be edited.
 export function Content({
   body,
   doc,
   change,
   preview,
   status = true,
+  undo,
   settings,
 }: {
   body: string;
@@ -383,9 +430,11 @@ export function Content({
   preview?: (d: Doc) => void;
   // whether it says that changes are saved
   status?: boolean;
+  // whether a removal can be undone, so it needn't be asked twice
+  undo?: boolean;
   settings?: { href: string; label: string };
 }) {
-  const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onMove, onLink, onJob, onDrop } = form(body, doc, change, preview);
+  const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onMove, onLink, onJob, onDrop, onLine, onProject, onEntryDrop, onLinkAdd, onLinkDrop } = form(body, doc, change, preview);
   const saved = doc !== blank;
   // the bullet being written that isn't in the resume yet: its entry ("section/group"), the bullet it goes
   // under, and the text it starts with (what Enter split off)
@@ -399,8 +448,22 @@ export function Content({
     return !!to;
   };
   const [newJob, setNewJob] = useState(false);
-  // the job a first press on its remove button asked about: a second one removes it (settings have no undo)
+  // the section whose new entry's form is open ("Contact" for a link)
+  const [newIn, setNewIn] = useState<string | null>(null);
+  // what a first press on a remove button asked about: a second one removes it (settings have no undo)
   const [dropping, setDropping] = useState<string | null>(null);
+  // a remove button: one press with undo, two without
+  const removal = (key: string, label: string, act: () => void) => (
+    <button
+      type="button"
+      onClick={() => (undo || dropping === key ? act() : setDropping(key))}
+      onBlur={() => setDropping(null)}
+      className={`${quiet} hover:bg-error/25 hover:text-error-text pointer-coarse:min-h-11 ${dropping === key ? "bg-error/25 text-error-text" : ""}`}
+    >
+      <Trash2 aria-hidden className="size-3.5" />
+      {dropping === key ? "Press again to remove" : label}
+    </button>
+  );
   // an entry folded to one line: its title, then its company and dates (or its first two texts)
   const by = (g: Group, hint: string) => g.fields.find((f) => f.hint === hint);
   const summary = (g: Group, i: number) => {
@@ -502,7 +565,10 @@ export function Content({
                       const kind = linkKind(run(f));
                       return f.link ? (
                         <div key={f.key}>
-                        <span className="mb-1 block text-xs font-medium text-ink/55">{kind.name}</span>
+                        <span className="mb-1 flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-ink/55">{kind.name}</span>
+                          {removal(`link:${f.was}`, "Remove link", () => onLinkDrop(f))}
+                        </span>
                         <div className="rounded-2xl bg-white ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
                           <Text value={run(f)} label={kind.name === "Link" ? "Link text" : kind.name} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent !ring-0" />
                           <div className="flex items-center gap-1.5 border-t border-ink/10 pl-3 text-ink/40">
@@ -579,7 +645,28 @@ export function Content({
                       </div>
                     ))}
                     {open && !shown.some((b) => b.id === open.after) && fresh}
-                    {(g.items.length > 0 || g.job) && (
+                    {s.title === "Contact" &&
+                      (newIn === "Contact" ? (
+                        <NewEntry
+                          title="New link"
+                          fields={[
+                            { label: "Text", placeholder: "GitHub, or you@example.com" },
+                            { label: "Address", placeholder: "https://", optional: true },
+                          ]}
+                          submit="Add link"
+                          onAdd={([text, url]) => {
+                            onLinkAdd(text, url);
+                            setNewIn(null);
+                          }}
+                          onCancel={() => setNewIn(null)}
+                        />
+                      ) : (
+                        <button type="button" onClick={() => setNewIn("Contact")} className={addRow}>
+                          <Plus aria-hidden className="size-4" />
+                          Add link
+                        </button>
+                      ))}
+                    {(g.items.length > 0 || g.job || (g.entry && nouns[s.title])) && (
                       <div className="flex items-center justify-between gap-2">
                         {g.items.length > 0 && !open ? (
                           <button type="button" onClick={() => setAdding({ group: id, after: shown.at(-1)?.id ?? g.items.at(-1)!, text: "" })} className={quiet}>
@@ -589,17 +676,7 @@ export function Content({
                         ) : (
                           <span />
                         )}
-                        {g.job && (
-                          <button
-                            type="button"
-                            onClick={() => (dropping === g.job ? onDrop(g.job) : setDropping(g.job!))}
-                            onBlur={() => setDropping(null)}
-                            className={`${quiet} hover:bg-error/25 hover:text-error-text ${dropping === g.job ? "bg-error/25 text-error-text" : ""}`}
-                          >
-                            <Trash2 aria-hidden className="size-3.5" />
-                            {dropping === g.job ? "Press again to remove" : "Remove experience"}
-                          </button>
-                        )}
+                        {g.job ? removal(g.job, "Remove experience", () => onDrop(g.job!)) : g.entry && nouns[s.title] && removal(g.entry, `Remove ${nouns[s.title]}`, () => onEntryDrop(g.entry!))}
                       </div>
                     )}
                   </div>
@@ -620,8 +697,36 @@ export function Content({
                   </Accordion.Item>
                 );
               })}
-              {/* the jobs' section takes new ones: the section with a company in it, whatever it's called */}
-              {s.groups.some((g) => by(g, "Company")) &&
+              {/* Projects, schools, certifications and skill lines take new ones, with what their line needs */}
+              {nouns[s.title] &&
+                (newIn === s.title ? (
+                  <NewEntry
+                    title={`New ${nouns[s.title]}`}
+                    fields={
+                      s.title === "Projects"
+                        ? [
+                            { label: "Name", placeholder: "pix-kit" },
+                            { label: "Stack", placeholder: "TypeScript, open source", optional: true },
+                            { label: "First bullet", placeholder: "What you built, and what changed because of it", optional: true },
+                          ]
+                        : kinds[s.title].fields.map((f, i) => ({ label: f, placeholder: placeholders[f] ?? "", optional: i === kinds[s.title].optional }))
+                    }
+                    submit={`Add ${nouns[s.title]}`}
+                    onAdd={(v) => {
+                      if (s.title === "Projects") onProject(v[0], v[1], v[2]);
+                      else onLine(s.title, v);
+                      setNewIn(null);
+                    }}
+                    onCancel={() => setNewIn(null)}
+                  />
+                ) : (
+                  <button type="button" onClick={() => setNewIn(s.title)} className={addRow}>
+                    <Plus aria-hidden className="size-4" />
+                    Add {nouns[s.title]}
+                  </button>
+                ))}
+              {/* the jobs' section takes new ones, even once it's emptied */}
+              {(s.title === "Experience" || s.groups.some((g) => by(g, "Company"))) &&
                 (newJob ? (
                   <NewJob
                     onAdd={(j) => {
