@@ -1,6 +1,6 @@
 # Configuration
 
-> Status: **draft**. Code: `Settings` in [`db.py`](../../../backend/src/backend/db.py). Template: [`backend/.env.example`](../../../backend/.env.example).
+> Status: **draft**. Code: `Settings` in [`config.py`](../../../backend/src/backend/db.py). Template: [`backend/.env.example`](../../../backend/.env.example).
 
 ## How settings are read
 
@@ -17,7 +17,7 @@ A required field with no value stops the app at startup with a validation error,
 | `backend/.env.example` | yes | Every setting with safe local values. Add new settings here |
 | `backend/.env` | no (gitignored) | Your local copy: `cp backend/.env.example backend/.env` |
 
-`.env` is found relative to `db.py`, so it works from any working directory. In CI and production there is no `.env`: set real environment variables instead. Anything that imports `backend.main` (including the tests) needs `DATABASE_URL` set.
+`.env` is found relative to `config.py`, so it works from any working directory. In CI and production there is no `.env`: set real environment variables instead. Anything that imports `backend.main` (including the tests) needs `DATABASE_URL` set.
 
 ## Settings
 
