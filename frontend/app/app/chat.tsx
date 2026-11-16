@@ -203,7 +203,7 @@ function Header() {
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 border-b border-ink/10 px-2">
       <Popover.Root>
-        <Popover.Trigger aria-label={`Your chats: ${title}`} className="flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink data-popup-open:bg-ink/5">
+        <Popover.Trigger aria-label={`Your chats: ${title}`} className="flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink data-popup-open:bg-ink/5">
           <MessagesSquare aria-hidden className="size-4 shrink-0 text-ink/50" />
           <span className="truncate">{title}</span>
           <ChevronDown aria-hidden className="size-3.5 shrink-0 text-ink/40" />
@@ -216,7 +216,7 @@ function Header() {
           </Popover.Positioner>
         </Popover.Portal>
       </Popover.Root>
-      <button type="button" aria-label="New chat" title="New chat" onClick={() => aui.threads.switchToNewThread()} className="ml-auto grid size-8 place-items-center rounded-lg text-ink/60 transition hover:bg-ink/5 hover:text-ink">
+      <button type="button" aria-label="New chat" title="New chat" onClick={() => aui.threads.switchToNewThread()} className="ml-auto grid size-8 place-items-center rounded-full text-ink/60 transition hover:bg-ink/5 hover:text-ink">
         <SquarePen aria-hidden className="size-4" />
       </button>
     </div>

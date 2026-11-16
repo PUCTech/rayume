@@ -1,15 +1,16 @@
 // no "use client": only client components import this, so its function props never cross from the server
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Accordion } from "@base-ui/react/accordion";
 import { Check, ChevronDown, Link2, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import { entries } from "../app/data";
 import { blank, dates, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withoutJob, type Doc, type Field, type Group, type Job } from "./tex";
 
+// rounded-2xl: a one-line field is a pill, a bullet's box keeps soft corners (the sign-in form's fields)
 const input =
-  "w-full rounded-lg bg-white px-2.5 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text disabled:opacity-40 sm:text-[13px]";
-const quiet = "flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/5 hover:text-ink";
+  "w-full rounded-2xl bg-white px-3 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text disabled:opacity-40 sm:text-[13px] pointer-coarse:py-2.5";
+const quiet = "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/5 hover:text-ink";
 const originals = entries.flatMap((e) => e.bullets);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 const years = Array.from({ length: 50 }, (_, i) => String(new Date().getFullYear() + 1 - i));
@@ -28,7 +29,7 @@ function Labeled({ label, className = "", children }: { label: string; className
 // A month as the API keeps it (YYYY-MM), picked as a month and a year
 function Month({ label, value, onChange }: { label: string; value: string; onChange: (ym: string) => void }) {
   const [y, m] = value.split("-");
-  const sel = "cursor-pointer rounded-lg bg-white py-1.5 pl-2 pr-1 text-base text-ink ring-1 ring-ink/10 outline-none transition hover:ring-ink/25 focus:ring-2 focus:ring-accent-text sm:text-[13px]";
+  const sel = "h-8 cursor-pointer rounded-full bg-white pl-2.5 pr-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition hover:ring-ink/25 focus:ring-2 focus:ring-accent-text sm:text-[13px] pointer-coarse:h-11";
   return (
     <span role="group" aria-label={label} className="flex gap-1">
       <select aria-label={`${label} month`} value={m} onChange={(e) => onChange(`${y}-${e.target.value}`)} className={sel}>
@@ -118,8 +119,10 @@ function NewJob({ onAdd, onCancel }: { onAdd: (j: Job) => void; onCancel: () => 
 // A text of the resume as a form field. It saves itself as a document does: on a pause in the typing, and
 // when you leave it. An empty field isn't saved: leaving it brings the text back. What the resume has
 // (value) replaces what's shown whenever the field isn't being typed in: a change made on the page, an undo.
-// late waits for you to leave the field (a bullet that doesn't exist yet, which saving would move); empty
-// lets an emptied field save (a link's address, taken off).
+// late waits for you to leave the field (a bullet that doesn't exist yet, which saving would move), and
+// saves on leaving even unchanged (a split-off bullet's text); empty lets an emptied field save (a link's
+// address, taken off). A bullet's keys, each saying whether it took the edit (it then saves nothing itself):
+// Enter splits it at the caret (onEnter), Backspace in an empty one removes it (onEmpty), ⌥↑ ⌥↓ move it (onMove).
 function Text({
   value,
   label,
@@ -131,6 +134,9 @@ function Text({
   className = "",
   onSave,
   onLive,
+  onEnter,
+  onEmpty,
+  onMove,
 }: {
   value: string;
   label: string;
@@ -143,8 +149,19 @@ function Text({
   onSave: (text: string) => void;
   // each keystroke's text, for a live preview, ahead of the save on a pause
   onLive?: (text: string) => void;
+  onEnter?: (before: string, after: string) => boolean;
+  onEmpty?: (el: HTMLTextAreaElement) => boolean;
+  onMove?: (up: boolean, text: string, el: HTMLTextAreaElement) => boolean;
 }) {
   const [text, setText] = useState(value);
+  const timer = useRef(0);
+  // set once a key took the edit: the blur that follows saves nothing
+  const taken = useRef(false);
+  // a field opened for you starts at its start: a split-off bullet's caret goes before its text
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (autoFocus) ref.current?.setSelectionRange(0, 0);
+  }, [autoFocus]);
   const [seen, setSeen] = useState<string | null>(value);
   const [focused, setFocused] = useState(false);
   if (value !== seen) {
@@ -154,8 +171,8 @@ function Text({
   useEffect(() => {
     if (late || !focused || text === value || !(empty || text.trim())) return;
     onLive?.(text);
-    const id = window.setTimeout(() => onSave(text), 700);
-    return () => clearTimeout(id);
+    timer.current = window.setTimeout(() => onSave(text), 700);
+    return () => clearTimeout(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
   }, [text]);
   const props = {
@@ -169,7 +186,8 @@ function Text({
       setFocused(false);
       // shows what the resume has from here on: the saved text tidied, or the old one if this wasn't saved
       setSeen(null);
-      if (text !== value && (empty || text.trim())) onSave(text);
+      if (taken.current) return void (taken.current = false);
+      if ((late || text !== value) && (empty || text.trim())) onSave(text);
     },
     className: `${input} ${className}`,
   };
@@ -178,9 +196,24 @@ function Text({
       {...props}
       rows={1}
       onChange={(e) => setText(e.target.value.replace(/\n/g, " "))}
-      // a bullet is one paragraph: Enter finishes it
-      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), e.currentTarget.blur())}
-      className={`${props.className} resize-none leading-snug [field-sizing:content]`}
+      ref={ref}
+      onKeyDown={(e) => {
+        const el = e.currentTarget;
+        const take = (done: boolean) => done && (clearTimeout(timer.current), (taken.current = true));
+        // a bullet is one paragraph: Enter finishes it, or starts the next
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          if (!onEnter) el.blur();
+          else take(onEnter(text.slice(0, el.selectionStart), text.slice(el.selectionEnd)));
+        } else if (e.key === "Backspace" && !text && onEmpty) {
+          e.preventDefault();
+          take(onEmpty(el));
+        } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && onMove) {
+          e.preventDefault();
+          take(onMove(e.key === "ArrowUp", text, el));
+        }
+      }}
+      className={`${input} ${className} resize-none leading-snug [field-sizing:content]`}
     />
   ) : (
     <input {...props} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
@@ -193,7 +226,9 @@ function Text({
 // its capitals: the page reads the name in the capitals the template sets it in, the form as the LaTeX has it.
 function form(body: string, doc: Doc, change: (d: Doc) => void, preview?: (d: Doc) => void) {
   const runKey = (f: Field) => Object.keys(doc.runs).find((k) => k.toLowerCase() === f.key.toLowerCase());
-  const text = (id: string) => strip(doc.added.find((a) => a.id === id)?.text ?? doc.bullets[id] ?? [...originals, ...projectBullets(doc)].find((b) => b.id === id)?.text ?? "");
+  // a bullet as the document keeps it, bold and italic included, and as bare text
+  const raw = (id: string) => doc.added.find((a) => a.id === id)?.text ?? doc.bullets[id] ?? [...originals, ...projectBullets(doc)].find((b) => b.id === id)?.text ?? "";
+  const text = (id: string) => strip(raw(id));
   const chain = (id: string): { id: string; text: string }[] => {
     const t = text(id);
     const next = doc.added.filter((a) => a.after === id).reverse().flatMap((a) => chain(a.id));
@@ -232,7 +267,23 @@ function form(body: string, doc: Doc, change: (d: Doc) => void, preview?: (d: Do
       const next = withText(id, raw);
       if (next) preview?.(next);
     },
-    onAdd: (after: string, raw: string) => tidy(raw) && change({ ...doc, added: [...doc.added, { id: `new-${Date.now()}`, after, text: mark(tidy(raw)) }] }),
+    // the new bullet's id, or nothing for an empty one
+    onAdd: (after: string, typed: string) => {
+      if (!tidy(typed)) return;
+      const id = `new-${Date.now()}`;
+      change({ ...doc, added: [...doc.added, { id, after, text: mark(tidy(typed)) }] });
+      return id;
+    },
+    // A bullet moved past its neighbour swaps texts with it: the page's bullets are matched by their place, so
+    // the text is what moves. typed is what its field holds now; unchanged, it keeps its bold and italic.
+    // shortcut: a bold label opening an item (Relevant Activities:) stays where it is; real order needs the API's
+    // bullets as a list (ExperienceData)
+    onMove: (id: string, typed: string, to: string) => {
+      if (!tidy(typed)) return false;
+      const mine = tidy(typed) === text(id) ? raw(id) : mark(tidy(typed));
+      change(withBullet(withBullet(doc, id, raw(to)), to, mine));
+      return true;
+    },
     onLink: (f: Field, url: string) => change({ ...doc, links: { ...doc.links, [f.was]: url } }),
     onJob: (j: Job) => change(withJob(body, doc, j)),
     // any job, the resume's own too: the user says what's on their resume
@@ -263,10 +314,19 @@ export function Content({
   busy?: boolean;
   settings?: { href: string; label: string };
 }) {
-  const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onLink, onJob, onDrop } = form(body, doc, change, preview);
+  const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onMove, onLink, onJob, onDrop } = form(body, doc, change, preview);
   const saved = doc !== blank;
-  // the entry a new bullet is being written for: "section/group"
-  const [adding, setAdding] = useState<string | null>(null);
+  // the bullet being written that isn't in the resume yet: its entry ("section/group"), the bullet it goes
+  // under, and the text it starts with (what Enter split off)
+  const [adding, setAdding] = useState<{ group: string; after: string; text: string } | null>(null);
+  // the field n places from el among its entry's bullets, the caret at its end (or at caret)
+  const focusNear = (el: HTMLElement, n: number, caret?: number) => {
+    const all = [...el.closest("[data-bullets]")!.querySelectorAll("textarea")];
+    const to = all[all.indexOf(el as HTMLTextAreaElement) + n];
+    to?.focus();
+    to?.setSelectionRange(caret ?? to.value.length, caret ?? to.value.length);
+    return !!to;
+  };
   const [newJob, setNewJob] = useState(false);
   // the job a first press on its remove button asked about: a second one removes it (settings have no undo)
   const [dropping, setDropping] = useState<string | null>(null);
@@ -312,8 +372,35 @@ export function Content({
                 const labelled = g.fields.filter((f) => f.hint && !f.link);
                 const rest = g.fields.filter((f) => !f.hint || f.link);
                 const { head, sub } = summary(g, i);
+                const open = adding?.group === id ? adding : null;
+                const fresh = open && (
+                  <Text
+                    key={`new:${open.after}`}
+                    value={open.text}
+                    label="New bullet"
+                    multiline
+                    late
+                    empty
+                    autoFocus
+                    onSave={(t) => {
+                      onAdd(open.after, t);
+                      setAdding(null);
+                    }}
+                    // the text before the caret goes in, the rest starts the next new bullet
+                    onEnter={(before, after) => {
+                      const added = onAdd(open.after, before);
+                      if (added) setAdding({ group: id, after: added, text: after });
+                      return !!added;
+                    }}
+                    onEmpty={(el) => {
+                      focusNear(el, -1);
+                      setAdding(null);
+                      return true;
+                    }}
+                  />
+                );
                 const fields = (
-                  <div className="space-y-1.5 p-2">
+                  <div data-bullets className="space-y-1.5 p-2">
                     {labelled.length > 0 && (
                       // a company and its place share a row; a title or dates need the width
                       <div className="grid grid-cols-2 gap-1.5">
@@ -340,9 +427,9 @@ export function Content({
                       f.link ? (
                         <div key={f.key}>
                         <span className="mb-1 block text-xs font-medium text-ink/55">Link</span>
-                        <div className="rounded-lg bg-white ring-1 ring-ink/10 focus-within:ring-2 focus-within:ring-accent-text">
+                        <div className="rounded-2xl bg-white ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
                           <Text value={run(f)} label="Link text" onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent !ring-0" />
-                          <div className="flex items-center gap-1.5 border-t border-ink/10 pl-2.5 text-ink/40">
+                          <div className="flex items-center gap-1.5 border-t border-ink/10 pl-3 text-ink/40">
                             <Link2 aria-hidden className="size-3.5 shrink-0" />
                             <Text
                               value={links[f.was] ?? ""}
@@ -362,38 +449,63 @@ export function Content({
                         </Labeled>
                       ),
                     )}
-                    {(shown.length > 0 || adding === id) && <span className="block pt-1 text-xs font-medium text-ink/55">Bullets</span>}
+                    {(shown.length > 0 || open) && (
+                      <span className="flex items-baseline justify-between gap-2 pt-1 text-xs">
+                        <span className="font-medium text-ink/55">Bullets</span>
+                        <span className="text-ink/40 pointer-coarse:hidden">Enter adds one · Alt ↑ ↓ moves it</span>
+                      </span>
+                    )}
                     {shown.map((b, n) => (
-                      <div key={b.id} className="relative">
-                        <Text value={b.text} label={`Bullet ${n + 1}`} placeholder="Bullet" multiline onSave={(t) => onBullet(b.id, t)} onLive={(t) => liveBullet(b.id, t)} className="pr-8" />
+                      <div key={b.id} className="space-y-1.5">
+                      <div className="relative">
+                        <Text
+                          value={b.text}
+                          label={`Bullet ${n + 1}`}
+                          placeholder="Bullet"
+                          multiline
+                          onSave={(t) => onBullet(b.id, t)}
+                          onLive={(t) => liveBullet(b.id, t)}
+                          // Enter at the start leaves the bullet whole and opens an empty one under it
+                          onEnter={(before, after) => {
+                            const keep = tidy(before) ? before : b.text;
+                            if (tidy(keep) !== b.text) onBullet(b.id, keep);
+                            setAdding({ group: id, after: b.id, text: tidy(before) ? after : "" });
+                            return true;
+                          }}
+                          onEmpty={(el) => {
+                            if (!focusNear(el, -1)) focusNear(el, 1, 0);
+                            onBullet(b.id, "");
+                            return true;
+                          }}
+                          onMove={(up, t, el) => {
+                            const to = shown[n + (up ? -1 : 1)];
+                            if (!to) return false;
+                            const at = el.selectionStart;
+                            el.blur();
+                            onMove(b.id, t, to.id);
+                            requestAnimationFrame(() => focusNear(el, up ? -1 : 1, at));
+                            return true;
+                          }}
+                          className="pr-8"
+                        />
                         <button
                           type="button"
                           aria-label={`Delete bullet ${n + 1}`}
                           title="Delete this bullet"
                           onClick={() => onBullet(b.id, "")}
-                          className="absolute right-1 top-1 grid size-6 place-items-center rounded-md text-ink/35 transition hover:bg-error/25 hover:text-error-text pointer-coarse:size-8"
+                          className="absolute right-1 top-1 grid size-6 place-items-center rounded-full text-ink/35 transition hover:bg-error/25 hover:text-error-text pointer-coarse:size-8"
                         >
                           <X aria-hidden className="size-3.5" />
                         </button>
                       </div>
+                      {open?.after === b.id && fresh}
+                      </div>
                     ))}
-                    {adding === id && (
-                      <Text
-                        value=""
-                        label="New bullet"
-                        multiline
-                        late
-                        autoFocus
-                        onSave={(t) => {
-                          onAdd(shown.at(-1)?.id ?? g.items.at(-1)!, t);
-                          setAdding(null);
-                        }}
-                      />
-                    )}
+                    {open && !shown.some((b) => b.id === open.after) && fresh}
                     {(g.items.length > 0 || g.job) && (
                       <div className="flex items-center justify-between gap-2">
-                        {g.items.length > 0 && adding !== id ? (
-                          <button type="button" onClick={() => setAdding(id)} className={quiet}>
+                        {g.items.length > 0 && !open ? (
+                          <button type="button" onClick={() => setAdding({ group: id, after: shown.at(-1)?.id ?? g.items.at(-1)!, text: "" })} className={quiet}>
                             <Plus aria-hidden className="size-3.5" />
                             Add bullet
                           </button>

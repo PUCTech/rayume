@@ -37,7 +37,7 @@ const zoomButton = "grid size-8 place-items-center rounded-full text-ink/70 tran
 // overlay, when given, is rendered over each page (through a portal into the sheet) once its text is laid out,
 // and again after every zoom with the new positions.
 // Pages are drawn again when the box changes width (a panel beside it opened, closed or was dragged), once
-// the resizing pauses.
+// the resizing pauses; with an overlay, only when the page no longer fits (see keeps).
 export function Pdf({ src, title, overlay }: { src: string; title: string; overlay?: (page: Page) => ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy>();
@@ -48,11 +48,17 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
   const vector = !!overlay;
   // the box's width the pages are drawn for; 0 until it's measured
   const [width, setWidth] = useState(0);
+  // live is the zoom on screen, drawn the one the pages were drawn at (see zoomTo)
+  const live = useRef(start);
+  const drawn = useRef(start);
   useEffect(() => {
     const el = box.current;
     if (!el) return;
     let wait = 0;
-    const fit = () => setWidth((w) => (Math.abs(el.clientWidth - w) > 2 ? el.clientWidth : w));
+    // Writing on the page (an overlay), the page keeps its size while it still fits: a side panel folding or
+    // opening used to redraw it a size bigger or smaller under the caret. It shrinks only once it doesn't fit.
+    const keeps = (w: number) => vector && w > 0 && w * Math.min(live.current, 1) <= el.clientWidth;
+    const fit = () => setWidth((w) => (Math.abs(el.clientWidth - w) > 2 && !keeps(w) ? el.clientWidth : w));
     fit();
     const ro = new ResizeObserver(() => {
       clearTimeout(wait);
@@ -63,14 +69,12 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
       ro.disconnect();
       clearTimeout(wait);
     };
-  }, []);
+  }, [vector]);
   // Zoom follows the fingers: while a pinch (or a button) changes it, the pages already drawn are scaled with
   // CSS zoom, around the pinch so what's under the fingers stays there, and once it pauses they're drawn again,
   // sharp, at the new size. A trackpad pinch arrives as ctrl+wheel, in Safari as gesture events, on a phone as
   // two touches; the browser's own page zoom is held off over the PDF.
-  // live is the zoom on screen, drawn the one the pages were drawn at; shown is live, for the controls
-  const live = useRef(start);
-  const drawn = useRef(start);
+  // shown is live, for the controls
   const [shown, setShown] = useState(start);
   const settle = useRef(0);
   const zoomTo = (to: number, at?: { x: number; y: number }) => {
@@ -302,8 +306,9 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
       {/* the stable gutter keeps the measured width the same once pages overflow and the scrollbar shows */}
       <div ref={box} role="document" aria-label={title} className="min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable]">
         {/* w-max centres pages narrower than the box and lets wider ones scroll from their left edge; at
-            100% of the full box width pages sit edge to edge, as before zoom existed */}
-        <div className={`mx-auto flex w-max min-w-full flex-col items-center ${shown === 1 ? "" : "gap-4 py-6"}`} />
+            100% of the full box width pages sit edge to edge, as before zoom existed. The room above and below
+            clears the View and Zoom pills, which otherwise sit over the page's corner and its foot */}
+        <div className={`mx-auto flex w-max min-w-full flex-col items-center ${shown === 1 ? "" : "gap-4 pt-16 pb-20"}`} />
       </div>
       {overlay && pages.map((p) => createPortal(overlay(p), p.el, `page-${p.n}`))}
       <div role="group" aria-label="Zoom" className="glass absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center rounded-full p-1 text-sm">

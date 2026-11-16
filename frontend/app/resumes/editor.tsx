@@ -36,7 +36,7 @@ const textIn = (d: Doc, t: Target, draft = "") => {
   return d.bullets[t.id] ?? [...originals, ...projectBullets(d)].find((b) => b.id === t.id)?.text ?? "";
 };
 // toolbar buttons take the press without taking the caret out of the text
-const tool = "grid size-8 place-items-center rounded-md text-ink/70 transition hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30 aria-pressed:bg-accent/15 aria-pressed:text-accent-text pointer-coarse:size-10";
+const tool = "grid size-8 place-items-center rounded-full text-ink/70 transition hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30 aria-pressed:bg-accent/15 aria-pressed:text-accent-text pointer-coarse:size-10";
 // the line between two panels: a hairline that lights up under the pointer, dragged to resize them
 const handle = "w-px bg-ink/10 outline-none transition-colors data-[separator=hover]:bg-accent data-[separator=active]:bg-accent focus-visible:bg-accent";
 
@@ -44,7 +44,7 @@ const handle = "w-px bg-ink/10 outline-none transition-colors data-[separator=ho
 function Pick({ label, value, items, disabled, onChange }: { label: string; value: string; items: { value: string; label: string }[]; disabled: boolean; onChange: (v: string) => void }) {
   return (
     <Select.Root items={items} value={value} disabled={disabled} onValueChange={(v) => onChange(v ?? "")}>
-      <Select.Trigger aria-label={label} title={label} className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] text-ink/75 transition hover:bg-ink/5 hover:text-ink data-disabled:pointer-events-none data-disabled:opacity-30 data-popup-open:bg-ink/5">
+      <Select.Trigger aria-label={label} title={label} className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[13px] text-ink/75 transition hover:bg-ink/5 hover:text-ink data-disabled:pointer-events-none data-disabled:opacity-30 data-popup-open:bg-ink/5">
         <Select.Value />
         <Select.Icon>
           <ChevronDown aria-hidden className="size-3.5 text-ink/40" />
@@ -90,7 +90,8 @@ function Title({ r }: { r: Saved }) {
         const el = e.currentTarget;
         requestAnimationFrame(() => el.blur());
       }}
-      className={`${serif} -ml-2 w-full truncate rounded-full bg-transparent px-2 text-xl leading-tight tracking-[-0.01em] outline-none transition hover:ring-1 hover:ring-ink/15 focus:bg-white focus:ring-2 focus:ring-accent-text`}
+      // as wide as the name, not the bar: a pill around it, tall enough for its descenders
+      className={`${serif} -ml-2 block h-8 max-w-full min-w-[4ch] truncate rounded-full bg-transparent px-2 text-xl leading-8 tracking-[-0.01em] outline-none transition [field-sizing:content] hover:ring-1 hover:ring-ink/15 focus:bg-white focus:ring-2 focus:ring-accent-text`}
     />
   );
 }
@@ -132,7 +133,11 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
   const [chat, setChat] = useState(wide);
   // a fold from a button slides: the panels' flex-grow eases for its length (a drag follows the pointer instead)
   const [easing, setEasing] = useState(false);
+  // On a narrow screen a panel takes the whole width, over the page, one at a time: beside a page it left
+  // the page no room, so it never opened at all.
   const fold = (p: typeof left) => {
+    const other = p === left ? right : left;
+    if (!wide && p.current?.isCollapsed()) other.current?.collapse();
     setEasing(true);
     timers.current.push(window.setTimeout(() => setEasing(false), 320));
     return p.current?.isCollapsed() ? p.current.expand() : p.current?.collapse();
@@ -595,7 +600,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         </div>
       )}
       <Group orientation="horizontal" className={`min-h-0 flex-1 ${easing ? "*:data-panel:transition-[flex-grow] *:data-panel:duration-300 *:data-panel:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:*:data-panel:transition-none" : ""}`}>
-        <Panel id="content" panelRef={left} collapsible collapsedSize={0} defaultSize={wide ? 320 : 0} minSize={260} maxSize={480} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setLeftOpen(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
+        <Panel id="content" panelRef={left} collapsible collapsedSize={0} defaultSize={wide ? 320 : 0} minSize={wide ? 260 : "100"} maxSize={wide ? 480 : "100"} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setLeftOpen(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
           {/* a folded panel has no width for its content to wrap in: it's hidden rather than left to spill, and
               while it slides it keeps its least width, clipped, instead of rewrapping at every step */}
           <div hidden={!leftOpen && !easing} className="h-full min-w-[260px]">
@@ -604,7 +609,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           </div>
         </Panel>
         <Separator className={handle} />
-        <Panel id="page" minSize={280} className="flex h-full flex-col">
+        <Panel id="page" minSize={wide ? 280 : 0} className="flex h-full flex-col">
             <div
               ref={view}
               onPointerDown={() => (dragging.current = true)}
@@ -641,7 +646,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
             </div>
         </Panel>
         <Separator className={handle} />
-        <Panel id="chat" panelRef={right} collapsible collapsedSize={0} defaultSize={wide ? 400 : 0} minSize={300} maxSize={560} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setChat(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
+        <Panel id="chat" panelRef={right} collapsible collapsedSize={0} defaultSize={wide ? 400 : 0} minSize={wide ? 300 : "100"} maxSize={wide ? 560 : "100"} groupResizeBehavior="preserve-pixel-size" onResize={(size) => setChat(size.inPixels > 1)} className="h-full overflow-hidden bg-paper">
             <aside hidden={!chat && !easing} className="flex h-full min-w-[300px] flex-col">
               <div className="min-h-0 flex-1">
                 <Chat
