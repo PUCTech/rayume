@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     github_client_id: str = ""
     github_client_secret: str = ""
 
+    # For Github using OAuth credentials, living empty for now
+    github_client_id: str = ""
+    github_client_secret: str = ""
+
 
 settings = Settings()
 

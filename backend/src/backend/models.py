@@ -74,6 +74,18 @@ class User(Timestamps, Base):
     links: Mapped[list | None] = mapped_column(JSONB)
     disabled_at: Mapped[datetime | None]
 
+    @property
+    def has_password(self) -> bool:
+        return self.password_hash is not None
+
+    @property
+    def github_connected(self) -> bool:
+        return self.github_id is not None
+
+    @property
+    def google_connected(self) -> bool:
+        return self.google_id is not None
+
 
 class Experience(Timestamps, Base):
     __tablename__ = "experiences"

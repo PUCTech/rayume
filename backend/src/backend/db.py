@@ -6,7 +6,6 @@ from .config import settings
 
 engine = create_engine(settings.database_url)
 
-
 class Base(DeclarativeBase):
     # team convention: every str is `text`, every timestamp is `timestamptz`
     type_annotation_map = {str: Text, datetime: DateTime(timezone=True)}
