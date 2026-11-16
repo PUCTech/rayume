@@ -1,9 +1,10 @@
 // no "use client": only client components import this, so its function props never cross from the server
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { Accordion } from "@base-ui/react/accordion";
-import { Check, ChevronDown, Link2, Plus, Trash2, X } from "lucide-react";
+import { Popover } from "@base-ui/react/popover";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Link2, Plus, Trash2, X } from "lucide-react";
 import { entries } from "../app/data";
 import { blank, dates, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withoutJob, type Doc, type Field, type Group, type Job } from "./tex";
 
@@ -13,7 +14,6 @@ const input =
 const quiet = "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/5 hover:text-ink";
 const originals = entries.flatMap((e) => e.bullets);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
-const years = Array.from({ length: 50 }, (_, i) => String(new Date().getFullYear() + 1 - i));
 // what a header link is, by its text: an email, a phone number, or anything else, with the address it takes
 const linkKind = (text: string) =>
   text.includes("@")
@@ -33,40 +33,103 @@ function Labeled({ label, className = "", children }: { label: string; className
   );
 }
 
-// A month as the API keeps it (YYYY-MM), picked as a month and a year
-function Month({ label, value, onChange }: { label: string; value: string; onChange: (ym: string) => void }) {
-  const [y, m] = value.split("-");
-  const sel = "h-8 cursor-pointer rounded-full bg-white pl-2.5 pr-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition hover:ring-ink/25 focus:ring-2 focus:ring-accent-text sm:text-[13px] pointer-coarse:h-11";
+// the month menus' surface, the toolbar's Pick popup's (editor.tsx), so both read as one family
+const popup =
+  "origin-(--transform-origin) rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none";
+const cell = "rounded-full text-[13px] text-ink/80 outline-none transition hover:bg-ink/5 focus-visible:ring-2 focus-visible:ring-accent-text disabled:pointer-events-none disabled:opacity-30";
+const short = (ym: string) => `${months[Number(ym.slice(5, 7)) - 1].slice(0, 3)} ${ym.slice(0, 4)}`;
+const long = (ym: string) => `${months[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+
+// A month as the API keeps it (YYYY-MM), or null for still there (present, the end only), picked as the
+// resume reads it: a pill saying "Feb 2025" that opens a year with its twelve months. Years step without
+// closing; a month picks and closes. Months before min can't be picked. The arrow keys walk the months.
+function Month({ label, value, min, present, onChange }: { label: string; value: string | null; min?: string; present?: boolean; onChange: (ym: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [year, setYear] = useState(Number((value ?? thisMonth()).slice(0, 4)));
+  const chosen = useRef<HTMLButtonElement>(null);
+  const pick = (ym: string | null) => {
+    onChange(ym);
+    setOpen(false);
+  };
+  const walk = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -4, ArrowDown: 4 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const all = [...e.currentTarget.querySelectorAll("button")];
+    let i = all.indexOf(document.activeElement as HTMLButtonElement);
+    do i += step;
+    while (all[i]?.disabled);
+    all[i]?.focus();
+  };
   return (
-    <span role="group" aria-label={label} className="flex gap-1">
-      <select aria-label={`${label} month`} value={m} onChange={(e) => onChange(`${y}-${e.target.value}`)} className={sel}>
-        {months.map((name, i) => (
-          <option key={name} value={String(i + 1).padStart(2, "0")}>
-            {name.slice(0, 3)}
-          </option>
-        ))}
-      </select>
-      <select aria-label={`${label} year`} value={y} onChange={(e) => onChange(`${e.target.value}-${m}`)} className={sel}>
-        {(years.includes(y) ? years : [y, ...years]).map((v) => (
-          <option key={v}>{v}</option>
-        ))}
-      </select>
-    </span>
+    <Popover.Root
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setYear(Number((value ?? min ?? thisMonth()).slice(0, 4)));
+      }}
+    >
+      <Popover.Trigger aria-label={`${label}, ${value ? long(value) : "Present"}`} className={`${input} text-left tabular-nums data-popup-open:ring-2 data-popup-open:ring-accent-text`}>
+        {value ? short(value) : "Present"}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner sideOffset={6} align="start" collisionPadding={8} className="z-[70] outline-none">
+          <Popover.Popup initialFocus={chosen} aria-label={label} className={`${popup} w-60`}>
+            {present && (
+              <button type="button" onClick={() => pick(null)} className={`${cell} mb-1 flex h-8 w-full items-center justify-between px-2.5 pointer-coarse:h-11 ${value === null ? "text-accent-text" : ""}`}>
+                Present
+                {value === null && <Check aria-hidden className="size-3.5 text-accent-text" />}
+              </button>
+            )}
+            <div className="flex items-center justify-between">
+              <button type="button" aria-label="Previous year" disabled={!!min && year <= Number(min.slice(0, 4))} onClick={() => setYear((y) => y - 1)} className={`${cell} grid size-8 place-items-center pointer-coarse:size-11`}>
+                <ChevronLeft aria-hidden className="size-4" />
+              </button>
+              <span aria-live="polite" className="text-[13px] font-medium tabular-nums">
+                {year}
+              </span>
+              <button type="button" aria-label="Next year" onClick={() => setYear((y) => y + 1)} className={`${cell} grid size-8 place-items-center pointer-coarse:size-11`}>
+                <ChevronRight aria-hidden className="size-4" />
+              </button>
+            </div>
+            <div onKeyDown={walk} className="mt-1 grid grid-cols-4 gap-0.5">
+              {months.map((name, i) => {
+                const ym = `${year}-${String(i + 1).padStart(2, "0")}`;
+                const on = ym === value;
+                return (
+                  <button
+                    key={name}
+                    ref={on || (!value && ym === (min ?? thisMonth())) ? chosen : undefined}
+                    type="button"
+                    aria-label={`${name} ${year}`}
+                    aria-pressed={on}
+                    disabled={!!min && ym < min}
+                    onClick={() => pick(ym)}
+                    className={`${cell} h-8 pointer-coarse:h-11 ${on ? "bg-accent/10 font-medium text-accent-text" : ""}`}
+                  >
+                    {name.slice(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
-// A job's dates: from, to, or still there (end null, like the API's ExperienceData). Leaving "Current" ends it
-// this month.
+// A job's dates: from, to, or still there (end null, like the API's ExperienceData), as two pills with a dash
+// between, the way the resume writes them. An end before the start can't be picked, and a start moved past
+// the end takes the end with it.
 function Dates({ start, end, onChange }: { start: string; end: string | null; onChange: (start: string, end: string | null) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-      <Month label="Start" value={start} onChange={(s) => onChange(s, end)} />
-      <span aria-hidden className="text-ink/40">–</span>
-      {end === null ? <span className="px-1 text-[13px] text-ink/70">Present</span> : <Month label="End" value={end} onChange={(e) => onChange(start, e)} />}
-      <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-ink/70">
-        <input type="checkbox" checked={end === null} onChange={(e) => onChange(start, e.target.checked ? null : thisMonth())} className="size-3.5 accent-accent-deep" />
-        Current
-      </label>
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+      <Month label="Start date" value={start} onChange={(s) => s && onChange(s, end && end < s ? s : end)} />
+      <span aria-hidden className="text-ink/40">
+        –
+      </span>
+      <Month label="End date" value={end} min={start} present onChange={(e) => onChange(start, e)} />
     </div>
   );
 }
@@ -463,9 +526,10 @@ export function Content({
                       );
                     })}
                     {(shown.length > 0 || open) && (
-                      <span className="flex items-baseline justify-between gap-2 pt-1 text-xs">
+                      // wraps under the label in a narrow panel rather than running out of it
+                      <span className="flex flex-wrap items-baseline justify-between gap-x-2 pt-1 text-xs">
                         <span className="font-medium text-ink/55">Bullets</span>
-                        <span className="text-ink/40 pointer-coarse:hidden">Enter adds one · Alt ↑ ↓ moves it</span>
+                        <span className="text-ink/40 pointer-coarse:hidden">Enter adds one, Alt ↑ ↓ moves it</span>
                       </span>
                     )}
                     {shown.map((b, n) => (

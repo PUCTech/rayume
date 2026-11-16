@@ -69,7 +69,8 @@ function Pick({ label, value, items, disabled, onChange }: { label: string; valu
 }
 const fontItems = [{ value: "", label: "Template font" }, ...Object.entries(fonts).map(([value, f]) => ({ value, label: f.label }))];
 const sizeItems = [{ value: "", label: "Size" }, ...sizes.map((value) => ({ value, label: `${value} pt` }))];
-const marginItems = [{ value: "", label: "Margins" }, ...Object.keys(margins).map((value) => ({ value, label: `${value[0].toUpperCase()}${value.slice(1)} margins` }))];
+// each margin says its size: "Narrow" read as a narrow column of text looked like the opposite of what it does
+const marginItems = [{ value: "", label: "Template margins" }, ...Object.entries(margins).map(([value, m]) => ({ value, label: `${value[0].toUpperCase()}${value.slice(1)} margins (${m.replace("in", " in")})` }))];
 
 // The resume's name, renamed where it's shown, as a document's is: Enter or a click away keeps it, Esc puts the
 // old one back, and an emptied name keeps the old one. Keyed by the name, so a rename elsewhere shows here.
