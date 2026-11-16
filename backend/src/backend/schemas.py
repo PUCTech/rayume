@@ -9,6 +9,7 @@ from .models import ExperienceType
 
 # "2024-03"
 YearMonth = Annotated[str, Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")]
+RESERVED_USERNAMES = frozenset({"admin", "api", "login", "settings"})
 
 
 class Link(BaseModel):
@@ -71,7 +72,7 @@ class TemplateDetail(TemplateOut):
 # Class for a existing user to Login
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=128)
 
 # Class for a non-existing user to register
 class RegisterRequest(BaseModel):
@@ -81,21 +82,27 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     language: Literal["en", "pt-BR"] = "en"
 
-    @field_validator("email", mode='before')
+    @field_validator("username", mode="before")
     @classmethod
-    def validate_email(cls, v: EmailStr) -> EmailStr:
-        email = v.lower()
-        return email
+    def lower_username(cls, v: object) -> object:
+        return v.lower() if isinstance(v, str) else v  # non-str falls through to string_type → 422
 
-    @field_validator("username", mode='before')
+    @field_validator("username")
     @classmethod
-    def username_validator(cls, v: str) -> str:
-        username = v.lower()
+    def username_not_reserved(cls, v: str) -> str:
+        if v in RESERVED_USERNAMES:
+            raise ValueError("username_reserved")
+        return v
 
-        if username in ("admin", "api", "login", "settings"):
-            raise ValueError("username cannot be this")
+    @field_validator("email")  # after: lowercase only once EmailStr has validated it
+    @classmethod
+    def lower_email(cls, v: str) -> str:
+        return v.lower()
 
-        return username
+    @field_validator("links", mode="before")
+    @classmethod
+    def normalize_links(cls, v: object) -> object:
+        return [] if v is None else v
 
 # Class for the backend  to return to the frontend (user information)
 class UserOut(BaseModel):
@@ -106,6 +113,20 @@ class UserOut(BaseModel):
     email: EmailStr
     username: str
     language: str
+
+    profession: str | None
+    summary: str | None
+    phone: str | None
+    address: str | None
+    picture_url: str | None
+    links: list[Link]
+
+    has_password: bool
+    github_connected: bool
+    google_connected: bool
+
+    created_at: datetime
+    updated_at: datetime
 
 # Class for the backend to return to the frontend (containg acess token and user information)
 class TokenResponse(BaseModel):
