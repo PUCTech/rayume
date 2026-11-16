@@ -378,6 +378,7 @@ Brand column (mark, wordmark, tagline) plus four columns. Entries are plain text
 | Ocean (`ocean.tsx`) | Mantas glide and beat their wings, a fish school passes, god rays sway, caustics shimmer, seagrass bends, specks drift and bubbles rise | SVG + SMIL only (no per-frame JS), loops of 20 to 90 s with negative `begin` so it never visibly restarts; paused while off screen | Frozen on a calm frame |
 | Steps (`steps.tsx`) | Progress bars fill in turn, the note types out, keywords light up, the PDF compiles and prints | Once, when the row's top passes 65% of the screen height (a stacked row on a short phone never reaches "35% visible"); CSS transitions staggered by `--d` (0.9 s per card) | Final state, no transitions |
 | Phone hero (`hero-phone.tsx`) | Rayume asks, he rants (lines fly up with a blur), "thats about it", Rayume answers, his card compiles, then a camera move over his new resume and his reaction | One loop of about 24 s; timers for the typing, Web Animations for the camera (eased holds, motion blur mid-move) | Final frame: the finished resume, still |
+| Auth slogan (`(auth)/slogan.tsx`) | "Glide through the job hunt." types out, then its ending is deleted and retyped twice before landing back on it | Once per visit, about 15 s, then stops (it is not a loop); the full line is always in an `sr-only` span | The full line, still (pure CSS, so no hydration mismatch) |
 | Lens drift | Lens wanders over the page until the visitor moves the mouse | `requestAnimationFrame`, slow sine path | Static |
 | Lens toggle | Radius and zoom open to the full page | 700 ms `cubic-bezier(0.2,0.8,0.2,1)` | Instant |
 | Nav compact | Width, wordmark and "Sign in" collapse | 300 ms `ease-out` | Instant (no transition needed) |
@@ -423,6 +424,7 @@ Written for an English-speaking Gen Z developer hunting their first tech job.
 | Resumes | `frontend/resumes/` → `public/resumes/` | Lucas Mendes, a fictional full-stack dev. Companies are invented. |
 | Favicon | `app/icon.svg` | The manta mark in white on an ultramarine tile, solid so it reads at 16 px on light and dark tabs. Replaces Next's `favicon.ico`. |
 | Ocean creatures | `ocean.tsx` | Drawn from scratch (mantas, fish, seagrass), not the brand mark. Manta wings are 12 precomputed path frames morphed with `<animate attributeName="d">`. |
+| Ray photos (sign in, sign up) | `public/auth/`, picked at random per visit in `(auth)/banner.tsx` | All [Unsplash License](https://unsplash.com/license) (commercial use and edits allowed, credit not required; we credit on the photo anyway). `manta-signup.jpg`: Ishan @seefromthesky, [3rSr37wFxKQ](https://unsplash.com/photos/3rSr37wFxKQ). `manta-login.jpg`: Swanson Chan, [yB1k0KaVcXE](https://unsplash.com/photos/yB1k0KaVcXE). `ray-andre-kaim.jpg`: Andre Kaim, [Syzn3nfkYE4](https://unsplash.com/photos/Syzn3nfkYE4). `ray-heidi-bruce.jpg`: Heidi Bruce, [qX_WaCWaIng](https://unsplash.com/photos/qX_WaCWaIng). `ray-ty-feague.jpg`: Ty Feague, [MFDHmnUs7Sc](https://unsplash.com/photos/MFDHmnUs7Sc). A new photo needs a calm, mid-to-dark blue lower third for the white slogan and colour behind the glass logo. |
 
 ### Resume pipeline
 
@@ -468,7 +470,7 @@ flowchart TB
 ```
 
 - **Tailwind first.** Plain CSS is only for what Tailwind can't express: the glass utilities, the Chromium refraction rule and the registered `@property` values the lens animates. CSS that belongs to one component sits next to it (`prism.css`, `templates/pdf.css`).
-- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `ocean.tsx` (pause off screen and for reduced motion), `hero-phone.tsx` (the phone story's timeline).
+- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `ocean.tsx` (pause off screen and for reduced motion), `hero-phone.tsx` (the phone story's timeline), `(auth)/slogan.tsx` (the typewriter).
 - New pages reuse the tokens, the `glass` utilities and the component class strings above; they don't add new colours, fonts or radii.
 
 ---

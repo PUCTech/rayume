@@ -86,7 +86,7 @@ const serif = GeistSerifRegular.className;
 function Providers() {
   return (
     <>
-      <div className="mt-8 grid gap-3">
+      <div className="mt-6 grid gap-3 lg:mt-8">
         <button type="button" className={provider}>
           <GitHub />
           Continue with GitHub
@@ -96,7 +96,7 @@ function Providers() {
           Continue with Google
         </button>
       </div>
-      <div className="mt-7 flex items-center gap-4 text-xs text-ink/45">
+      <div className="mt-5 flex items-center gap-4 text-xs text-ink/45 lg:mt-7">
         <span className="h-px flex-1 bg-ink/10" />
         or with email
         <span className="h-px flex-1 bg-ink/10" />
@@ -136,7 +136,7 @@ export function LoginForm() {
           e.preventDefault();
           check(e.currentTarget);
         }}
-        className="mt-7 grid gap-4"
+        className="mt-5 grid gap-4 lg:mt-7"
       >
         <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" data-message="Enter an email like you@example.com." error={errors.email} onChange={(e) => setLoginEmail(e.target.value)} />
         <Field label="Password" name="password" type="password" autoComplete="current-password" maxLength={128} data-message="Enter your password." error={errors.password} />
@@ -224,7 +224,7 @@ export function SignupForm() {
           setEmail(true);
           if (step < steps.length - 1) go(step + 1);
         }}
-        className="mt-7 grid gap-4"
+        className="mt-5 grid gap-4 lg:mt-7"
       >
         {step === 0 && (
           <div key="account" className={enter}>
