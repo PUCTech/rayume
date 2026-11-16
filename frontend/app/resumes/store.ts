@@ -80,3 +80,5 @@ export const keep = (id: string, d: Doc) => {
 
 // an edited resume moves to the top of "Last edited"
 export const touch = (id: string) => save(read().map((r) => (r.id === id ? { ...r, updated: today() } : r)));
+// a renamed resume moves to the top of "Last edited" too
+export const rename = (id: string, title: string) => save(read().map((r) => (r.id === id ? { ...r, title, updated: today() } : r)));

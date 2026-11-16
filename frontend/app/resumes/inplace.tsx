@@ -95,7 +95,7 @@ const commitLater = (el: HTMLElement, commit: (text: string) => void) => {
 // editing looks like the page itself changing. It reports how many lines it gained or lost (onDelta) so
 // the overlay can slide the rest of the page; offset is how far the bullets above have moved it.
 // Enter splits it at the caret into a new bullet (onSplit), Backspace in an empty one removes it, Esc
-// drops the edit. ⌘B and ⌘I set bold and italic (the browser's own, on a contenteditable), shown in the
+// leaves it with the text kept, as a document does (⌘Z takes it back). ⌘B and ⌘I set bold and italic (the browser's own, on a contenteditable), shown in the
 // PDF's bold and italic faces when it has them (faces). The arrow keys walk out of it into the text next
 // to it (onNav). It stays, no longer editable, until the re-typeset PDF arrives and replaces it.
 // What's typed and where the caret is go up as you type (onLive), so a field swapped out with the page
@@ -110,7 +110,6 @@ export function Written({
   start,
   busy,
   onCommit,
-  onCancel,
   onSplit,
   onRemove,
   onDelta,
@@ -126,7 +125,6 @@ export function Written({
   start?: number;
   busy: boolean;
   onCommit: (text: string) => void;
-  onCancel: () => void;
   onSplit: (before: string, after: string) => void;
   onRemove: () => void;
   onDelta: (delta: number) => void;
@@ -186,7 +184,7 @@ export function Written({
       // the drawer would close on it
       e.stopPropagation();
       handled.current = true;
-      onCancel();
+      onCommit(marked(el));
     } else {
       const to = leaving(e, g.lh);
       if (!to) return;
@@ -245,7 +243,7 @@ export function Written({
 // Any other run of text written on the page (a title, a date, a skill line): one line in the run's font and
 // place, growing the way the PDF sets it: from its left, from its right for text set flush right (dates),
 // from its middle for centered text (the name). A run set in capitals (the name, uppercased by the template)
-// shows capitals as you type. Enter or a click away saves, Esc drops it, the arrow keys walk out of it.
+// shows capitals as you type. Enter, Esc or a click away saves it, the arrow keys walk out of it.
 export function Run({
   x,
   y,
@@ -263,7 +261,6 @@ export function Run({
   busy,
   start,
   onCommit,
-  onCancel,
   onLive,
   onNav,
 }: {
@@ -283,7 +280,6 @@ export function Run({
   busy: boolean;
   start?: number;
   onCommit: (text: string) => void;
-  onCancel: () => void;
   onLive: (text: string, at: number) => void;
   onNav: (dir: Dir, x: number) => void;
 }) {
@@ -315,7 +311,7 @@ export function Run({
         } else if (e.key === "Escape") {
           e.stopPropagation();
           handled.current = true;
-          onCancel();
+          onCommit(e.currentTarget.textContent ?? "");
         } else {
           const to = leaving(e, h);
           if (!to) return;

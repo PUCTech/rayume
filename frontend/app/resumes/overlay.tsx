@@ -71,7 +71,6 @@ export function Overlay({
   busy,
   onEdit,
   onCommit,
-  onCancel,
   onSplit,
   onRemove,
   onLive,
@@ -88,7 +87,6 @@ export function Overlay({
   busy: boolean;
   onEdit: (t: Target, at?: { x: number; y: number }, start?: number) => void;
   onCommit: (t: Target, text: string) => void;
-  onCancel: () => void;
   onSplit: (before: string, after: string) => void;
   onRemove: () => void;
   onLive: (text: string, at: number) => void;
@@ -300,7 +298,6 @@ export function Overlay({
             start={same(editing, w.t) ? editStart : undefined}
             busy={busy}
             onCommit={(t) => onCommit(w.t, t)}
-            onCancel={onCancel}
             onSplit={onSplit}
             onRemove={onRemove}
             onLive={onLive}
@@ -323,7 +320,6 @@ export function Overlay({
             busy={busy}
             start={same(editing, { kind: "run", key: r.key }) ? editStart : undefined}
             onCommit={(t) => onCommit({ kind: "run", key: r.key }, t)}
-            onCancel={onCancel}
             onLive={onLive}
             onNav={(dir, x) => nav({ kind: "run", key: r.key }, dir, x)}
           />

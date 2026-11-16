@@ -5,7 +5,7 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import Image from "next/image";
 import Link from "next/link";
 import { Select } from "@base-ui/react/select";
-import { Check, ChevronDown, MessageSquareQuote, Omega, PanelLeft, PanelRight, Redo2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, Download, MessageSquareQuote, Omega, PanelLeft, PanelRight, Redo2, Undo2 } from "lucide-react";
 import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { Mark } from "../logo";
 import { Viewer } from "../templates/viewer";
@@ -15,7 +15,7 @@ import { answer } from "../app/workspace";
 import { entries, postings, profile } from "../app/data";
 import type { Quote } from "../app/resume";
 import type { Saved } from "./data";
-import { editsOf, kept, touch } from "./store";
+import { editsOf, kept, rename, touch } from "./store";
 import { master as masterSeed } from "./data";
 import { Overlay, type Target } from "./overlay";
 import { plain } from "./regions";
@@ -71,6 +71,30 @@ const fontItems = [{ value: "", label: "Template font" }, ...Object.entries(font
 const sizeItems = [{ value: "", label: "Size" }, ...sizes.map((value) => ({ value, label: `${value} pt` }))];
 const marginItems = [{ value: "", label: "Margins" }, ...Object.keys(margins).map((value) => ({ value, label: `${value[0].toUpperCase()}${value.slice(1)} margins` }))];
 
+// The resume's name, renamed where it's shown, as a document's is: Enter or a click away keeps it, Esc puts the
+// old one back, and an emptied name keeps the old one. Keyed by the name, so a rename elsewhere shows here.
+function Title({ r }: { r: Saved }) {
+  const [text, setText] = useState(r.title);
+  const done = () => (text.trim() && text.trim() !== r.title ? rename(r.id, text.trim()) : setText(r.title));
+  return (
+    <input
+      value={text}
+      aria-label="Resume name"
+      title="Rename"
+      onChange={(e) => setText(e.target.value)}
+      onBlur={done}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== "Escape") return;
+        if (e.key === "Escape") setText(r.title);
+        // a frame later, so the blur saves the name as reset, not as typed
+        const el = e.currentTarget;
+        requestAnimationFrame(() => el.blur());
+      }}
+      className={`${serif} -ml-2 w-full truncate rounded-full bg-transparent px-2 text-xl leading-tight tracking-[-0.01em] outline-none transition hover:ring-1 hover:ring-ink/15 focus:bg-white focus:ring-2 focus:ring-accent-text`}
+    />
+  );
+}
+
 const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` : `${t.kind}:${t.id}`);
 
 // A resume's own page (/resumes/[id]): the templates' PDF/Code viewer across the width, with Rayume's chat in a
@@ -83,6 +107,8 @@ const key = (t: Target | null) => (!t ? "" : t.kind === "run" ? `run:${t.key}` :
 // (tex.ts's styled), bold, italic, underline and symbols (bullets only), and says when changes are saved.
 // ⌘Z and ⇧⌘Z step through the changes, they're kept in this browser across reloads, Code shows the whole
 // LaTeX with them written in, and the bar says when the resume no longer fits on one page.
+// The name in the bar renames the resume where it stands. ⌘S saves at once, and typing not saved yet is saved
+// when the tab is hidden or closed or the editor left, so nothing typed is lost to the pause before a save.
 // Text selected in the PDF or the code gets a "Send to chat" button, which quotes it in the composer (opening
 // the chat if it's folded); Rayume's suggestions go into the document like your own edits.
 // shortcut: the chat is scripted (app/workspace.tsx's answer); changes live in localStorage until the API
@@ -261,19 +287,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     };
   }, []);
 
-  // ⌘Z / Ctrl+Z undoes a change and ⇧ redoes it, unless a text field has the keys for its own undo
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const field = (e.target as Element).closest("input, textarea, [contenteditable]:not([contenteditable=false])");
-      // a field on the page keeps the keys only while it holds typing that isn't saved yet
-      if ((field && (!editing || dirty)) || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
-      e.preventDefault();
-      step(!e.shiftKey);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
   // the entries as the PDF on screen has them, added bullets in place and deleted ones gone: what the overlay
   // finds on the page
   const after = (id: string): { id: string; text: string }[] =>
@@ -350,6 +363,43 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
   }, [mine?.text]);
+  // typing not saved yet is saved before the pause would when the tab is hidden or closed or the editor left,
+  // and on ⌘S: a reload within the pause used to lose it
+  const flush = useRef(() => {});
+  useEffect(() => {
+    flush.current = () => editing && dirty && tidy(mine!.text) && save(editing, mine!.text);
+  });
+  useEffect(() => {
+    const on = () => flush.current();
+    window.addEventListener("pagehide", on);
+    document.addEventListener("visibilitychange", on);
+    return () => {
+      window.removeEventListener("pagehide", on);
+      document.removeEventListener("visibilitychange", on);
+      on();
+    };
+  }, []);
+  // ⌘Z / Ctrl+Z undoes a change and ⇧ redoes it, unless a text field has the keys for its own undo; ⌘S saves
+  // now instead of opening the browser's save dialog
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        return void flush.current();
+      }
+      const field = (e.target as Element).closest("input, textarea, [contenteditable]:not([contenteditable=false])");
+      // a field on the page keeps the keys only while it holds typing that isn't saved yet
+      if ((field && (!editing || dirty)) || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      e.preventDefault();
+      step(!e.shiftKey);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  useEffect(() => {
+    document.title = `${r.title} · Rayume`;
+  }, [r.title]);
   const setup = (s: Setup) => change({ ...doc, setup: { ...doc.setup, ...s } });
   // one history, as a document has: the field's own for typing not saved yet, the document's otherwise
   const history = (back: boolean) => (dirty ? document.execCommand(back ? "undo" : "redo") : step(back));
@@ -411,7 +461,9 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           </svg>
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`${serif} truncate text-xl leading-tight tracking-[-0.01em]`}>{r.title}</h1>
+          <h1>
+            <Title key={r.title} r={r} />
+          </h1>
           <p className="hidden truncate text-xs text-ink/50 md:block">
             {isMaster ? "Everything you've done · new resumes start from here" : "Click any text to change it · it saves as you write · Enter adds a bullet · ⌘B bold"}
           </p>
@@ -461,8 +513,10 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
             Runs to {pages} pages
           </span>
         )}
-        <a href={src ?? `/resumes/${r.template}.pdf`} download={`${r.title}.pdf`} className="hidden shrink-0 rounded-full px-4 py-2 text-sm font-medium text-ink/75 ring-1 ring-ink/10 transition hover:text-ink hover:ring-ink/25 sm:inline-flex">
-          Download PDF
+        {/* on a phone too, as an icon: the PDF is what the resume is for */}
+        <a href={src ?? `/resumes/${r.template}.pdf`} download={`${r.title}.pdf`} aria-label="Download PDF" title="Download PDF" className="grid size-9 shrink-0 place-items-center rounded-full text-sm font-medium text-ink/75 ring-1 ring-ink/10 transition hover:text-ink hover:ring-ink/25 sm:inline-flex sm:size-auto sm:px-4 sm:py-2 pointer-coarse:size-11 sm:pointer-coarse:size-auto">
+          <Download aria-hidden className="size-4 sm:hidden" />
+          <span className="max-sm:hidden">Download PDF</span>
         </a>
         <button
           type="button"
@@ -485,10 +539,13 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         <button type="button" aria-label="Redo" title="Redo (⇧⌘Z)" disabled={!dirty && !steps[1]} onClick={() => history(false)} className={tool}>
           <Redo2 aria-hidden className="size-4" />
         </button>
+        {/* the page's look waits for a wider screen: on a phone the toolbar keeps to writing, without scrolling sideways */}
+        <div className="flex items-center max-sm:hidden">
         <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
         <Pick label="Font" value={doc.setup?.font ?? ""} items={fontItems} disabled={!wired} onChange={(font) => setup({ font })} />
         <Pick label="Type size" value={doc.setup?.size ?? ""} items={sizeItems} disabled={!wired} onChange={(size) => setup({ size })} />
         <Pick label="Margins" value={doc.setup?.margin ?? ""} items={marginItems} disabled={!wired} onChange={(margin) => setup({ margin })} />
+        </div>
         <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
         <button type="button" aria-label="Bold" title={rich ? "Bold (⌘B)" : "Bold: click into a bullet first"} aria-pressed={rich && fmt.bold} disabled={!rich} onClick={() => document.execCommand("bold")} className={`${tool} ${serif} text-[17px] font-bold`}>
           B
@@ -514,8 +571,9 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
             </div>
           )}
         </div>
-        <span role="status" className="ml-auto text-xs text-ink/50">
-          {busy ? "Saving…" : offline ? "Saved · the PDF can't be typeset here, so changes are drawn over it" : doc === blank ? "" : "Saved in this browser"}
+        <span role="status" className="ml-auto min-w-0 truncate pl-2 text-xs text-ink/50">
+          {/* saving is the document catching up with the typing; typesetting the PDF after it isn't */}
+          {dirty ? "Saving…" : offline ? "Saved · the PDF can't be typeset here, so changes are drawn over it" : busy ? "Saved · updating the PDF" : doc === blank ? "" : <>Saved<span className="max-sm:hidden"> in this browser</span></>}
         </span>
         <span aria-hidden className="mx-1.5 h-4 w-px bg-ink/15" />
         <button type="button" aria-label="Chat" title={chat ? "Hide the chat" : "Show the chat"} aria-pressed={chat} onClick={() => fold(right)} className={tool}>
@@ -573,10 +631,6 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                     busy={busy}
                     onEdit={edit}
                     onCommit={commit}
-                    onCancel={() => {
-                      setEditing(null);
-                      setLive(null);
-                    }}
                     onSplit={split}
                     onRemove={remove}
                     onLive={(text, at) => setLive({ key: key(editing), text, at })}

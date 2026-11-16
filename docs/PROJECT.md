@@ -106,7 +106,7 @@ Local dev: Next on `:3000`, FastAPI on `:8000` (CORS is already configured for t
   - `/templates` and `/templates/[id]`: the gallery with search, filters and a pdf.js viewer; "Use this template" goes to `/signup?template=…`.
   - `/login`, `/signup` (forms only, not wired to an API) and `/legal/*`.
   - `/resumes`: the signed-in home, a grid of resumes with the Master Resume first, new and tailored resumes, saved jobs. `/app` redirects here.
-  - `/resumes/[id]`: the editor. You write on the real LaTeX PDF (one caret across the page, bold/italic/underline in bullets, save while typing, undo), with a toolbar (font, size, margins, symbols), a collapsible content form on the left (including links) and a collapsible Rayume chat on the right. Changes are written into the LaTeX and re-typeset through the dev-only `/api/render`.
+  - `/resumes/[id]`: the editor. You write on the real LaTeX PDF (one caret across the page, bold/italic/underline in bullets, save while typing and on leaving, Esc keeps what was typed, undo), the resume renamed in place from its title, with a toolbar (font, size, margins, symbols), a collapsible content form on the left (including links) and a collapsible Rayume chat on the right. Changes are written into the LaTeX and re-typeset through the dev-only `/api/render`.
   - Everything signed-in is a demo: resumes and edits live in localStorage and the chat is scripted, until the API has the routes.
 - **Built, backend:** `GET /health`, `GET /templates`, `GET /templates/{slug}`; SQLAlchemy models for the whole schema; templates seeded by `seed.py`. No migrations yet (`create_all`).
 - **Next:** the in-house JWT auth and the `/experiences` and `/resumes` routes, so the frontend can drop localStorage.

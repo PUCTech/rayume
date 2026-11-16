@@ -1,4 +1,4 @@
-"use client";
+// no "use client": only client components import this, so its function props never cross from the server
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
