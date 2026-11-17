@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
 // The contract between the resources pages (layout, design) and their writing. A guide or a post is data:
-// sections of JSX, in plain elements (p, h3, ul, ol, li, strong, em, a, blockquote, table, code) plus the
+// sections of JSX, in plain elements (p, h3, ul, ol, li, strong, em, a, blockquote, table, code; next/link for
+// links inside the site, which lint requires) plus the
 // parts in parts.tsx. The pages decide how it all looks; the writing never sets a class.
 export type Section = { id: string; title: string; body: ReactNode };
 export type Article = {
