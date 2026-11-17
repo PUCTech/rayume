@@ -94,6 +94,7 @@ This file loads at the start of every session, including after `/clear`. Before 
   - `accent #4338F5` for fields. White text only; ink on accent fails contrast.
   - `accent-deep #271BF4` for buttons with white text.
   - `accent-text #180BEA` for small accent text.
+  - Status only: `error #C2362B` / `error-text #9A1F1A`, `warning #B26A00` / `warning-text #7A4700`, `success #1E7B52` / `success-text #135C3C`; info is the accent. Words use the `-text` shade, never white on `warning`, never colour alone.
 - **Type:** Geist Serif (one weight, no italic) for display headings, Geist Sans for everything else. Sentence case. Never colour or italicise a single word in a headline.
 - **Layout:** `max-w-6xl`, `px-4 sm:px-6`, `py-28 lg:py-36`, left-aligned. Grids start at `grid-cols-1`.
 - **Responsive:**

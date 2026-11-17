@@ -41,9 +41,9 @@
 
 ## Colour
 
-![The six colour tokens with their contrast ratios](images/palette.svg)
+![The six brand colour tokens and the six status tokens, with their contrast ratios](images/palette.svg)
 
-All colours are Tailwind theme tokens in `frontend/app/globals.css` (`@theme`). Use the token names, never raw hex: `bg-paper`, `text-ink`, `bg-mist`, `bg-accent`, `bg-accent-deep`, `text-accent-text`. Opacity modifiers work as usual (`text-ink/60`, `bg-accent/15`).
+All colours are Tailwind theme tokens in `frontend/app/globals.css` (`@theme`): six brand tokens and six [status tokens](#status-colours). Use the token names, never raw hex: `bg-paper`, `text-ink`, `bg-mist`, `bg-accent`, `bg-accent-deep`, `text-accent-text`, and for status only `error`, `error-text`, `warning`, `warning-text`, `success`, `success-text`. Opacity modifiers work as usual (`text-ink/60`, `bg-accent/15`).
 
 The accent is **ultramarine**, picked in November 2026 over vermilion, cobalt, violet, emerald and magenta. It replaced vermilion, so older screenshots in this doc still show the vermilion version; the layout and rules are the same.
 
@@ -72,6 +72,54 @@ The base shade is the brand. The two deeper ones keep contrast for small text an
 | `accent-text` on `paper` | 8.1 : 1 | All text |
 | `accent` on `paper` | 5.9 : 1 | All text |
 | white on dark glass over `accent` | 5.9 : 1 | All text (the band's cards) |
+
+### Status colours
+
+Errors, warnings and successes get two shades each, the same split the accent has: a base for fills, icons, rings, borders and tints, and a deeper `-text` shade for words. Tints are opacity on the base (`bg-error/15`), never separate tokens. Info adds no colour: it is the ultramarine.
+
+| Token | Hex | Use it for |
+|---|---|---|
+| `error` | `#C2362B` | Destructive buttons (white text on it), error icons, field rings and borders, tints (`bg-error/15`) |
+| `error-text` | `#9A1F1A` | Error messages and labels on paper, mist, white, or on an error tint |
+| `warning` | `#B26A00` | Warning icons, borders, tints (`bg-warning/15`). **Never under white text** |
+| `warning-text` | `#7A4700` | Warning text on paper, mist, white, or on a warning tint |
+| `success` | `#1E7B52` | Success icons, ticks, borders, tints (`bg-success/15`), solid fills with white text |
+| `success-text` | `#135C3C` | Success text on paper, mist, white, or on a success tint |
+| info | `accent` / `accent-text` | Neutral notices and tips: `bg-accent/10` with `accent-text` |
+
+Brick red, ochre and pine are the warm, slightly muted relatives of paper and navy. None is as saturated as the ultramarine, so the accent stays the one loud thing, and the red is deeper and browner than the old vermilion accent so it doesn't read as brand.
+
+Contrast (WCAG ratio, tints composited over the surface named):
+
+| Pair | Ratio | Verdict |
+|---|---|---|
+| white on `error` / `success` | 5.45 / 5.24 : 1 | All text (solid fills) |
+| white on `warning` | 4.24 : 1 | **Fails** for text, hence never under white |
+| `error` / `warning` / `success` on paper | 4.80 / 3.73 / 4.61 : 1 | Icons and borders (3:1) |
+| `error` / `warning` / `success` on mist | 4.27 / 3.32 / 4.10 : 1 | Icons and borders (3:1) |
+| `error-text` on paper / mist / white | 7.16 / 6.37 / 8.12 : 1 | All text |
+| `warning-text` on paper / mist / white | 6.78 / 6.03 / 7.70 : 1 | All text |
+| `success-text` on paper / mist / white | 7.05 / 6.27 / 8.00 : 1 | All text |
+| `error-text` on `error/15` over paper / mist · `/12` over white | 5.75 / 5.17 · 6.79 : 1 | All text (the message pattern) |
+| `warning-text` on `warning/15` over paper / mist · `/12` over white | 5.70 / 5.14 · 6.64 : 1 | All text |
+| `success-text` on `success/15` over paper / mist · `/12` over white | 5.79 / 5.21 · 6.80 : 1 | All text |
+| `error-text` on `error/20` over paper / mist / white | 5.35 / 4.80 / 5.99 : 1 | All text |
+| `warning-text` on `warning/20` over paper / mist / white | 5.36 / 4.86 / 5.99 : 1 | All text |
+| `success-text` on `success/20` over paper / mist / white | 5.44 / 4.88 / 6.09 : 1 | All text |
+| `error-text` on `error/25` over paper / mist / white | 4.97 / **4.49** / 5.53 : 1 | Fails on mist |
+| `warning-text` on `warning/25` over paper / mist / white | 5.04 / 4.59 / 5.62 : 1 | All text, barely on mist |
+| `success-text` on `success/25` over paper / mist / white | 5.07 / 4.58 / 5.65 : 1 | All text, barely on mist |
+| `ink` on `error/15` / `warning/15` / `success/15` over paper | 12.25 / 12.82 / 12.51 : 1 | All text |
+
+Rules:
+- A status colour only ever means its status. Never decoration, never a brand moment, never a chart series.
+- Colour is never the only signal: every status comes with an icon or words (and `sr-only` text where an icon stands alone).
+- One pattern for a message: a tint of the base (`/15` on paper or mist, `/12` on white) with the `-text` shade for the words and the base for the icon. No border needed. **Never go past `/20` under text**: `error-text` on `error/25` over mist is 4.49:1.
+- An inline field error is `error-text` text under the field and a 2px `error` ring on the field in place of the focus ring's colour.
+- Solid fills with white text: `error` (a destructive confirm) and `success` only. A warning is never a solid fill.
+- Info is ultramarine, so a page should rarely show info next to a primary button; prefer plain `ink/60` text for low-stakes hints.
+- Status never uses glass, and status shadows stay navy.
+- Status colour is absent from a calm screen. It does not join the 60/30/10 split below.
 
 ### Proportions
 
@@ -407,6 +455,7 @@ Written for an English-speaking Gen Z developer hunting their first tech job.
 ## Accessibility
 
 - Contrast: every pairing in [Colour](#colour) is AA; don't introduce new ones without checking.
+- Status never relies on colour alone: an error, warning or success always has an icon or words, and an icon on its own has `sr-only` text.
 - Focus: a global `:focus-visible` ring, 2 px `accent-text`, offset 3 px (`globals.css`, `@layer base`).
 - Motion: everything animated checks `prefers-reduced-motion`.
 - Semantics: landmarks (`header`, `nav`, `section` with `aria-labelledby`, `footer`), table headers with `scope`, decorative SVGs `aria-hidden`.
@@ -490,3 +539,5 @@ flowchart TB
 | Build a phone version of a section that doesn't fit, and keep desktop as it is | Shrink a desktop composition until it technically fits |
 | Fit the hero's title, pitch, visual and buttons on a phone's first screen | Push the buttons below the fold |
 | Drop text on phones to make room | Make a table scroll sideways |
+| Set status words in the `-text` shade (`text-error-text`) | Put white text on `warning`, or status words in the base shade |
+| Pair a status colour with an icon or words | Rely on colour alone to say something went wrong |

@@ -55,9 +55,14 @@
   --color-accent: #4338f5;
   --color-accent-deep: #271bf4;
   --color-accent-text: #180bea;
-  /* pastel vermilion for errors; error-text is its deep shade, which keeps AA contrast on paper */
-  --color-error: #f4a28c;
-  --color-error-text: #b8401f;
+  /* status: brick, ochre, pine. The base is for fills, icons, rings and tints (bg-error/15); the -text shade is
+     for words. White text sits on error and success only: on warning it's 4.2:1 */
+  --color-error: #c2362b;
+  --color-error-text: #9a1f1a;
+  --color-warning: #b26a00;
+  --color-warning-text: #7a4700;
+  --color-success: #1e7b52;
+  --color-success-text: #135c3c;
   --animate-shake: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 
   @keyframes shake {

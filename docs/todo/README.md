@@ -48,5 +48,6 @@ Only when the code might be what's wrong: A) change the doc ... B) change the co
 
 | Item | Kind | Blocks |
 |------|------|--------|
+| [`contradiction-status-colours.md`](contradiction-status-colours.md) | `contradiction` | Nothing; recolours the frontend's error, warning and destructive states to the status scheme |
 | [`missing-schema-job-applications.md`](missing-schema-job-applications.md) | `missing-schema` | Moving `/jobs` off localStorage |
 | [`scope-application-tracking.md`](scope-application-tracking.md) | `scope` | Building `/jobs`' backend; the tailoring review needs `POST /resumes` to return proposals |
