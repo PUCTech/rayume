@@ -7,6 +7,7 @@ import { Mark } from "./logo";
 const links = [
   ["How it works", "/#how"],
   ["Templates", "/templates"],
+  ["Resources", "/resources"],
   ["Resumes", "/resumes"],
 ];
 
@@ -69,7 +70,7 @@ export function Nav({ serif }: { serif: string }) {
       <nav
         aria-label="Main"
         className={`glass glass-prism mx-auto flex items-center justify-between rounded-full py-2 pr-2 transition-[max-width,padding,background-color] ${ease} ${
-          compact ? "max-w-48 bg-paper/75! pl-4 md:max-w-[33rem]" : "max-w-6xl pl-5"
+          compact ? "max-w-48 bg-paper/75! pl-4 md:max-w-[40rem]" : "max-w-6xl pl-5"
         }`}
       >
         <Link href="/" className="inline-flex items-center" aria-label="Rayume home">
@@ -84,7 +85,7 @@ export function Nav({ serif }: { serif: string }) {
         </Link>
         <div className="hidden items-center text-sm md:flex">
           {links.map(([label, href]) => (
-            <a key={label} href={href} className="rounded-full px-4 py-2 text-ink/70 transition hover:bg-white/50 hover:text-ink">
+            <a key={label} href={href} className="whitespace-nowrap rounded-full px-4 py-2 text-ink/70 transition hover:bg-white/50 hover:text-ink">
               {label}
             </a>
           ))}

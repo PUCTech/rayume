@@ -15,77 +15,148 @@ function random(seed: string) {
   };
 }
 
-// lines of body text on a sheet: n bars from (x, y), each a share of width w, the last of a paragraph shorter
-function lines(r: () => number, x: number, y: number, w: number, n: number, gap = 7, color = c.ink, opacity = 0.22) {
-  return Array.from({ length: n }, (_, i) => (
-    <rect key={i} x={x} y={y + i * gap} width={w * (i === n - 1 ? 0.35 + r() * 0.3 : 0.78 + r() * 0.22)} height={2.6} rx={1.3} fill={color} opacity={opacity} />
-  ));
+// The pen: everything is drawn as if by hand, in the manner of rough.js (not a dependency: these few lines are
+// all it takes). A stroke wanders off the straight line through a jittered midpoint, misses its ends a little
+// and goes over itself a second time, slightly off; fills are diagonal hatching inside the shape.
+type R = () => number;
+const j = (r: R, n: number) => (r() - 0.5) * 2 * n;
+
+function stroke(r: R, x1: number, y1: number, x2: number, y2: number, wobble = 1.4) {
+  const once = () => `M ${x1 + j(r, 1)} ${y1 + j(r, 1)} Q ${(x1 + x2) / 2 + j(r, wobble)} ${(y1 + y2) / 2 + j(r, wobble)} ${x2 + j(r, 1.5)} ${y2 + j(r, 1.5)}`;
+  return `${once()} ${once()}`;
 }
 
-// a white sheet with a navy-tinted shadow, rotated a touch
-function Sheet({ x, y, w, h, tilt = 0, children }: { x: number; y: number; w: number; h: number; tilt?: number; children: ReactNode }) {
+function Line({ r, x1, y1, x2, y2, color = c.ink, width = 1.5, opacity = 0.9, wobble }: { r: R; x1: number; y1: number; x2: number; y2: number; color?: string; width?: number; opacity?: number; wobble?: number }) {
+  return <path d={stroke(r, x1, y1, x2, y2, wobble)} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" opacity={opacity} />;
+}
+
+// a box drawn as four strokes; hatched inside when given a colour
+function Box({ r, x, y, w, h, color = c.ink, hatch, gap = 5, width = 1.5 }: { r: R; x: number; y: number; w: number; h: number; color?: string; hatch?: string; gap?: number; width?: number }) {
+  const lines: ReactNode[] = [];
+  if (hatch)
+    // 45° lines across the box, each cut to its edges by hand
+    for (let k = gap; k < w + h; k += gap) {
+      const a = { x: x + Math.min(k, w), y: y + Math.max(0, k - w) };
+      const b = { x: x + Math.max(0, k - h), y: y + Math.min(k, h) };
+      lines.push(<Line key={k} r={r} x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={hatch} width={1.1} opacity={0.75} wobble={0.6} />);
+    }
+  const d = [stroke(r, x, y, x + w, y), stroke(r, x + w, y, x + w, y + h), stroke(r, x + w, y + h, x, y + h), stroke(r, x, y + h, x, y)].join(" ");
+  return (
+    <>
+      {lines}
+      <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  );
+}
+
+// a circle that doesn't quite close: a ring of jittered points, gone round about one and a quarter times
+function Ring({ r, cx, cy, rad, color, width = 2.5 }: { r: R; cx: number; cy: number; rad: number; color: string; width?: number }) {
+  const start = r() * Math.PI * 2;
+  const pts = Array.from({ length: 22 }, (_, i) => {
+    const t = start + (i / 17) * Math.PI * 2;
+    const k = rad + j(r, rad * 0.04);
+    return [cx + Math.cos(t) * k, cy + Math.sin(t) * k];
+  });
+  // smoothed: each point is a control, the curve passing through the midpoints between them
+  const mid = (a: number[], b: number[]) => `${(a[0] + b[0]) / 2} ${(a[1] + b[1]) / 2}`;
+  const d = `M ${mid(pts[0], pts[1])} ${pts.slice(1, -1).map((p, i) => `Q ${p[0]} ${p[1]} ${mid(p, pts[i + 2])}`).join(" ")}`;
+  return <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />;
+}
+
+// body text as a scribble: n wavy lines from (x, y), each a share of width w, the last one shorter
+function Scribble({ r, x, y, w, n, gap = 7, color = c.ink, opacity = 0.45 }: { r: R; x: number; y: number; w: number; n: number; gap?: number; color?: string; opacity?: number }) {
+  return (
+    <>
+      {Array.from({ length: n }, (_, i) => {
+        const len = w * (i === n - 1 && n > 1 ? 0.35 + r() * 0.3 : 0.75 + r() * 0.25);
+        const steps = Math.max(3, Math.round(len / 9));
+        const d = Array.from({ length: steps + 1 }, (_, s) => `${s ? "L" : "M"} ${x + (len * s) / steps} ${y + i * gap + j(r, 0.9)}`).join(" ");
+        return <path key={i} d={d} fill="none" stroke={color} strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" opacity={opacity} />;
+      })}
+    </>
+  );
+}
+
+// a sheet of paper: white, outlined by hand, with a pencil-shaded edge on the right and bottom
+function Sheet({ r, x, y, w, h, tilt = 0, children }: { r: R; x: number; y: number; w: number; h: number; tilt?: number; children: ReactNode }) {
   return (
     <g transform={`rotate(${tilt} ${x + w / 2} ${y + h / 2})`}>
-      <rect x={x} y={y + 4} width={w} height={h} rx={3} fill={c.ink} opacity={0.08} />
-      <rect x={x} y={y} width={w} height={h} rx={3} fill="white" />
+      <path d={`M ${x + 6} ${y + h} L ${x + w} ${y + h} L ${x + w} ${y + 6} L ${x + w + 4} ${y + 10} L ${x + w + 4} ${y + h + 4} L ${x + 10} ${y + h + 4} Z`} fill={c.ink} opacity={0.12} />
+      <rect x={x} y={y} width={w} height={h} fill="white" />
+      <Box r={r} x={x} y={y} w={w} h={h} width={1.6} />
       {children}
     </g>
   );
 }
 
 // a typeset page, and a lens over one "fi": the letters a parser reads, not a ligature glyph
-function Latex({ r }: { r: () => number }) {
+function Latex({ r }: { r: R }) {
   return (
     <>
-      <Sheet x={46} y={26} w={136} h={176} tilt={-4}>
-        <rect x={84} y={40} width={60} height={5} rx={2.5} fill={c.ink} opacity={0.85} />
-        <rect x={70} y={50} width={88} height={2} rx={1} fill={c.ink} opacity={0.3} />
-        {[64, 108, 152].map((y, s) => (
+      <Sheet r={r} x={46} y={28} w={136} h={172} tilt={-4}>
+        <Line r={r} x1={86} y1={44} x2={142} y2={44} width={3.5} />
+        <Scribble r={r} x={72} y={53} w={86} n={1} opacity={0.35} />
+        {[66, 108, 150].map((y, s) => (
           <g key={y}>
-            <rect x={58} y={y} width={34} height={3.2} rx={1.6} fill={c.ink} opacity={0.7} />
-            <rect x={58} y={y + 6} width={112} height={1} fill={c.ink} opacity={0.35} />
-            {lines(r, 58, y + 12, 112, s === 2 ? 3 : 4, 6.5)}
+            <Line r={r} x1={58} y1={y} x2={90} y2={y} width={2.4} />
+            <Line r={r} x1={58} y1={y + 5} x2={170} y2={y + 5} width={0.9} opacity={0.5} />
+            <Scribble r={r} x={58} y={y + 12} w={110} n={s === 2 ? 3 : 4} gap={6.5} />
           </g>
         ))}
       </Sheet>
-      <line x1={206} y1={128} x2={174} y2={160} stroke={c.ink} strokeWidth={7} strokeLinecap="round" />
-      <circle cx={232} cy={98} r={46} fill={c.paper} stroke={c.accent} strokeWidth={5} />
+      <Line r={r} x1={204} y1={130} x2={176} y2={160} width={7} wobble={0.8} />
+      <circle cx={232} cy={98} r={44} fill={c.paper} />
+      <Ring r={r} cx={232} cy={98} rad={44} color={c.accent} width={3.5} />
       <text x={232} y={116} textAnchor="middle" className={serif} fontSize={52} fill={c.ink}>
         f<tspan fill={c.accent}>i</tspan>
       </text>
+      {/* "look here" ticks */}
+      <Line r={r} x1={276} y1={44} x2={284} y2={34} color={c.accent} width={2} />
+      <Line r={r} x1={284} y1={58} x2={296} y2={54} color={c.accent} width={2} />
     </>
   );
 }
 
-// the same resume twice: on the right a few lines move up and some words turn ultramarine; the rest, the
-// facts, stay exactly where they were
-function Tailoring({ r }: { r: () => number }) {
+// the same resume twice: on the right two lines moved up, their key words hatched in ultramarine; the rest,
+// the facts, stay exactly where they were
+function Tailoring({ r }: { r: R }) {
   const rows = Array.from({ length: 9 }, () => 0.55 + r() * 0.4);
   const moved = [6, 2];
   const right = [...moved, ...rows.map((_, i) => i).filter((i) => !moved.includes(i))];
-  const y = (i: number) => 52 + i * 15;
+  const y = (i: number) => 56 + i * 15;
   return (
     <>
       {[34, 186].map((x, side) => (
-        <Sheet key={x} x={x} y={30} w={100} h={170} tilt={side ? 3 : -3}>
-          <rect x={x + 12} y={40} width={44} height={4} rx={2} fill={c.ink} opacity={0.8} />
+        <Sheet key={x} r={r} x={x} y={30} w={100} h={172} tilt={side ? 3 : -3}>
+          <Line r={r} x1={x + 12} y1={42} x2={x + 54} y2={42} width={3} />
           {(side ? right : rows.map((_, i) => i)).map((row, i) => (
             <g key={row}>
-              <rect x={x + 12} y={y(i)} width={76 * rows[row]} height={3} rx={1.5} fill={c.ink} opacity={0.22} />
-              {side === 1 && moved.includes(row) && <rect x={x + 12} y={y(i)} width={76 * rows[row] * 0.45} height={3} rx={1.5} fill={c.accent} />}
+              <Scribble r={r} x={x + 12} y={y(i)} w={76 * rows[row]} n={1} />
+              {side === 1 && moved.includes(row) && <Box r={r} x={x + 9} y={y(i) - 4} w={76 * rows[row] * 0.5} h={8} color={c.accent} hatch={c.accent} gap={3.5} width={1.4} />}
             </g>
           ))}
         </Sheet>
       ))}
-      {moved.map((row, k) => (
-        <path key={row} d={`M ${46 + 76 * rows[row]} ${y(row) + 1} C 160 ${y(row)}, 166 ${y(k) + 2}, 196 ${y(k) + 2}`} fill="none" stroke={c.accent} strokeWidth={2} strokeDasharray="4 4" strokeLinecap="round" />
-      ))}
+      {moved.map((row, k) => {
+        const x1 = 50 + 76 * rows[row];
+        const y1 = y(row) + 2;
+        const x2 = 192;
+        const y2 = y(k);
+        return (
+          <g key={row}>
+            <path d={`M ${x1} ${y1} C ${150 + j(r, 6)} ${y1 + j(r, 8)}, ${150 + j(r, 6)} ${y2 + j(r, 8)}, ${x2} ${y2}`} fill="none" stroke={c.accent} strokeWidth={2} strokeLinecap="round" />
+            {/* the arrowhead, two quick strokes */}
+            <Line r={r} x1={x2} y1={y2} x2={x2 - 7} y2={y2 - 5} color={c.accent} width={2} wobble={0.5} />
+            <Line r={r} x1={x2} y1={y2} x2={x2 - 7} y2={y2 + 5} color={c.accent} width={2} wobble={0.5} />
+          </g>
+        );
+      })}
     </>
   );
 }
 
-// a first resume filling up: projects, coursework and a part-time job as blocks, one more being drawn in
-function First({ r }: { r: () => number }) {
+// a first resume filling up: project blocks hatched in ultramarine, coursework in ink, one more being drawn
+function First({ r }: { r: R }) {
   const sections = [
     { y: 50, items: 2, accent: true },
     { y: 104, items: 2, accent: false },
@@ -93,49 +164,56 @@ function First({ r }: { r: () => number }) {
   ];
   return (
     <>
-      <Sheet x={88} y={22} w={144} h={180}>
-        <rect x={102} y={34} width={56} height={5} rx={2.5} fill={c.ink} opacity={0.85} />
+      <Sheet r={r} x={88} y={22} w={144} h={182}>
+        <Line r={r} x1={102} y1={36} x2={160} y2={36} width={3.5} />
         {sections.map((s) => (
           <g key={s.y}>
-            <rect x={102} y={s.y} width={30} height={3} rx={1.5} fill={c.ink} opacity={0.65} />
+            <Line r={r} x1={102} y1={s.y} x2={132} y2={s.y} width={2.2} />
             {Array.from({ length: s.items }, (_, i) => (
               <g key={i}>
-                <rect x={102} y={s.y + 8 + i * 20} width={116} height={15} rx={4} fill={s.accent ? c.accent : c.mist} opacity={s.accent ? 0.16 + i * 0.1 : 1} />
-                {lines(r, 108, s.y + 13 + i * 20, 90, 2, 5, c.ink, 0.25)}
+                <Box r={r} x={102} y={s.y + 7 + i * 20} w={116} h={15} color={s.accent ? c.accent : c.ink} hatch={s.accent ? c.accent : undefined} gap={6} width={1.3} />
+                {!s.accent && <Scribble r={r} x={108} y={s.y + 15 + i * 20} w={90} n={1} opacity={0.4} />}
               </g>
             ))}
           </g>
         ))}
-        <rect x={102} y={178} width={116} height={15} rx={4} fill="none" stroke={c.accent} strokeWidth={1.5} strokeDasharray="4 3" />
+        {/* the one being added: dashed, half hatched */}
+        <path d={stroke(r, 102, 180, 218, 180)} fill="none" stroke={c.accent} strokeWidth={1.4} strokeDasharray="4 4" strokeLinecap="round" />
+        <path d={stroke(r, 102, 195, 218, 195)} fill="none" stroke={c.accent} strokeWidth={1.4} strokeDasharray="4 4" strokeLinecap="round" />
+        {[108, 116, 124, 132].map((x) => (
+          <Line key={x} r={r} x1={x} y1={194} x2={x + 10} y2={181} color={c.accent} width={1.1} opacity={0.75} wobble={0.5} />
+        ))}
       </Sheet>
-      <g transform="rotate(-38 236 172)">
-        <rect x={222} y={166} width={64} height={12} rx={2} fill={c.deep} />
-        <rect x={276} y={166} width={10} height={12} rx={2} fill={c.ink} opacity={0.7} />
-        <path d="M 222 166 L 208 172 L 222 178 Z" fill={c.mist} />
-        <path d="M 212 170.3 L 208 172 L 212 173.7 Z" fill={c.ink} />
+      {/* the pencil, its tip on the line being drawn */}
+      <g transform="rotate(-35 150 188)">
+        <rect x={150} y={182} width={70} height={12} fill={c.paper} />
+        <Box r={r} x={150} y={182} w={70} h={12} color={c.ink} hatch={c.deep} gap={3} width={1.5} />
+        <Box r={r} x={220} y={182} w={10} h={12} color={c.ink} width={1.5} />
+        <path d="M 150 182 L 136 188 L 150 194" fill={c.paper} stroke={c.ink} strokeWidth={1.5} strokeLinejoin="round" />
+        <path d="M 140.5 186 L 136 188 L 140.5 190 Z" fill={c.ink} />
       </g>
     </>
   );
 }
 
-// a plain typeset sheet, for a post with no drawing of its own yet
-function Plain({ r }: { r: () => number }) {
+// a plain sheet, for a post with no drawing of its own yet
+function Plain({ r }: { r: R }) {
   return (
-    <Sheet x={100} y={26} w={120} h={170} tilt={-2}>
-      <rect x={114} y={40} width={50} height={5} rx={2.5} fill={c.ink} opacity={0.85} />
-      {lines(r, 114, 56, 92, 16)}
+    <Sheet r={r} x={100} y={26} w={120} h={170} tilt={-2}>
+      <Line r={r} x1={114} y1={42} x2={164} y2={42} width={3.5} />
+      <Scribble r={r} x={114} y={58} w={92} n={16} />
     </Sheet>
   );
 }
 
-const drawings: Record<string, (p: { r: () => number }) => ReactNode> = {
+const drawings: Record<string, (p: { r: R }) => ReactNode> = {
   "why-we-write-resumes-in-latex": Latex,
   "what-tailoring-should-change": Tailoring,
   "first-resume-no-experience": First,
 };
 
-// A post's cover: a drawing made in code, in the site's own colours, decorative (the title says it all). It sits
-// on mist, or on paper when it's inside a mist card
+// A post's cover: a drawing made in code, as if by hand, in the site's own colours; decorative (the title says
+// it all). It sits on mist, or on paper when it's inside a mist card
 export function Cover({ slug, onMist = false, className = "" }: { slug: string; onMist?: boolean; className?: string }) {
   const Drawing = drawings[slug] ?? Plain;
   return (
