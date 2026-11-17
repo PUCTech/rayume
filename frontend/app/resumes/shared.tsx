@@ -101,6 +101,12 @@ export const copy = (from: Saved, extra: Partial<Saved>): Saved => {
 export function useTailor() {
   const list = useResumes();
   const router = useRouter();
+  // links to a route share one prefetched shell (partialPrefetching), so warming any id makes the click on a
+  // fresh one instant instead of waiting on the server
+  useEffect(() => {
+    router.prefetch("/resumes/_/tailor");
+    router.prefetch("/resumes/_");
+  }, [router]);
   return (job?: Posting) => {
     const from = list.find((r) => r.id === master.id) ?? master;
     const fresh = job

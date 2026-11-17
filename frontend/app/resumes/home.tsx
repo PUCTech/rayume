@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { sheetSizes } from "../precache";
 import { templates } from "../templates/data";
 import { save, useJobs, useResumes } from "./store";
 import { master, type Saved } from "./data";
@@ -74,28 +75,53 @@ export function Home() {
 
       <div className="mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6">
         {waiting.length > 0 && !q && (
-          <section aria-labelledby="jobs-h" className="mb-10">
+          <section aria-labelledby="jobs-h" className="mb-12">
             <div className="flex items-baseline justify-between gap-4">
               <h2 id="jobs-h" className="text-sm font-medium text-ink/60">
-                Saved jobs, no resume yet
+                {waiting.length === 1 ? "1 saved job" : `${waiting.length} saved jobs`} without a resume
               </h2>
               <Link href="/jobs" className="shrink-0 text-sm text-ink/60 transition hover:text-ink">
                 See all jobs
               </Link>
             </div>
-            <ul className="mt-3 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
-              {waiting.map((p) => (
-                <li key={p.id} className="flex shrink-0 items-center gap-3 rounded-2xl bg-white py-2.5 pl-3 pr-2.5 ring-1 ring-ink/10">
-                  <Logo p={p} className="size-7" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{p.company}</p>
-                    <p className="text-xs text-ink/55">{p.title}</p>
-                  </div>
-                  <button type="button" onClick={() => create(p)} className="ml-2 rounded-full bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:bg-ink/85">
-                    Tailor
-                  </button>
-                </li>
-              ))}
+            {/* the newest three; the rest are a click away on /jobs */}
+            <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[...waiting]
+                .sort((a, b) => b.saved.localeCompare(a.saved))
+                .slice(0, 3)
+                .map((p, i) => (
+                  <li key={p.id} className={`flex flex-col rounded-[24px] bg-white p-4 ring-1 ring-ink/10 ${i === 2 ? "sm:max-lg:hidden" : ""}`}>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Logo p={p} className="size-9" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-medium" title={p.title}>
+                          {p.title}
+                        </p>
+                        <p className="truncate text-[13px] text-ink/60">
+                          {p.company} · saved <time dateTime={p.saved}>{date.format(new Date(p.saved))}</time>
+                        </p>
+                      </div>
+                    </div>
+                    {p.keywords.length > 0 && (
+                      <ul aria-label="Asks for" className="mt-3 flex flex-wrap gap-1.5">
+                        {p.keywords.slice(0, 4).map((k) => (
+                          <li key={k} className="rounded-full bg-mist px-2.5 py-0.5 text-[12px] text-ink/75">
+                            {k}
+                          </li>
+                        ))}
+                        {p.keywords.length > 4 && <li className="px-1 py-0.5 text-[12px] text-ink/50">+{p.keywords.length - 4}</li>}
+                      </ul>
+                    )}
+                    <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+                      <Link href={`/jobs?job=${p.id}`} className="-mx-1 rounded-full px-1 py-1 text-[13px] text-ink/60 transition hover:text-ink pointer-coarse:py-3">
+                        Read the job
+                      </Link>
+                      <button type="button" onClick={() => create(p)} className={`${primary} pointer-coarse:py-3`}>
+                        Tailor a resume
+                      </button>
+                    </div>
+                  </li>
+                ))}
             </ul>
           </section>
         )}
@@ -132,7 +158,7 @@ export function Home() {
               <li key={r.id} className="group relative">
                 <Link href={`/resumes/${r.id}`} className="block rounded-xl" aria-label={`Open ${r.title}`}>
                   <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)] ring-1 ring-ink/10 transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] motion-reduce:group-hover:translate-y-0">
-                    <Image src={`/resumes/${r.template}.png`} alt="" fill draggable={false} sizes="(min-width: 1280px) 230px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" className="object-cover" />
+                    <Image src={`/resumes/${r.template}.png`} alt="" fill draggable={false} sizes={sheetSizes.card} className="object-cover" />
                     {r.id === master.id && (
                       <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[11px] font-medium text-white">
                         <svg aria-hidden viewBox="0 0 16 16" className="size-3" fill="currentColor">
