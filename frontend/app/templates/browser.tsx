@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { sheetSizes } from "../precache";
 import { Drawer } from "./drawer";
 import { Detail } from "./panel";
 import { templates, type Template } from "./data";
@@ -170,7 +171,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
                     fill
                     draggable={false}
                     loading={i < 4 ? "eager" : undefined}
-                    sizes="(min-width: 1024px) 300px, (min-width: 640px) 33vw, 50vw"
+                    sizes={sheetSizes.gallery}
                     className="object-cover"
                   />
                   {/* the whole preview opens it; the button sits above that link, not inside it */}

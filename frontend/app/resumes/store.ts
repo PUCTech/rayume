@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { master, resumes as seed, type Saved } from "./data";
-import { postings, type Posting } from "../app/data";
+import { postings, profile, type Posting } from "../app/data";
 import { blank, type Doc } from "./tex";
 import type { Reply } from "../app/chat";
 
@@ -70,6 +70,17 @@ const jobs = stored<Posting[]>("rayume:jobs", postings, (list) => {
 export const useJobs = jobs.use;
 export const saveJobs = jobs.save;
 export const readJobs = jobs.read;
+
+// You, as GET /me returns you: what Personal information edits. It's yours, not a resume's: a resume keeps the
+// contact details it was made with (each version is a snapshot), as PATCH /me leaves saved resumes alone.
+// shortcut: localStorage until the API serves GET/PATCH /me; the email changes nowhere (the API can't yet).
+export type Me = { name: string; username: string; email: string; profession: string; phone: string; address: string; language: "en" | "pt-BR" };
+const me = stored<Me>("rayume:me", { name: profile.name, username: "lucasmendes", email: profile.email, profession: profile.profession, phone: profile.phone, address: profile.address, language: "en" }, (kept) => {
+  if (typeof kept.name !== "string" || typeof kept.username !== "string") throw kept;
+  return kept;
+});
+export const useMe = me.use;
+export const saveMe = me.save;
 
 // the full time, not just the day: "changed since" compares two edits that can fall on the same day
 export const today = () => new Date().toISOString();

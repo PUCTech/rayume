@@ -5,10 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GeistSerifRegular } from "geist/font/serif/regular";
-import { BriefcaseBusiness, FileText } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
+import { BriefcaseBusiness, FileText, LifeBuoy, LogOut, UserRound } from "lucide-react";
 import { Mark } from "../logo";
-import { profile, type Posting } from "../app/data";
-import { copyEdits, newId, save, today, useResumes } from "./store";
+import type { Posting } from "../app/data";
+import { copyEdits, newId, save, today, useMe, useResumes } from "./store";
 import { master, type Saved } from "./data";
 
 // What the signed-in pages share: the app bar, the class strings, a company's logo, the dates, the menus,
@@ -101,6 +102,12 @@ export const copy = (from: Saved, extra: Partial<Saved>): Saved => {
 export function useTailor() {
   const list = useResumes();
   const router = useRouter();
+  // links to a route share one prefetched shell (partialPrefetching), so warming any id makes the click on a
+  // fresh one instant instead of waiting on the server
+  useEffect(() => {
+    router.prefetch("/resumes/_/tailor");
+    router.prefetch("/resumes/_");
+  }, [router]);
   return (job?: Posting) => {
     const from = list.find((r) => r.id === master.id) ?? master;
     const fresh = job
@@ -115,10 +122,64 @@ const sections = [
   { href: "/resumes", name: "Resumes", Icon: FileText },
   { href: "/jobs", name: "Jobs", Icon: BriefcaseBusiness },
 ] as const;
-const initials = profile.name
-  .split(" ")
-  .map((w) => w[0])
-  .join("");
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+const menuItem = "flex cursor-default items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-ink/80 outline-none select-none data-highlighted:bg-ink/5 data-highlighted:text-ink pointer-coarse:py-3";
+
+// Your account, under your initials: who's signed in, then your personal information and your experience
+// (what every resume is made from), help and the legal pages, and signing out.
+// shortcut: signing out goes to /login; with the API it's POST /auth/logout first, which clears the cookie.
+function Account() {
+  const me = useMe();
+  const router = useRouter();
+  const links = [
+    { href: "/settings/profile", label: "Personal information", Icon: UserRound },
+    { href: "/settings/experience", label: "Experience", Icon: BriefcaseBusiness },
+  ];
+  return (
+    <Menu.Root>
+      <Menu.Trigger aria-label={`Your account, ${me.name}`} className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white transition hover:bg-ink/85 data-popup-open:ring-2 data-popup-open:ring-accent-text data-popup-open:ring-offset-2 data-popup-open:ring-offset-paper pointer-coarse:size-11">
+        {initials(me.name)}
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="end" sideOffset={8} className="z-50 outline-none">
+          <Menu.Popup className="w-64 origin-(--transform-origin) rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none">
+            <div className="flex items-center gap-3 px-2.5 pb-3 pt-2">
+              <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white">
+                {initials(me.name)}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{me.name}</p>
+                <p className="truncate text-xs text-ink/55">{me.email}</p>
+              </div>
+            </div>
+            <Menu.Separator className="mx-1 mb-1 h-px bg-ink/10" />
+            {links.map(({ href, label, Icon }) => (
+              <Menu.Item key={href} render={<Link href={href} />} className={menuItem}>
+                <Icon aria-hidden className="size-4 text-ink/50" />
+                {label}
+              </Menu.Item>
+            ))}
+            <Menu.Separator className="mx-1 my-1 h-px bg-ink/10" />
+            <Menu.Item render={<Link href="/legal" />} className={menuItem}>
+              <LifeBuoy aria-hidden className="size-4 text-ink/50" />
+              Help and legal
+            </Menu.Item>
+            <Menu.Item onClick={() => router.push("/login")} className={menuItem}>
+              <LogOut aria-hidden className="size-4 text-ink/50" />
+              Sign out
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
 
 // The signed-in pages' bar (no marketing nav): the brand, the two sections, the page's own search and main
 // action, then your account. On a phone the sections are icons, named for screen readers.
@@ -159,10 +220,7 @@ export function AppBar({ current, label, query, onQuery, children }: { current: 
           />
         </div>
         {children}
-        {/* your account: for now, the experiences every resume is made from */}
-        <Link href="/settings/experience" aria-label={`${profile.name}: your experience`} title="Your experience" className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white transition hover:bg-ink/85">
-          {initials}
-        </Link>
+        <Account />
       </div>
     </header>
   );

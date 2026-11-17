@@ -10,7 +10,9 @@ import type { Posting } from "../app/data";
 import { master, type Saved } from "../resumes/data";
 import { readJobs, save, saveJobs, today, useJobs, useResumes } from "../resumes/store";
 import { AppBar, Logo, More, day, item, localDay, menuPanel, primary, serif, tabButton, tabTrack, useMenu, useTailor } from "../resumes/shared";
+import { sheetSizes } from "../precache";
 import { templates } from "../templates/data";
+import { Activity } from "./charts";
 import { JobDialog, safeUrl, type JobFields } from "./dialog";
 
 // a day as YYYY-MM-DD in the person's own time zone, n days from today
@@ -88,7 +90,7 @@ export function Jobs() {
   const counts = [
     ["Saved", jobs.filter((j) => !j.applied).length],
     ["Applied", jobs.filter((j) => j.applied).length],
-    ["This week", jobs.filter((j) => j.applied && j.applied >= weekAgo).length],
+    ["Applied this week", jobs.filter((j) => j.applied && j.applied >= weekAgo).length],
     ["Tailored", jobs.filter((j) => list.some((r) => r.job === j.id)).length],
   ] as const;
 
@@ -148,12 +150,13 @@ export function Jobs() {
 
         <dl className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {counts.map(([label, n]) => (
-            <div key={label} className="flex flex-col-reverse rounded-[28px] bg-mist p-5 sm:p-6">
-              <dt className="mt-2 text-sm text-ink/65">{label}</dt>
-              <dd className={`${serif} text-[2.75rem] leading-none tracking-[-0.03em] sm:text-5xl`}>{n}</dd>
+            <div key={label} className="flex items-baseline justify-between gap-3 rounded-[22px] bg-mist px-5 py-4">
+              <dt className="text-sm text-ink/65">{label}</dt>
+              <dd className={`${serif} text-[1.75rem] leading-none tracking-[-0.02em]`}>{n}</dd>
             </div>
           ))}
         </dl>
+        {jobs.length > 0 && <Activity jobs={jobs} list={list} />}
 
         {jobs.length === 0 ? (
           <div className="mt-10 rounded-[28px] bg-mist px-6 py-16 text-center">
@@ -180,7 +183,7 @@ export function Jobs() {
                     <li
                       key={j.id}
                       // a row with its menu or popover open sits over the rows below it
-                      className={`relative flex flex-col gap-3 rounded-[26px] bg-white p-4 ring-1 ring-ink/10 transition duration-300 hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] lg:hover:bg-white lg:hover:shadow-none lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem_8.5rem_11rem] lg:items-center lg:gap-6 lg:rounded-none lg:bg-transparent lg:px-2 lg:py-3.5 lg:ring-0 ${menu?.split(":").pop() === j.id ? "z-20" : ""}`}
+                      className={`relative flex flex-col gap-3 rounded-[26px] bg-white p-4 ring-1 ring-ink/10 transition duration-300 hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] lg:hover:bg-white lg:hover:shadow-none lg:grid lg:grid-cols-[minmax(0,1fr)_7.5rem_12rem_10rem] lg:items-center lg:gap-6 lg:rounded-none lg:bg-transparent lg:px-2 lg:py-3.5 lg:ring-0 ${menu?.split(":").pop() === j.id ? "z-20" : ""}`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <Logo p={j} className="size-9" />
@@ -199,6 +202,16 @@ export function Jobs() {
                             {j.company}
                           </p>
                         </div>
+                        {/* what the job asks for, in the row's spare width */}
+                        {j.keywords.length > 0 && (
+                          <ul aria-label="Asks for" className="ml-auto hidden shrink-0 gap-1.5 pl-4 xl:flex">
+                            {j.keywords.slice(0, 3).map((k) => (
+                              <li key={k} className="rounded-full bg-mist px-2.5 py-0.5 text-[12px] text-ink/70">
+                                {k}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
 
                       <p className="text-[13px] text-ink/70">
@@ -334,13 +347,19 @@ export function Jobs() {
 // resumes tailored to a job, the one most likely sent first
 const tailored = (list: Saved[], j: Posting) => list.filter((r) => r.job === j.id).sort(byEdited);
 
-// The row's word on its resume: tailored, sent or deleted, as plain text (the resume itself is in the job's
-// dialog); a job with none gets a way to tailor one, the only control here, so it sits above the row's link.
+// The row's word on its resume: the one sent or tailored, by name, opening the editor (above the row's link);
+// a sent one since deleted says so; a job with none gets a way to tailor one.
 function ResumeNote({ j, list, onTailor }: { j: Posting; list: Saved[]; onTailor: () => void }) {
-  const note = j.applied ? (list.some((r) => r.id === j.sent) ? "Resume sent" : "Resume deleted") : tailored(list, j).length ? "Resume tailored" : "";
-  return note ? (
-    <span className="text-[13px] text-ink/55">{note}</span>
-  ) : (
+  const r = j.applied ? list.find((x) => x.id === j.sent) : tailored(list, j)[0];
+  if (r)
+    return (
+      <Link href={`/resumes/${r.id}`} title={r.title} className="relative z-10 min-w-0 text-[13px] leading-snug text-ink/55 transition hover:text-ink">
+        {j.applied ? "Sent" : "Tailored"}
+        <span className="block truncate text-ink/80 hover:underline">{r.title}</span>
+      </Link>
+    );
+  if (j.applied) return <span className="text-[13px] text-ink/55">Resume deleted</span>;
+  return (
     <button type="button" onClick={onTailor} className="relative z-10 -mx-1 rounded-full px-1 py-1 text-[13px] font-medium text-accent-text transition hover:underline pointer-coarse:py-3">
       Tailor a resume
     </button>
@@ -414,7 +433,6 @@ function JobView({ open, j, list, onClose, onTailor, onApply, onUnapply, onEdit 
   const r = j.applied ? list.find((x) => x.id === j.sent) : tailored(list, j)[0];
   const preset = list.find((x) => x.id === j.sent)?.id ?? (tailored(list, j)[0] ?? master).id;
   const button = "rounded-full px-4 py-2 text-sm font-medium text-ink/75 ring-1 ring-ink/10 transition hover:text-ink hover:ring-ink/25 pointer-coarse:py-3";
-  const heading = "text-sm font-medium text-ink/60";
   // the sheet: as wide as the column, up to the page's own 816px; on a phone short enough to see what's below
   const sheet = "relative mx-auto block aspect-[8.5/11] w-[min(100%,calc(60dvh*8.5/11))] lg:w-full lg:max-w-[816px]";
   return (
@@ -449,22 +467,7 @@ function JobView({ open, j, list, onClose, onTailor, onApply, onUnapply, onEdit 
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:overflow-hidden">
             <div className="order-2 px-5 py-6 lg:order-1 lg:overflow-y-auto lg:overscroll-contain lg:px-8">
-              {j.keywords.length > 0 && (
-                <section className="mb-6">
-                  <h3 className={heading}>Requirements</h3>
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {j.keywords.map((k) => (
-                      <li key={k} className="rounded-full bg-mist px-2.5 py-1 text-[13px] text-ink/80">
-                        {k}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-              <section>
-                <h3 className={heading}>Description</h3>
-                <p className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-relaxed">{j.description}</p>
-              </section>
+              <JobDetails j={j} />
             </div>
 
             <div className="order-1 bg-mist px-5 py-6 lg:order-2 lg:overflow-y-auto lg:overscroll-contain lg:px-8">
@@ -482,7 +485,7 @@ function JobView({ open, j, list, onClose, onTailor, onApply, onUnapply, onEdit 
                     aria-label={`Open ${r.title} in the editor`}
                     className={`${sheet} overflow-hidden rounded-sm bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)] ring-1 ring-ink/10 transition duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] motion-reduce:hover:translate-y-0`}
                   >
-                    <Image src={`/resumes/${r.template}.png`} alt="" fill sizes="(min-width: 1024px) 600px, 60vh" className="object-cover object-top" />
+                    <Image src={`/resumes/${r.template}.png`} alt="" fill sizes={sheetSizes.job} className="object-cover object-top" />
                   </Link>
                 </>
               ) : (
@@ -550,5 +553,31 @@ function JobView({ open, j, list, onClose, onTailor, onApply, onUnapply, onEdit 
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+// What a job asks: the requirements Rayume took from it (none for a job saved by hand: they come from the API's
+// AI) and the description as plain text. The job's dialog and the tailoring page both show it.
+export function JobDetails({ j }: { j: Posting }) {
+  const heading = "text-sm font-medium text-ink/60";
+  return (
+    <>
+      {j.keywords.length > 0 && (
+        <section className="mb-6">
+          <h3 className={heading}>Requirements</h3>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {j.keywords.map((k) => (
+              <li key={k} className="rounded-full bg-mist px-2.5 py-1 text-[13px] text-ink/80">
+                {k}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <section>
+        <h3 className={heading}>Description</h3>
+        <p className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-relaxed">{j.description}</p>
+      </section>
+    </>
   );
 }

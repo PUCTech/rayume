@@ -8,17 +8,22 @@ import { Chat } from "../../../app/chat";
 import { entries, profile, type Posting } from "../../../app/data";
 import { tailorAnswer, tailoring } from "../../../app/workspace";
 import { keep, keepReview, kept, review, touch, useJobs, useResumes, type Review } from "../../store";
-import { withBullet } from "../../tex";
+import { inline, styled, withBullet, withDoc, type Doc } from "../../tex";
 import type { Saved } from "../../data";
-import { Logo, primary, serif } from "../../shared";
+import { Logo, primary, serif, tabButton, tabTrack } from "../../shared";
+import { JobDetails } from "../../../jobs/jobs";
+import { Viewer } from "../../../templates/viewer";
 import { Missing } from "../open";
 
 const noop = () => () => {};
 const none: never[] = [];
 const steps = ["Reading the posting", "Picking your most relevant experience", "Rewriting bullets around what they ask for", "Checking it fits one page"];
-const STEP_MS = 900;
+// short: it stands in for the API call, so it should feel like one, not a show
+const STEP_MS = 300;
 const secondary = "inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-ink/75 ring-1 ring-ink/10 transition hover:text-ink hover:ring-ink/25 pointer-coarse:py-3";
-const original = (id: string) => entries.flatMap((e) => e.bullets).find((b) => b.id === id)?.text ?? "";
+const originals = entries.flatMap((e) => e.bullets);
+const original = (id: string) => originals.find((b) => b.id === id)?.text ?? "";
+const panes = { chat: "Chat", resume: "Resume", job: "Job" } as const;
 
 // Tailoring a new resume to a job: a short loading screen while Rayume works, then its proposals in the chat to
 // replace or skip one by one, written into the resume's document as they're accepted, so the editor opens on
@@ -26,7 +31,7 @@ const original = (id: string) => entries.flatMap((e) => e.bullets).find((b) => b
 // whatever was accepted already saved. Coming back shows the chat again, not the loading. A resume with no
 // job goes to the editor; one that isn't here says so.
 // ?fail=1 makes the demo's tailoring fail, to show (and test) what a 502 from the API looks like: nothing applied.
-export function Tailor() {
+export function Tailor({ tex, body }: { tex: Record<string, string>; body: string }) {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const list = useResumes();
@@ -40,16 +45,20 @@ export function Tailor() {
   if (!browser) return null;
   if (!r) return <Missing />;
   if (!job) return null;
-  return <Flow key={r.id} r={r} job={job} />;
+  return <Flow key={r.id} r={r} job={job} template={tex[r.template]} body={body} />;
 }
 
-function Flow({ r, job }: { r: Saved; job: Posting }) {
+function Flow({ r, job, template, body }: { r: Saved; job: Posting; template: string; body: string }) {
   const router = useRouter();
   const path = usePathname();
   const fail = useSearchParams().get("fail") === "1";
   const [rev, setRev] = useState<Review>(() => review(r.id));
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // the resume's document, read again after each accepted change so the page beside the chat shows it
+  const [doc, setDoc] = useState<Doc>(() => kept(r.id));
+  // what the side shows; Chat is a pane of its own only below lg, where the chat doesn't fit beside it
+  const [pane, setPane] = useState<keyof typeof panes>("chat");
   const save = (next: Review) => {
     keepReview(r.id, next);
     setRev(next);
@@ -57,7 +66,9 @@ function Flow({ r, job }: { r: Saved; job: Posting }) {
   const decide = (bulletId: string, d: "accepted" | "skipped") => save({ ...rev, decided: { ...rev.decided, [bulletId]: d } });
   // a change goes into the resume's own document, read fresh, so nothing the editor kept is lost
   const accept = (bulletId: string, text: string) => {
-    keep(r.id, withBullet(kept(r.id), bulletId, text));
+    const next = withBullet(kept(r.id), bulletId, text);
+    keep(r.id, next);
+    setDoc(next);
     touch(r.id);
   };
   const proposals = rev.opening?.proposals ?? [];
@@ -93,34 +104,44 @@ function Flow({ r, job }: { r: Saved; job: Posting }) {
       </header>
 
       {rev.opening ? (
-        <main className="mx-auto min-h-0 w-full max-w-3xl flex-1">
-          <Chat
-            reply={(text) => [tailorAnswer(text, pending.length ? pending : proposals)]}
-            mode="tailor"
-            setMode={() => {}}
-            quotes={none}
-            takeQuotes={() => {}}
-            apply={(bulletId, text) => {
-              accept(bulletId, text);
-              if (proposals.some((p) => p.bulletId === bulletId)) decide(bulletId, "accepted");
-            }}
-            addEntry={() => {}}
-            only={["tailor"]}
-            name={profile.name.split(" ")[0]}
-            addedTo="this resume"
-            opening={[rev.opening]}
-            decided={rev.decided}
-            skip={(bulletId) => decide(bulletId, "skipped")}
-            acceptAll={
-              pending.length
-                ? () => {
-                    pending.forEach((p) => accept(p.bulletId, p.after));
-                    save({ ...rev, decided: { ...rev.decided, ...Object.fromEntries(pending.map((p) => [p.bulletId, "accepted" as const])) } });
-                  }
-                : undefined
-            }
-            placeholder="Ask for a change, like: make the second one shorter"
-          />
+        <main className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)]">
+          <div role="group" aria-label="Show" className={`${tabTrack} mx-3 mt-3 w-fit shrink-0 lg:hidden`}>
+            {Object.entries(panes).map(([k, v]) => (
+              <button key={k} type="button" aria-pressed={pane === k} onClick={() => setPane(k as keyof typeof panes)} className={tabButton(pane === k)}>
+                {v}
+              </button>
+            ))}
+          </div>
+          <div className={`min-h-0 flex-1 lg:border-r lg:border-ink/10 ${pane === "chat" ? "" : "max-lg:hidden"}`}>
+            <Chat
+              reply={(text) => [tailorAnswer(text, pending.length ? pending : proposals)]}
+              mode="tailor"
+              setMode={() => {}}
+              quotes={none}
+              takeQuotes={() => {}}
+              apply={(bulletId, text) => {
+                accept(bulletId, text);
+                if (proposals.some((p) => p.bulletId === bulletId)) decide(bulletId, "accepted");
+              }}
+              addEntry={() => {}}
+              only={["tailor"]}
+              name={profile.name.split(" ")[0]}
+              addedTo="this resume"
+              opening={[rev.opening]}
+              decided={rev.decided}
+              skip={(bulletId) => decide(bulletId, "skipped")}
+              acceptAll={
+                pending.length
+                  ? () => {
+                      pending.forEach((p) => accept(p.bulletId, p.after));
+                      save({ ...rev, decided: { ...rev.decided, ...Object.fromEntries(pending.map((p) => [p.bulletId, "accepted" as const])) } });
+                    }
+                  : undefined
+              }
+              placeholder="Ask for a change, like: make the second one shorter"
+            />
+          </div>
+          <Side r={r} job={job} doc={doc} template={template} body={body} pane={pane === "job" ? "job" : "resume"} onPane={setPane} hidden={pane === "chat"} />
         </main>
       ) : failed ? (
         <main className="grid flex-1 place-items-center px-4">
@@ -190,5 +211,49 @@ function Loading({ company, onDone, editor, logo }: { company: string; onDone: (
         </Link>
       </div>
     </main>
+  );
+}
+
+// Beside the chat: the resume as it stands, typeset again after each accepted change (dev only, through
+// /api/render, as in the editor), or the job it's tailored to. Below lg it's a pane of its own.
+// shortcut: off the dev server there's no typesetter, so the page is the template's sample PDF until the
+// render worker exists; the accepted changes are in the resume all the same.
+function Side({ r, job, doc, template, body, pane, onPane, hidden }: { r: Saved; job: Posting; doc: Doc; template: string; body: string; pane: "resume" | "job"; onPane: (p: "resume" | "job") => void; hidden: boolean }) {
+  const tex = inline(styled(template, doc.setup), withDoc(body, doc, originals));
+  const [src, setSrc] = useState<string>();
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    let gone = false;
+    fetch("/api/render", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ file: r.template, tex }) })
+      .then((res) => (res.ok ? res.blob() : Promise.reject()))
+      .then((b) => !gone && setSrc(URL.createObjectURL(b)))
+      .catch(() => {});
+    return () => {
+      gone = true;
+    };
+  }, [r.template, tex]);
+  return (
+    <section aria-label={panes[pane]} className={`flex min-h-0 flex-1 flex-col ${pane === "resume" ? "bg-mist" : ""} ${hidden ? "max-lg:hidden" : ""}`}>
+      <div role="group" aria-label="Show" className={`${tabTrack} m-3 w-fit shrink-0 max-lg:hidden`}>
+        {(["resume", "job"] as const).map((k) => (
+          <button key={k} type="button" aria-pressed={pane === k} onClick={() => onPane(k)} className={tabButton(pane === k)}>
+            {panes[k]}
+          </button>
+        ))}
+      </div>
+      {pane === "resume" ? (
+        <div className="flex min-h-0 flex-1 flex-col *:min-h-0">
+          <Viewer file={r.template} name={r.title} tex={tex} src={src} />
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-8 pt-2 lg:px-8">
+          <div className="max-w-2xl">
+            <h2 className={`${serif} text-[1.75rem] leading-tight tracking-[-0.02em]`}>{job.title}</h2>
+            <p className="mb-6 mt-0.5 text-[15px] text-ink/65">{job.company}</p>
+            <JobDetails j={job} />
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
