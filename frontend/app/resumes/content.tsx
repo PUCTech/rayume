@@ -136,6 +136,8 @@ function Dates({ start, end, onChange }: { start: string; end: string | null; on
 
 // what an entry of each section is called on its buttons; the sections the form can add to and take from
 const nouns: Record<string, string> = { Projects: "project", Education: "education", Certifications: "certification", "Technical Skills": "skill line" };
+// entries that are a line each, one after another down their card: removed with the quiet ×, like a link
+const lineSections = new Set(["Certifications", "Technical Skills"]);
 
 // Anything else that isn't on the resume yet, as a short form like a new job's: the texts its line needs, a
 // name above each, and it goes in once the ones not optional are filled
@@ -452,7 +454,21 @@ export function Content({
   const [newIn, setNewIn] = useState<string | null>(null);
   // what a first press on a remove button asked about: a second one removes it (settings have no undo)
   const [dropping, setDropping] = useState<string | null>(null);
-  // a remove button: one press with undo, two without
+  // The quiet remove of an item that repeats down a card (a link, a certification, a skill line): the bullet's
+  // ×, at the right of the item's first row; one press with undo, two without (it turns red and says so)
+  const cross = (key: string, name: string, act: () => void, at = "top-1") => (
+    <button
+      type="button"
+      aria-label={dropping === key ? `Press again to remove ${name}` : `Remove ${name}`}
+      title={dropping === key ? "Press again to remove" : `Remove ${name}`}
+      onClick={() => (undo || dropping === key ? act() : setDropping(key))}
+      onBlur={() => setDropping(null)}
+      className={`absolute right-1 ${at} grid size-6 place-items-center rounded-full transition hover:bg-error/25 hover:text-error-text pointer-coarse:size-8 ${dropping === key ? "bg-error/25 text-error-text" : "text-ink/35"}`}
+    >
+      <X aria-hidden className="size-3.5" />
+    </button>
+  );
+  // the worded remove of a whole entry, once per card: one press with undo, two without
   const removal = (key: string, label: string, act: () => void) => (
     <button
       type="button"
@@ -505,7 +521,9 @@ export function Content({
             {/* several entries (jobs, schools) fold to a line each, one open at a time, so the form isn't a wall of fields */}
             <Accordion.Root className="space-y-1.5 px-3 pb-4">
               {s.groups.map((g, i) => {
-                const id = `${s.title}/${i}`;
+                // by what it is, not where: an entry moved by its dates, or one after a removed one, keeps its panel
+                const id = g.job ?? g.entry ?? `${s.title}/${i}`;
+                const crossed = !!g.entry && lineSections.has(s.title);
                 const shown = g.items.flatMap(bullets);
                 const labelled = g.fields.filter((f) => f.hint && !f.link);
                 const rest = g.fields.filter((f) => !f.hint || f.link);
@@ -565,12 +583,10 @@ export function Content({
                       const kind = linkKind(run(f));
                       return f.link ? (
                         <div key={f.key}>
-                        <span className="mb-1 flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-ink/55">{kind.name}</span>
-                          {removal(`link:${f.was}`, "Remove link", () => onLinkDrop(f))}
-                        </span>
-                        <div className="rounded-2xl bg-white ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
-                          <Text value={run(f)} label={kind.name === "Link" ? "Link text" : kind.name} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent !ring-0" />
+                        <span className="mb-1 block text-xs font-medium text-ink/55">{kind.name}</span>
+                        <div className="relative rounded-2xl bg-white ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
+                          <Text value={run(f)} label={kind.name === "Link" ? "Link text" : kind.name} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent pr-8 !ring-0" />
+                          {cross(`link:${f.was}`, `${kind.name === "Link" ? run(f) : kind.name} link`, () => onLinkDrop(f))}
                           <div className="flex items-center gap-1.5 border-t border-ink/10 pl-3 text-ink/40">
                             <Link2 aria-hidden className="size-3.5 shrink-0" />
                             <Text
@@ -586,9 +602,13 @@ export function Content({
                         </div>
                         </div>
                       ) : (
-                        <Labeled key={f.key} label={f === g.fields[0] ? "Title" : "Details"}>
-                          <Text value={run(f)} label={f === g.fields[0] ? "Title" : "Details"} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className={f === g.fields[0] && g.fields.length > 1 ? "font-medium" : ""} />
-                        </Labeled>
+                        <div key={f.key} className="relative">
+                          <Labeled label={f === g.fields[0] ? "Title" : "Details"}>
+                            <Text value={run(f)} label={f === g.fields[0] ? "Title" : "Details"} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className={`${f === g.fields[0] && g.fields.length > 1 ? "font-medium" : ""} ${f === g.fields[0] && crossed ? "pr-8" : ""}`} />
+                          </Labeled>
+                          {/* outside the label, which would otherwise take the button as the field it names */}
+                          {f === g.fields[0] && crossed && cross(g.entry!, `${nouns[s.title]} ${run(f).replace(/:$/, "")}`, () => onEntryDrop(g.entry!), "bottom-1 pointer-coarse:bottom-1.5")}
+                        </div>
                       );
                     })}
                     {(shown.length > 0 || open) && (
@@ -666,7 +686,7 @@ export function Content({
                           Add link
                         </button>
                       ))}
-                    {(g.items.length > 0 || g.job || (g.entry && nouns[s.title])) && (
+                    {(g.items.length > 0 || g.job || (g.entry && nouns[s.title] && !crossed)) && (
                       <div className="flex items-center justify-between gap-2">
                         {g.items.length > 0 && !open ? (
                           <button type="button" onClick={() => setAdding({ group: id, after: shown.at(-1)?.id ?? g.items.at(-1)!, text: "" })} className={quiet}>
@@ -676,7 +696,7 @@ export function Content({
                         ) : (
                           <span />
                         )}
-                        {g.job ? removal(g.job, "Remove experience", () => onDrop(g.job!)) : g.entry && nouns[s.title] && removal(g.entry, `Remove ${nouns[s.title]}`, () => onEntryDrop(g.entry!))}
+                        {g.job ? removal(g.job, "Remove experience", () => onDrop(g.job!)) : g.entry && nouns[s.title] && !crossed && removal(g.entry, `Remove ${nouns[s.title]}`, () => onEntryDrop(g.entry!))}
                       </div>
                     )}
                   </div>

@@ -92,7 +92,7 @@ function Title({ r }: { r: Saved }) {
         requestAnimationFrame(() => el.blur());
       }}
       // as wide as the name, not the bar: a pill around it, tall enough for its descenders
-      className={`${serif} -ml-2 block h-8 max-w-full min-w-[4ch] truncate rounded-full bg-transparent px-2 text-xl leading-8 tracking-[-0.01em] outline-none transition [field-sizing:content] hover:ring-1 hover:ring-ink/15 focus:bg-white focus:ring-2 focus:ring-accent-text`}
+      className={`${serif} block h-8 max-w-full min-w-[4ch] truncate rounded-full bg-transparent px-2 text-xl leading-8 tracking-[-0.01em] outline-none transition [field-sizing:content] hover:ring-1 hover:ring-ink/15 focus:bg-white focus:ring-2 focus:ring-accent-text`}
     />
   );
 }
@@ -519,7 +519,9 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="min-w-0">
+            {/* the pill's inset is the heading's, not the field's: a field's negative margin made the heading
+                shrink-wrap it 8px short, and max-w-full then clipped the name to that */}
+            <h1 className="-ml-2 min-w-0">
               <Title key={r.title} r={r} />
             </h1>
             {/* Saved once, by the name, as a document says it. Saving is the document catching up with the typing;
