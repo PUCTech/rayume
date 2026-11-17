@@ -90,7 +90,7 @@ export function Jobs() {
   const counts = [
     ["Saved", jobs.filter((j) => !j.applied).length],
     ["Applied", jobs.filter((j) => j.applied).length],
-    ["This week", jobs.filter((j) => j.applied && j.applied >= weekAgo).length],
+    ["Applied this week", jobs.filter((j) => j.applied && j.applied >= weekAgo).length],
     ["Tailored", jobs.filter((j) => list.some((r) => r.job === j.id)).length],
   ] as const;
 
@@ -183,7 +183,7 @@ export function Jobs() {
                     <li
                       key={j.id}
                       // a row with its menu or popover open sits over the rows below it
-                      className={`relative flex flex-col gap-3 rounded-[26px] bg-white p-4 ring-1 ring-ink/10 transition duration-300 hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] lg:hover:bg-white lg:hover:shadow-none lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem_8.5rem_11rem] lg:items-center lg:gap-6 lg:rounded-none lg:bg-transparent lg:px-2 lg:py-3.5 lg:ring-0 ${menu?.split(":").pop() === j.id ? "z-20" : ""}`}
+                      className={`relative flex flex-col gap-3 rounded-[26px] bg-white p-4 ring-1 ring-ink/10 transition duration-300 hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] lg:hover:bg-white lg:hover:shadow-none lg:grid lg:grid-cols-[minmax(0,1fr)_7.5rem_12rem_10rem] lg:items-center lg:gap-6 lg:rounded-none lg:bg-transparent lg:px-2 lg:py-3.5 lg:ring-0 ${menu?.split(":").pop() === j.id ? "z-20" : ""}`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <Logo p={j} className="size-9" />
@@ -202,6 +202,16 @@ export function Jobs() {
                             {j.company}
                           </p>
                         </div>
+                        {/* what the job asks for, in the row's spare width */}
+                        {j.keywords.length > 0 && (
+                          <ul aria-label="Asks for" className="ml-auto hidden shrink-0 gap-1.5 pl-4 xl:flex">
+                            {j.keywords.slice(0, 3).map((k) => (
+                              <li key={k} className="rounded-full bg-mist px-2.5 py-0.5 text-[12px] text-ink/70">
+                                {k}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
 
                       <p className="text-[13px] text-ink/70">
@@ -337,13 +347,19 @@ export function Jobs() {
 // resumes tailored to a job, the one most likely sent first
 const tailored = (list: Saved[], j: Posting) => list.filter((r) => r.job === j.id).sort(byEdited);
 
-// The row's word on its resume: tailored, sent or deleted, as plain text (the resume itself is in the job's
-// dialog); a job with none gets a way to tailor one, the only control here, so it sits above the row's link.
+// The row's word on its resume: the one sent or tailored, by name, opening the editor (above the row's link);
+// a sent one since deleted says so; a job with none gets a way to tailor one.
 function ResumeNote({ j, list, onTailor }: { j: Posting; list: Saved[]; onTailor: () => void }) {
-  const note = j.applied ? (list.some((r) => r.id === j.sent) ? "Resume sent" : "Resume deleted") : tailored(list, j).length ? "Resume tailored" : "";
-  return note ? (
-    <span className="text-[13px] text-ink/55">{note}</span>
-  ) : (
+  const r = j.applied ? list.find((x) => x.id === j.sent) : tailored(list, j)[0];
+  if (r)
+    return (
+      <Link href={`/resumes/${r.id}`} title={r.title} className="relative z-10 min-w-0 text-[13px] leading-snug text-ink/55 transition hover:text-ink">
+        {j.applied ? "Sent" : "Tailored"}
+        <span className="block truncate text-ink/80 hover:underline">{r.title}</span>
+      </Link>
+    );
+  if (j.applied) return <span className="text-[13px] text-ink/55">Resume deleted</span>;
+  return (
     <button type="button" onClick={onTailor} className="relative z-10 -mx-1 rounded-full px-1 py-1 text-[13px] font-medium text-accent-text transition hover:underline pointer-coarse:py-3">
       Tailor a resume
     </button>
