@@ -243,6 +243,11 @@ export function Jobs() {
                                   Open posting
                                 </a>
                               )}
+                              {mine[0] && (
+                                <Link href={`/resumes/${mine[0].id}/tailor`} className={item}>
+                                  Review tailoring
+                                </Link>
+                              )}
                               {j.applied ? (
                                 <>
                                   <button type="button" onClick={() => setMenu(`details:${j.id}`)} className={item}>
@@ -527,6 +532,11 @@ function JobView({ open, j, list, onClose, onTailor, onApply, onUnapply, onEdit 
                     Edit
                   </button>
                 </>
+              )}
+              {tailored(list, j)[0] && (
+                <Link href={`/resumes/${tailored(list, j)[0].id}/tailor`} className={button}>
+                  Review tailoring
+                </Link>
               )}
               {url && (
                 <a href={url} target="_blank" rel="noreferrer noopener" className={button}>

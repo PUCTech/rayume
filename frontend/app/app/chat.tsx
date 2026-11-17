@@ -52,7 +52,10 @@ export type Message = {
   skills?: { hard: [string, number][]; soft: string[] };
   postings?: Posting[];
   tailored?: { posting: Posting; created?: boolean };
+  // a tailoring's rewrites, each of a bullet the resume has (by its id): before, after and the job's words it uses
+  proposals?: Proposal[];
 };
+export type Proposal = { bulletId: string; before: string; after: string; uses: string[] };
 export type Reply = Omit<Message, "id" | "from">;
 
 const small = "rounded-full px-3 py-1.5 text-[13px] font-medium transition pointer-coarse:py-2.5";
@@ -93,6 +96,8 @@ function partsOf(replies: Reply[], quotes: Quote[]): ThreadAssistantMessagePart[
       ...(r.draft
         ? [{ type: "tool-call" as const, toolCallId: id(), toolName: "add_experience", args: { title: r.draft.entry.title, bullets: r.draft.entry.bullets.map((b) => b.text) }, argsText: JSON.stringify(r.draft.entry) }]
         : []),
+      ...(r.proposals ?? []).map((p) => ({ type: "tool-call" as const, toolCallId: id(), toolName: "propose_bullet", args: p, argsText: JSON.stringify(p) })),
+      ...((r.proposals?.length ?? 0) > 1 ? [{ type: "tool-call" as const, toolCallId: id(), toolName: "accept_all", args: {}, argsText: "{}" }] : []),
     ]),
   ];
 }
@@ -113,7 +118,16 @@ const wait = (ms: number, signal: AbortSignal) => new Promise<void>((ok) => (sig
 // The resume's actions, as assistant-ui tool UIs (a toolkit of render-only "backend" tools: Rayume, not
 // the browser, makes the calls). A press applies it to the resume and stores that as the tool's result, so
 // the card says it's done even after switching chats and back.
-type Actions = { apply: (bulletId: string, text: string) => void; addEntry: (title: string, bullets: string[]) => void; addedTo: string };
+// decided, skip and acceptAll are a tailoring's (see Chat's opening): what was done with each proposal, kept by
+// the page, so the cards say so after a reload and after Accept all
+type Actions = {
+  apply: (bulletId: string, text: string) => void;
+  addEntry: (title: string, bullets: string[]) => void;
+  addedTo: string;
+  decided?: Record<string, "accepted" | "skipped">;
+  skip?: (bulletId: string) => void;
+  acceptAll?: () => void;
+};
 const On = createContext<Actions>(null!);
 const Rewrite: ToolCallMessagePartComponent<{ bulletId: string; text: string }, { applied: boolean }> = ({ args, result, addResult }) => {
   const on = useContext(On);
@@ -154,14 +168,69 @@ const Draft: ToolCallMessagePartComponent<{ title: string; bullets: string[] }, 
     </div>
   );
 };
+// the job's words in a rewrite, marked as the design system marks keywords
+function Marked({ text, words }: { text: string; words: string[] }) {
+  if (!words.length) return <>{text}</>;
+  const re = new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+  return <>{text.split(re).map((t, i) => (i % 2 ? <mark key={i} className="rounded bg-accent/15 px-0.5 text-accent-text">{t}</mark> : t))}</>;
+}
+const Propose: ToolCallMessagePartComponent<Proposal, { done: "accepted" | "skipped" }> = ({ args, result, addResult }) => {
+  const on = useContext(On);
+  const done = on.decided?.[args.bulletId] ?? result?.done;
+  return (
+    <div className="my-2 rounded-2xl bg-white p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
+      <p className="text-xs font-medium text-ink/50">Before</p>
+      <p className="text-ink/60">{args.before}</p>
+      <p className="mt-2.5 text-xs font-medium text-ink/50">After</p>
+      <p>
+        <Marked text={args.after} words={args.uses} />
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {done === "accepted" ? (
+          <Done>Replaced in your resume</Done>
+        ) : done === "skipped" ? (
+          <span className="text-[13px] font-medium text-ink/50">Skipped</span>
+        ) : (
+          <>
+            <button type="button" onClick={() => (on.apply(args.bulletId, args.after), addResult({ done: "accepted" }))} className={primary}>
+              Replace in resume
+            </button>
+            <button type="button" onClick={() => (on.skip?.(args.bulletId), addResult({ done: "skipped" }))} className={`${small} text-ink/70 ring-1 ring-ink/10 hover:text-ink hover:ring-ink/25`}>
+              Skip
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+const AcceptAll: ToolCallMessagePartComponent<Record<string, never>, { done: boolean }> = () => {
+  const on = useContext(On);
+  return on.acceptAll ? (
+    <div className="my-2">
+      <button type="button" onClick={on.acceptAll} className={primary}>
+        Accept all
+      </button>
+    </div>
+  ) : (
+    <div className="my-2">
+      <Done>Every change is decided</Done>
+    </div>
+  );
+};
+
 // standalone: each asks for a press, so it shows on its own rather than folded into the trace of tool calls
 const toolkit = defineToolkit({
   rewrite_bullet: { type: "backend", display: "standalone", render: Rewrite },
   add_experience: { type: "backend", display: "standalone", render: Draft },
+  propose_bullet: { type: "backend", display: "standalone", render: Propose },
+  accept_all: { type: "backend", display: "standalone", render: AcceptAll },
 });
 
 // the modes, in the composer's action row
 function Modes({ mode, setMode, only }: { mode: Mode; setMode: (m: Mode) => void; only?: Mode[] }) {
+  // one mode is no choice
+  if (only?.length === 1) return null;
   return (
     <div role="group" aria-label="Mode" className="flex gap-1 overflow-x-auto">
       {modes.filter((m) => !only || only.includes(m.id)).map((m) => (
@@ -261,6 +330,11 @@ export function Chat({
   only,
   name,
   addedTo = "your Master Resume",
+  opening,
+  decided,
+  skip,
+  acceptAll,
+  placeholder,
 }: {
   // Rayume's answer to what was sent: the text typed (with any text files attached) and the quotes
   reply: (text: string, quotes: Quote[]) => Reply[];
@@ -277,6 +351,14 @@ export function Chat({
   name: string;
   // where an added experience went, for its confirmation
   addedTo?: string;
+  // Rayume's first message, already there when the chat opens (a tailoring's summary and its proposals), and
+  // what the page has done with them; acceptAll is unset once nothing is left to accept
+  opening?: Reply[];
+  decided?: Record<string, "accepted" | "skipped">;
+  skip?: (bulletId: string) => void;
+  acceptAll?: () => void;
+  // the composer's hint, when the mode's own doesn't fit the page
+  placeholder?: string;
 }) {
   // the adapters are made once; what they call is read fresh each run
   const latest = useRef(reply);
@@ -309,7 +391,9 @@ export function Chat({
       },
     };
     const feedback: FeedbackAdapter = { submit: () => {} };
+    const initialMessages = opening ? [{ role: "assistant" as const, content: partsOf(opening, []) }] : undefined;
     return {
+      initialMessages,
       model,
       local: {
         attachments: new CompositeAttachmentAdapter([new SimpleImageAttachmentAdapter(), new SimpleTextAttachmentAdapter()]),
@@ -323,14 +407,14 @@ export function Chat({
   });
   const runtime = useRemoteThreadListRuntime({
     // eslint-disable-next-line react-hooks/rules-of-hooks -- assistant-ui calls the hook once per chat
-    runtimeHook: () => useLocalRuntime(adapters.model, { adapters: adapters.local }),
+    runtimeHook: () => useLocalRuntime(adapters.model, { adapters: adapters.local, initialMessages: adapters.initialMessages }),
     adapter: adapters.list,
   });
   const config = useMemo(() => AuiConfig({ tools: Tools({ toolkit }), suggestions: Suggestions(["What makes a strong bullet?", "How do I rewrite a line?"]) }), []);
   return (
     <AssistantRuntimeProvider runtime={runtime} config={config}>
       <TooltipProvider>
-        <On.Provider value={{ apply, addEntry, addedTo }}>
+        <On.Provider value={{ apply, addEntry, addedTo, decided, skip, acceptAll }}>
           <Inbox quotes={quotes} taken={takeQuotes} />
           <div className="flex h-full flex-col">
             <Header />
@@ -340,7 +424,7 @@ export function Chat({
                 components={{
                   Welcome: () => <Welcome name={name} />,
                   ComposerExtra: () => <Modes mode={mode} setMode={setMode} only={only} />,
-                  placeholder: modes.find((m) => m.id === mode)!.hint,
+                  placeholder: placeholder ?? modes.find((m) => m.id === mode)!.hint,
                 }}
               />
             </div>

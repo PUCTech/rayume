@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { master, resumes as seed, type Saved } from "./data";
 import { postings, type Posting } from "../app/data";
 import { blank, type Doc } from "./tex";
+import type { Reply } from "../app/chat";
 
 // A list as this browser has it: the demo list, plus what's been changed here. The server and the first
 // render see the demo list; the browser's copy takes over right after, and every page using it updates when
@@ -97,6 +98,25 @@ export const kept = (id: string): Doc => {
 export const keep = (id: string, d: Doc) => {
   try {
     localStorage.setItem(editsOf(id), JSON.stringify(d));
+  } catch {}
+};
+
+// A tailoring's review, per resume: Rayume's opening (its summary and proposals, kept as the API would return
+// them, so a reload shows the same ones) and what was done with each. No opening means it hasn't run, and
+// coming back shows the loading screen; with one, it shows the chat.
+// shortcut: localStorage until POST /resumes with job_posting_id returns the proposals.
+export type Review = { opening?: Reply; decided: Record<string, "accepted" | "skipped"> };
+const reviewOf = (id: string) => `rayume:tailor:${id}`;
+export const review = (id: string): Review => {
+  try {
+    const r = JSON.parse(localStorage.getItem(reviewOf(id)) ?? "null") as Review | null;
+    if (r && typeof r.decided === "object" && r.decided && (!r.opening || typeof r.opening.text === "string")) return r;
+  } catch {}
+  return { decided: {} };
+};
+export const keepReview = (id: string, r: Review) => {
+  try {
+    localStorage.setItem(reviewOf(id), JSON.stringify(r));
   } catch {}
 };
 

@@ -95,9 +95,9 @@ export const copy = (from: Saved, extra: Partial<Saved>): Saved => {
   return fresh;
 };
 
-// A new resume from the master, as it is or tailored to a job, opened in the editor.
-// shortcut: tailoring copies the master and links the job; the AI tailoring (POST /resumes with
-// job_posting_id) replaces the copy once the API has it.
+// A new resume from the master, opened in the editor; or tailored to a job: the master's copy linked to it,
+// opened on Rayume's tailoring (/resumes/[id]/tailor), which proposes the changes to review.
+// shortcut: the copy stands in for POST /resumes with job_posting_id, which makes the tailored version itself.
 export function useTailor() {
   const list = useResumes();
   const router = useRouter();
@@ -107,7 +107,7 @@ export function useTailor() {
       ? copy(from, { title: `${job.company}, ${job.title}`, job: job.id, company: job.logo ? { name: job.company, logo: job.logo } : undefined })
       : copy(from, { title: "Untitled resume" });
     save([...list, fresh]);
-    router.push(`/resumes/${fresh.id}`);
+    router.push(job ? `/resumes/${fresh.id}/tailor` : `/resumes/${fresh.id}`);
   };
 }
 
