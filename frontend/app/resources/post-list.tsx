@@ -2,16 +2,19 @@ import Link from "next/link";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import type { Article } from "./content";
 import { day } from "./article";
+import { Cover } from "./cover";
 
 const serif = GeistSerifRegular.className;
 
-// a column of posts as rows: date, title, description; the blog page shows the date in its own column
+// a column of posts as rows: date, title, description; the blog page shows the date in its own column and the
+// post's cover beside it (above it on a phone)
 export function PostList({ posts, compact = false }: { posts: Article[]; compact?: boolean }) {
   return (
     <ul className={`divide-y divide-ink/10 ${compact ? "-mt-6" : "border-t border-ink"}`}>
       {posts.map((p) => (
         <li key={p.slug}>
-          <Link href={`/resources/blog/${p.slug}`} className={`group grid gap-2 py-6 ${compact ? "" : "sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8"}`}>
+          <Link href={`/resources/blog/${p.slug}`} className={`group grid gap-2 py-6 ${compact ? "" : "sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8 lg:grid-cols-[11rem_minmax(0,1fr)_17rem] lg:items-start"}`}>
+            {!compact && <Cover slug={p.slug} className="mb-3 transition duration-300 group-hover:-translate-y-1 motion-reduce:group-hover:translate-y-0 sm:col-span-2 sm:mb-0 lg:order-last lg:col-span-1" />}
             <time dateTime={p.updated} className="text-sm text-ink/55 sm:pt-1">
               {day(p.updated)}
             </time>
@@ -44,6 +47,7 @@ export function Latest({ posts }: { posts: Article[] }) {
       </div>
       <div className={`mt-6 grid grid-cols-1 gap-10 border-t border-ink pt-8 ${rest.length ? "lg:grid-cols-[1.2fr_1fr]" : ""}`}>
         <Link href={`/resources/blog/${lead.slug}`} className="group flex flex-col rounded-[28px] bg-mist p-6 sm:p-8">
+          <Cover slug={lead.slug} onMist className="mb-6" />
           <time dateTime={lead.updated} className="text-sm text-ink/55">
             {day(lead.updated)}
           </time>

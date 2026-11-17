@@ -28,7 +28,7 @@ export default function Blog() {
         </p>
       </header>
 
-      <div className="mt-14 max-w-4xl">
+      <div className="mt-14">
         {posts.length ? (
           <PostList posts={posts} />
         ) : (
