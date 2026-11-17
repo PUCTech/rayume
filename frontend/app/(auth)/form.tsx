@@ -5,8 +5,21 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import Link from "next/link";
 
 // 16px on phones, or iOS Safari zooms the page when an input takes focus
-const input =
+export const input =
   "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-base ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text sm:text-[15px] aria-invalid:ring-2 aria-invalid:ring-error aria-invalid:focus:ring-error-text aria-invalid:duration-400 aria-invalid:animate-shake motion-reduce:animate-none";
+
+// a field's message, under it; the jobs page's save dialog uses it too
+export function FieldError({ id, children }: { id: string; children: string }) {
+  return (
+    <span id={id} role="alert" className="mt-2 flex items-start gap-1.5 text-xs font-medium text-error-text transition duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none starting:-translate-y-1 starting:opacity-0">
+      <svg aria-hidden viewBox="0 0 16 16" className="mt-px size-3.5 shrink-0">
+        <circle cx="8" cy="8" r="8" className="fill-error" />
+        <path d="M8 4.5v4M8 11h.01" stroke="white" strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+      {children}
+    </span>
+  );
+}
 
 function Field({ label, hint, error, ...props }: { label: string; hint?: string; error?: string } & ComponentProps<"input">) {
   const id = useId();
@@ -15,13 +28,7 @@ function Field({ label, hint, error, ...props }: { label: string; hint?: string;
       <span className="text-sm font-medium">{label}</span>
       <input required {...props} aria-invalid={!!error} aria-describedby={error || hint ? id : undefined} className={input} />
       {error ? (
-        <span id={id} role="alert" className="mt-2 flex items-start gap-1.5 text-xs font-medium text-error-text transition duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none starting:-translate-y-1 starting:opacity-0">
-          <svg aria-hidden viewBox="0 0 16 16" className="mt-px size-3.5 shrink-0">
-            <circle cx="8" cy="8" r="8" className="fill-error" />
-            <path d="M8 4.5v4M8 11h.01" stroke="white" strokeWidth="1.75" strokeLinecap="round" />
-          </svg>
-          {error}
-        </span>
+        <FieldError id={id}>{error}</FieldError>
       ) : (
         hint && <span id={id} className="mt-1.5 block text-xs text-ink/55">{hint}</span>
       )}

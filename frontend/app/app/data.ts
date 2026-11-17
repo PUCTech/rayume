@@ -1,6 +1,7 @@
 // Demo data for the signed-in workspace: Lucas Mendes's Master Resume (the same fictional person as
 // resumes/body.tex), shaped like the API's Experience and Resume objects in docs/backend/endpoints.
 // shortcut: static until the API serves /me, /experiences, /resumes and /job-postings; swap these for fetches then.
+// The job postings' companies are real names used as demo data; the postings themselves are invented.
 
 export type Bullet = { id: string; text: string };
 export type Entry = {
@@ -185,48 +186,94 @@ export const refined: Record<string, string> = {
   "rota-1": "Led a team of four to 2nd place at HackPUC with a mobile app, built in 36 hours, that routes students along well-lit streets.",
 };
 
-// Job postings, shaped like the API's JobPosting (docs/backend/endpoints/job-postings.md) minus url and
-// description; logo is a demo asset in public/logos/, not part of the schema.
-export type Posting = { id: string; title: string; company: string; keywords: string[]; missing: string[]; logo?: string };
+// Job postings, shaped like the API's JobPosting (docs/backend/endpoints/job-postings.md); logo is a demo asset
+// in public/logos/, not part of the schema. saved is created_at. applied (a day, YYYY-MM-DD) and sent (the id
+// of the resume that went with it) are the user's own record of applying, which the schema can't hold yet
+// (docs/todo/missing-schema-job-applications.md). The companies are real names used as demo data; the postings,
+// their text and the dates are invented. Dates agree with resumes/data.ts: a job is saved before its
+// resume was last edited and applied on or after that.
+export type Posting = {
+  id: string;
+  title: string;
+  company: string;
+  url?: string;
+  description: string;
+  keywords: string[];
+  missing: string[];
+  logo?: string;
+  saved: string;
+  applied?: string;
+  sent?: string;
+};
 export const postings: Posting[] = [
   {
-    id: "orbita",
-    title: "Full Stack Engineer",
-    company: "Orbita",
-    logo: "orbita",
-    keywords: ["React", "TypeScript", "Node.js", "PostgreSQL", "design collaboration", "testing", "GraphQL", "Kubernetes", "mentoring"],
-    missing: ["GraphQL", "Kubernetes"],
+    id: "nubank",
+    title: "Software Engineer, Full Stack",
+    company: "Nubank",
+    logo: "nubank",
+    keywords: ["React", "TypeScript", "Clojure", "Kafka", "PostgreSQL", "testing", "design collaboration", "mentoring"],
+    missing: ["Clojure", "Kafka"],
+    description: "We're looking for a full stack engineer to join one of the teams behind the screens customers use every day to manage their money.\n\nWhat you'd do:\n- Build web features end to end, from React and TypeScript interfaces to the Clojure services behind them\n- Work with designers and product managers from the first sketch to the release\n- Write tests and review your teammates' code\n- Help newer engineers find their feet\n\nWhat we ask for:\n- Experience shipping web applications with React and TypeScript\n- Comfort working with relational data, such as PostgreSQL\n- Curiosity about functional programming; Clojure and Kafka are a plus, not a requirement",
+    saved: "2026-11-05",
+    applied: "2026-11-12",
+    sent: "r1",
   },
   {
-    id: "vela",
+    id: "stripe",
     title: "Backend Engineer, Payments",
-    company: "Vela Pay",
-    logo: "vela",
-    keywords: ["Node.js", "Stripe", "idempotency", "PostgreSQL", "Redis", "AWS", "on-call", "Go"],
-    missing: ["Go", "on-call"],
+    company: "Stripe",
+    logo: "stripe",
+    url: "https://stripe.com/jobs",
+    keywords: ["Ruby", "Java", "API design", "idempotency", "PostgreSQL", "Redis", "AWS", "on-call"],
+    missing: ["Ruby", "Java", "on-call"],
+    description: "The Payments team builds the APIs businesses use to accept and move money, and the systems that keep those APIs correct when the network isn't.\n\nWhat you'd do:\n- Design and build backend services in Ruby and Java\n- Make every operation safe to retry, with idempotency built in from the start\n- Own your services in production, including an on-call rotation\n- Write clear API documentation for the developers who rely on it\n\nWhat we ask for:\n- Experience building and running backend services\n- A solid grasp of relational databases (PostgreSQL) and caching (Redis)\n- Some time on AWS or another cloud\n- Care for API design and the people who use your APIs",
+    saved: "2026-10-30",
+    applied: "2026-11-05",
+    sent: "r2",
   },
   {
-    id: "nimbo",
-    title: "Frontend Developer",
-    company: "Nimbo",
-    logo: "nimbo",
+    id: "vercel",
+    title: "Frontend Engineer",
+    company: "Vercel",
+    logo: "vercel",
+    url: "https://vercel.com/careers",
     keywords: ["React", "TypeScript", "Next.js", "accessibility", "design systems", "Figma", "testing"],
     missing: ["design systems"],
+    description: "We're hiring a frontend engineer to work on the dashboard developers use to deploy and run their projects.\n\nWhat you'd do:\n- Build product features in React, TypeScript and Next.js\n- Grow the design system with our designers in Figma\n- Keep every screen accessible, from keyboard to screen reader\n- Keep the test suite honest\n\nWhat we ask for:\n- Strong React and TypeScript\n- Experience with Next.js or a similar framework\n- Working knowledge of accessibility\n- Design systems experience is a plus",
+    saved: "2026-10-28",
   },
   {
-    id: "pacto",
+    id: "vtex",
     title: "Software Engineer II",
-    company: "Pacto",
-    logo: "pacto",
-    keywords: ["TypeScript", "NestJS", "PostgreSQL", "Docker", "AWS", "code review", "Kafka"],
-    missing: ["Kafka"],
+    company: "VTEX",
+    logo: "vtex",
+    keywords: ["TypeScript", "Node.js", "React", "GraphQL", "AWS", "code review", "Kubernetes"],
+    missing: ["GraphQL", "Kubernetes"],
+    description: "Join a product team building commerce features for retailers around the world.\n\nWhat you'd do:\n- Build TypeScript services in Node.js and the GraphQL APIs that expose them\n- Build React components for storefronts\n- Ship to AWS, on Kubernetes\n- Review code every day and help keep the codebase healthy\n\nWhat we ask for:\n- Two or more years building with TypeScript and Node.js\n- Experience with React\n- Some time on AWS\n- GraphQL and Kubernetes are a plus",
+    saved: "2026-10-20",
+    applied: "2026-10-27",
+    sent: "r5",
   },
   {
-    id: "kairo",
-    title: "Junior Data Engineer",
-    company: "Kairo",
-    keywords: ["Python", "SQL", "PostgreSQL", "Airflow", "dbt", "AWS", "data modeling"],
-    missing: ["Airflow", "dbt"],
+    id: "spotify",
+    title: "Data Engineer, Early Career",
+    company: "Spotify",
+    logo: "spotify",
+    url: "https://www.lifeatspotify.com",
+    keywords: ["Python", "SQL", "Scala", "Apache Beam", "BigQuery", "GCP", "data modeling"],
+    missing: ["Scala", "Apache Beam", "BigQuery", "GCP"],
+    description: "An early-career role on a data team that builds the pipelines behind listening insights.\n\nWhat you'd do:\n- Build and look after batch pipelines in Python, SQL and Scala, using Apache Beam on Google Cloud\n- Model data so other teams can query it in BigQuery\n- Monitor data quality and fix what breaks\n\nWhat we ask for:\n- Good Python and SQL\n- An understanding of data modeling\n- Interest in distributed data processing; Scala, Beam and GCP can be learned on the job",
+    saved: "2026-11-14",
+  },
+  {
+    id: "ifood",
+    title: "Backend Developer",
+    company: "iFood",
+    logo: "ifood",
+    keywords: ["Kotlin", "Java", "Spring", "PostgreSQL", "Kafka", "AWS", "microservices"],
+    missing: ["Kotlin", "Java", "Spring", "Kafka"],
+    description: "We're looking for a backend developer to work on the services that get orders from restaurants to people's doors.\n\nWhat you'd do:\n- Build microservices in Kotlin with Spring\n- Publish and consume events over Kafka\n- Run your services on AWS, with PostgreSQL behind them\n\nWhat we ask for:\n- Experience with a JVM language (Kotlin or Java)\n- Familiarity with relational databases\n- Interest in event-driven systems",
+    saved: "2026-11-15",
   },
 ];
 
