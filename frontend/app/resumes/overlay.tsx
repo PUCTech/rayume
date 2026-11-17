@@ -14,7 +14,9 @@ const inside = (b: Box, x: number, y: number) => x >= b.x && x <= b.x + b.w && y
 
 // what's being written: a bullet on the page, any other run of text, or a bullet the PDF doesn't have yet
 export type Target = { kind: "bullet"; id: string } | { kind: "run"; key: string } | { kind: "new"; id: string; after: string };
-const same = (a: Target | null, b: Target) => !!a && a.kind === b.kind && (a.kind === "run" ? a.key === (b as typeof a).key : a.id === (b as { id: string }).id);
+// A new bullet and the same bullet once the typeset page has it are one target: the page lands while it's
+// still being written (as "new"), and the field must stay the one being typed in
+const same = (a: Target | null, b: Target) => !!a && (a.kind === "run" || b.kind === "run" ? a.kind === "run" && b.kind === "run" && a.key === b.key : a.id === b.id);
 
 // a bullet written on the page: what it is, where it goes, the page's own text it replaces, and its place
 // among bullets that follow the same one
@@ -170,9 +172,13 @@ export function Overlay({
   const written = useMemo(() => {
     const onPage: Item[] = bullets.flatMap((b) => {
       const t: Target = { kind: "bullet", id: b.id };
-      return same(editing, t) || pending.bullets.includes(b.id) ? [{ key: b.id, t, ...geometry(b), order: 0 }] : [];
+      // the one being written keeps the editor's target ("new" until it's saved), so its text and its save
+      // are still the new bullet's
+      if (same(editing, t)) return [{ key: b.id, t: editing!, ...geometry(b), order: 0 }];
+      return pending.bullets.includes(b.id) ? [{ key: b.id, t, ...geometry(b), order: 0 }] : [];
     });
-    const fresh = [...pending.added, ...(editing?.kind === "new" && !pending.added.some((a) => a.id === editing.id) ? [{ id: editing.id, after: editing.after, text: "" }] : [])];
+    const fresh = [...pending.added, // one item per bullet: a new one the page already has is written as the page's
+    ...(editing?.kind === "new" && !pending.added.some((a) => a.id === editing.id) && !onPage.some((w) => w.key === editing.id) ? [{ id: editing.id, after: editing.after, text: "" }] : [])];
     const placed: Item[] = [];
     const anchorOf = (id: string) => [...onPage, ...placed].find((w) => w.key === id) ?? bullets.flatMap((b) => (b.id === id ? [geometry(b)] : []))[0];
     fresh.forEach((a, i) => {

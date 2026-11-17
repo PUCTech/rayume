@@ -41,13 +41,20 @@ export function regions(spans: Span[], entries: Entry[]): Region[] {
     const marks = own.flatMap((r, j) =>
       /^•\s*\S/.test(r.text) || (r.text.trim() === "•" && (j === 0 || own[j - 1].y + own[j - 1].h / 2 < r.y)) ? [j] : [],
     );
+    // each bullet once: a short one (a new bullet's first letters) is "in" almost any line, so a line takes the
+    // bullet it starts like before one it merely contains, and never one an earlier line took
+    const used = new Set<string>();
     const bullets = marks.flatMap((j, m) => {
       const lines = own.slice(j, marks[m + 1] ?? own.length);
       // without spaces: a bullet with bold or italic in it comes as several runs, split where no space was
       const tight = (t: string) => plain(t).replace(/ /g, "");
       const said = tight(lines.map((l) => l.text).join(" ").replace(/^•\s*/, ""));
       // either side can carry extra words: the PDF a label like "Relevant Activities:", the data a longer ending
-      const bullet = e.bullets.find((b) => tight(b.text).includes(said.slice(0, 30)) || said.includes(tight(b.text).slice(0, 30)));
+      const free = e.bullets.filter((b) => !used.has(b.id) && tight(b.text));
+      const bullet =
+        free.find((b) => tight(b.text).startsWith(said.slice(0, 30)) || said.startsWith(tight(b.text).slice(0, 30))) ??
+        free.find((b) => tight(b.text).includes(said.slice(0, 30)) || said.includes(tight(b.text).slice(0, 30)));
+      if (bullet) used.add(bullet.id);
       return bullet ? [{ id: bullet.id, ...union(lines), lines }] : [];
     });
     return { id: e.id, ...union(own), bullets };

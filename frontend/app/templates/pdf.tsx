@@ -1,7 +1,7 @@
 // no "use client": only client components import this, so its function props never cross from the server
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import type { PDFDocumentProxy, PDFWorker } from "pdfjs-dist";
 
 // pdf.js's worker, made on the first PDF and kept: a document destroyed leaves a worker it was given running
@@ -315,8 +315,10 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
         });
         el.querySelector(".textLayer")?.classList.add("drawn");
       });
-      // measured once the sheets are in the document, where the text layer has its final layout
-      setPages(
+      // Measured once the sheets are in the document, where the text layer has its final layout. Set in the same
+      // task as the swap above: the old sheets took the field being typed in with them, and a key pressed before
+      // the overlay is back on the new ones would go nowhere
+      flushSync(() => setPages(
         pages.map((el, i) => {
           const at = el.getBoundingClientRect();
           const spans = [...el.querySelectorAll<HTMLElement>(".textLayer span:not(.markedContent)")]
@@ -327,8 +329,10 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
             });
           return { n: i + 1, of: pages.length, el, width: at.width, height: at.height, spans };
         }),
-      );
-    })().catch(() => !cancelled && setFailed(true));
+      ));
+      // a document replaced while it was being drawn (typing typesets a new one every pause) isn't a failure: the
+      // new one draws next
+    })().catch(() => !cancelled && !doc.loadingTask.destroyed && setFailed(true));
     return () => {
       cancelled = true;
     };

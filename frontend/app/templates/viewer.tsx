@@ -68,8 +68,9 @@ export function Viewer({
     if (src) setPdf(src);
   }
 
-  // free each rendered PDF once a newer one replaces it or the viewer closes
-  useEffect(() => () => (pdf.startsWith("blob:") ? URL.revokeObjectURL(pdf) : undefined), [pdf]);
+  // free each rendered PDF once a newer one replaces it or the viewer closes, a moment later: pdf.js may only
+  // be starting to load it when typing has already typeset the next one
+  useEffect(() => () => void (pdf.startsWith("blob:") && setTimeout(() => URL.revokeObjectURL(pdf), 2000)), [pdf]);
 
   useEffect(() => {
     if (!auto || !canRender || mode !== "code" || code === tex) return;
