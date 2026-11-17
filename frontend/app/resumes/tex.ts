@@ -102,7 +102,23 @@ export const toTex = (s: string) => {
 // A run's text as it can be written in LaTeX: dashes as -- or ---, spaces as thin spaces or ties, symbols
 // escaped. It must fill a whole argument or phrase, so "São Paulo, Brazil" doesn't match inside
 // "São Paulo, Brazil (Hybrid)".
-const spelled: Record<string, string> = { "–": "(?:--|–)", "—": "(?:---|—)", "’": "['’]", "‘": "[`‘]", "%": "\\\\%", $: "\\\\\\$", "&": "\\\\&", "#": "\\\\#", _: "\\\\_" };
+// every character esc spells, as esc spells it, so a text typed with braces or a backslash is found again
+const spelled: Record<string, string> = {
+  "–": "(?:--|–)",
+  "—": "(?:---|—)",
+  "’": "['’]",
+  "‘": "[`‘]",
+  "%": "\\\\%",
+  $: "\\\\\\$",
+  "&": "\\\\&",
+  "#": "\\\\#",
+  _: "\\\\_",
+  "{": "\\\\\\{",
+  "}": "\\\\\\}",
+  "\\": "\\\\textbackslash\\{\\}",
+  "~": "\\\\textasciitilde\\{\\}",
+  "^": "\\\\textasciicircum\\{\\}",
+};
 const pattern = (t: string) =>
   new RegExp(
     `(?<=^|[{\\s])${[...t.normalize("NFKC").trim()]

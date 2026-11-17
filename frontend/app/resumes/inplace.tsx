@@ -85,8 +85,10 @@ const caret = (el: HTMLElement, at?: { x: number; y: number }, offset?: number) 
 // A blur finishes the edit, unless the field was swapped out with the page (a PDF typeset from an earlier
 // change landing mid-sentence): that blur comes while the field is still attached, so this waits a tick and
 // commits only if it's still on the page. Its replacement on the new page takes over, text and caret intact.
-const commitLater = (el: HTMLElement, commit: (text: string) => void) => {
-  const text = marked(el);
+// read is how the field's text is taken: a bullet's with its marks, any other run's as the plain text it is
+// (marked would spell its "&" as "&amp;" and that would be saved)
+const commitLater = (el: HTMLElement, commit: (text: string) => void, read: (el: HTMLElement) => string = marked) => {
+  const text = read(el);
   setTimeout(() => el.isConnected && commit(text));
 };
 
@@ -313,7 +315,7 @@ export function Run({
       lang="en"
       contentEditable={editing ? "plaintext-only" : false}
       suppressContentEditableWarning
-      onBlur={(e) => editing && !handled.current && commitLater(e.currentTarget, onCommit)}
+      onBlur={(e) => editing && !handled.current && commitLater(e.currentTarget, onCommit, (el) => el.textContent ?? "")}
       onInput={(e) => onLive(e.currentTarget.textContent ?? "", offsetIn(e.currentTarget) ?? 0)}
       onKeyUp={(e) => editing && onLive(e.currentTarget.textContent ?? "", offsetIn(e.currentTarget) ?? 0)}
       onKeyDown={(e) => {
