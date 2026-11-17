@@ -6,7 +6,7 @@ import type { Article } from "./content";
 const serif = GeistSerifRegular.className;
 
 // the legal pages' long-form style, plus the elements guides use and legal text doesn't
-const prose = `${base} [&_em]:italic [&_blockquote]:mt-6 [&_blockquote]:border-l-2 [&_blockquote]:border-accent [&_blockquote]:pl-5 [&_blockquote]:text-ink [&_code]:rounded-md [&_code]:bg-mist [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.88em] [&_code]:text-ink [&_table]:mt-6 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:text-sm [&_th]:border-b [&_th]:border-ink/15 [&_th]:py-2 [&_th]:pr-5 [&_th]:text-left [&_th]:align-bottom [&_th]:font-medium [&_th]:text-ink [&_td]:border-b [&_td]:border-ink/5 [&_td]:py-2 [&_td]:pr-5 [&_td]:align-top`;
+const prose = `${base} [&_em]:italic [&_blockquote]:mt-6 [&_blockquote]:border-l-2 [&_blockquote]:border-ink/20 [&_blockquote]:pl-5 [&_blockquote]:text-ink [&_code]:rounded-md [&_code]:bg-mist [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.88em] [&_code]:text-ink [&_table]:mt-6 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:text-sm [&_th]:border-b [&_th]:border-ink/15 [&_th]:py-2 [&_th]:pr-5 [&_th]:text-left [&_th]:align-bottom [&_th]:font-medium [&_th]:text-ink [&_td]:border-b [&_td]:border-ink/5 [&_td]:py-2 [&_td]:pr-5 [&_td]:align-top`;
 
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
 const primary = `${btn} bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`;
