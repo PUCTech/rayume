@@ -21,7 +21,12 @@ Set out to make the resume editor feel like Google Docs with LaTeX underneath: n
 - **Contact fields** (`49f3a76`): labelled Email, Phone or Link by what the text is, with `mailto:`, `tel:` and `https://` placeholders. [`security/README.md`](../../security/README.md) now says links may be `tel:` too, as `href` in [`tex.ts`](../../../frontend/app/resumes/tex.ts) already allowed.
 - **Dates picker** (`cd1425d`): two pills (`Feb 2025 – Present`), each opening a base-ui popover with a year stepper and a 4×3 month grid. "Present" is the end popover's first choice, replacing the checkbox. An end before the start can't be picked.
 - **Margins say their size** (`cd1425d`): "Template margins", "Narrow margins (0.3 in)", "Wide margins (0.7 in)". The values didn't change (see Problems).
-- **Add and remove** (`848ad9b`, [`tex.ts`](../../../frontend/app/resumes/tex.ts), [`content.tsx`](../../../frontend/app/resumes/content.tsx)): contact links, projects, education entries, certifications and skill lines can be added and taken off, each as one undo step. A section's heading goes with its last entry and comes back with a new one. Form entries are keyed by what they are, so the open one no longer jumps after a removal or a re-sort.
+- **Add and remove** (`848ad9b`, [`tex.ts`](../../../frontend/app/resumes/tex.ts), [`content.tsx`](../../../frontend/app/resumes/content.tsx)): contact links, projects, education entries, certifications and skill lines can be added and taken off, each as one undo step. A section's heading goes with its last entry and comes back with a new one.
+- **Typing fast into a new bullet keeps every letter** (`7250179`, [`regions.ts`](../../../frontend/app/resumes/regions.ts), [`overlay.tsx`](../../../frontend/app/resumes/overlay.tsx), [`pdf.tsx`](../../../frontend/app/templates/pdf.tsx), [`viewer.tsx`](../../../frontend/app/templates/viewer.tsx)): each bullet has one place on the page and one item in the overlay, the new pages' overlay mounts in the same task as the sheets are swapped, a PDF replaced mid-draw no longer shows "Couldn't draw this PDF", and replaced blobs are freed 2 s later. Exact text in 10 of 10 runs each (5 at 30 ms per key, 5 at 0 ms) for Enter-then-type, three bullets in a row and a mid-bullet split; 5 s of continuous typing with 22 to 38 renders landing mid-typing, the caret never jumping; no console errors or "same key" warnings; Backspace, Esc, arrows, Alt+↑/↓ and one-step ⌘Z unchanged.
+- **The resume's name shows whole** (`b67ec96`): the pill's inset moved from the field to its heading. "Master resume" and a 60-character name show in full at 1440; at 390 the long one truncates.
+- **Quiet removes** (`b67ec96`): links, certifications and skill lines are removed with the bullet's × at the right of their first row ("Remove LinkedIn link"); settings still asks twice. Form entries are keyed by what they are, so the open one no longer jumps after a removal or a re-sort.
+- **Braces, backslashes and symbols round-trip** (`d1de2f8`, [`inplace.tsx`](../../../frontend/app/resumes/inplace.tsx), [`tex.ts`](../../../frontend/app/resumes/tex.ts)): `C++ {templates}`, `AT&T \ R&D`, `50% of $x_1$` and `~tilde^caret#hash` save, typeset literally, show back in the form and can be edited again, in the form and on the page, on the body's own skill line and on an added one (8 of 8).
+- **The zoom pill clears the page's last lines** once scrolled to the bottom (sheet bottom 820 vs pill top 844 at 1440, 600 vs 788 at 390); `pb-20` left as it is.
 - [`PROJECT.md`](../../PROJECT.md)'s editor line was updated with each commit.
 - **Outside the repo:** Playwright screenshots of every check are in `.playwright-mcp/` (git-ignored), the last round's under `.playwright-mcp/fable/`.
 
@@ -46,7 +51,10 @@ Set out to make the resume editor feel like Google Docs with LaTeX underneath: n
 
 ## Problems found
 
-- **Fast typing into a new bullet drops letters** (Enter, then type: "Wrote the onboarding guide" became "Wrote te onboarding guie"), with "two children with the same key new-…" in the console. It predates this session (`9b24790` does it too). A new bullet that has been typeset is in the overlay's `written` list twice, as a page bullet and as a "new" one, so React remounts the field under the caret. **Not fixed**: see Open.
+- **Fast typing into a new bullet drops letters** (Enter, then type: "Wrote the onboarding guide" became "Wrote te onboarding guie"), with "two children with the same key new-…" in the console. It predates this session (`9b24790` does it too). Three causes, fixed in `7250179`: `regions` matched a new bullet's first letters to every page line containing them (four page bullets took its id), the overlay also listed it once as "new" and once as the page's, and keys pressed between the sheets' swap and React mounting the new overlay went nowhere. A two-line fix that only matched targets by id made it worse, because the four mismatched page bullets then all became the field being edited.
+- **The accordion keying claimed in `848ad9b` wasn't in it**: a `grep` guarding the edit found nothing, the edit was skipped and a later `tsc` still printed "ok". Applied in `b67ec96`.
+- **A run edited on the page saved `&` as `&amp;`**: it was read with the bullets' `marked()`. And an added entry holding braces, a backslash, `~` or `^` couldn't be edited again, since `pattern()` didn't spell them. Both fixed in `d1de2f8`.
+- **macOS End doesn't move the caret** in a text field (⌘→ does), which made one of D's checks look like a bug at first.
 - **Margins were not inverted.** Narrow is 0.30in with a 7.90in text block, wide 0.70in and 7.10in, on Classic and Modern. The likely confusion: the default was labelled bare "Margins", and "Narrow" reads as a narrow column of text.
 - **The IDE's TypeScript errors in `editor.tsx` were stale** every time they appeared (a missing `label` export, `onCancel`, `body`): `tsc --noEmit` passed on disk each time.
 - **The session ran on Haiku at first by mistake**; the first three commits were orchestrated from it, with Opus agents doing the work.
@@ -54,21 +62,15 @@ Set out to make the resume editor feel like Google Docs with LaTeX underneath: n
 - **The `\underline` match in `withDoc` broke on escaped braces** once links could be added; it's now aware of nested braces.
 - **`handled` in `Written` was cleared when an edit ended, not when it started**, so a field left by a move could re-commit its old text on blur.
 - **Unsplash serves a browser check to `curl`**; photos were fetched from `images.unsplash.com` at `w=4000`.
-- **The usage limit ended the last agent mid-task** (it resets at 23:30 America/Sao_Paulo).
+- **The usage limit and a network error ended the follow-up agent mid-task** several times (the limit resets at 23:30 America/Sao_Paulo); each finished item was committed before the long re-runs.
 
 ## Open
 
-- **The follow-up round was cut off at its first step.** The agent had only added a temporary trace line to [`overlay.tsx`](../../../frontend/app/resumes/overlay.tsx) (marked `TRACE-TEMP`, **uncommitted in the working tree**; remove it or let the agent finish). Its four items, all still to do:
-  1. **The dropped-letters bug** above. Acceptance: exact text at 30 ms and 0 ms per key across Enter-type, three bullets in a row, a mid-bullet split and 5 s of continuous typing; the caret only ever advances by one; no "same key" warnings; Backspace, Esc, arrows, Alt+↑/↓ and ⌘Z unchanged.
-  2. **The resume's name is clipped** to "Master resu..." in the header with the bar empty beside it; it should show in full when there's room.
-  3. **"Remove link" is spelled out five times** in the Contact card; make it a quiet × like a bullet's, and the same wherever a worded remove button repeats down a list.
-  4. **A form field with braces or backslashes doesn't save** (`C++ {templates}`, `AT&T \ R&D`).
-  - Also check that the zoom pill doesn't permanently cover the page's last lines.
 - **Nothing is pushed and there's no PR** for `feat/resume-editor-ux`.
 - **`CLAUDE.md`'s security summary** still says links are http(s)/mailto only; the security doc now includes `tel:`.
 - **Moving a bullet** swaps texts within one entry; a bold label opening an item stays in place. Real order needs the API's bullets as a list.
 - **Undo history is lost on reload**, and without Tectonic, Download gives the template's original PDF.
 - **Auth pages:** the forms still aren't wired; on a phone, sign-up has a large gap above its heading (the step bar's reserved space); the slogan wasn't checked between 430 and 1023px; Ty Feague's photo passed by eye only, its contrast wasn't measured; "the job hunt." is 8% narrower than "Glide through" above it.
 - **Not checked:** real touch hardware and coarse-pointer sizes, Safari, pinch zoom, screen readers, and old saved documents that hold chat-added projects.
-- An occasional `ERR_FILE_NOT_FOUND` on a revoked blob URL after a reload; not confirmed whether it's new.
+- Rewriting a bullet from the page turns LaTeX's thin space into a plain one (`3.8\,s` becomes `3.8 s`), as before this session.
 - Still open from before: no frontend test runner, the four Overleaf templates don't read the shared body, everything signed-in is localStorage.
