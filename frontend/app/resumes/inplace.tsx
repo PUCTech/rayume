@@ -85,8 +85,10 @@ const caret = (el: HTMLElement, at?: { x: number; y: number }, offset?: number) 
 // A blur finishes the edit, unless the field was swapped out with the page (a PDF typeset from an earlier
 // change landing mid-sentence): that blur comes while the field is still attached, so this waits a tick and
 // commits only if it's still on the page. Its replacement on the new page takes over, text and caret intact.
-const commitLater = (el: HTMLElement, commit: (text: string) => void) => {
-  const text = marked(el);
+// read is how the field's text is taken: a bullet's with its marks, any other run's as the plain text it is
+// (marked would spell its "&" as "&amp;" and that would be saved)
+const commitLater = (el: HTMLElement, commit: (text: string) => void, read: (el: HTMLElement) => string = marked) => {
+  const text = read(el);
   setTimeout(() => el.isConnected && commit(text));
 };
 
@@ -95,7 +97,8 @@ const commitLater = (el: HTMLElement, commit: (text: string) => void) => {
 // editing looks like the page itself changing. It reports how many lines it gained or lost (onDelta) so
 // the overlay can slide the rest of the page; offset is how far the bullets above have moved it.
 // Enter splits it at the caret into a new bullet (onSplit), Backspace in an empty one removes it, Esc
-// drops the edit. ⌘B and ⌘I set bold and italic (the browser's own, on a contenteditable), shown in the
+// leaves it with the text kept, as a document does (⌘Z takes it back). ⌥↑ and ⌥↓ move it past the bullet
+// above or below (onMove, which says whether it did), what's typed and its formatting going with it. ⌘B and ⌘I set bold and italic (the browser's own, on a contenteditable), shown in the
 // PDF's bold and italic faces when it has them (faces). The arrow keys walk out of it into the text next
 // to it (onNav). It stays, no longer editable, until the re-typeset PDF arrives and replaces it.
 // What's typed and where the caret is go up as you type (onLive), so a field swapped out with the page
@@ -110,9 +113,9 @@ export function Written({
   start,
   busy,
   onCommit,
-  onCancel,
   onSplit,
   onRemove,
+  onMove,
   onDelta,
   onLive,
   onNav,
@@ -126,18 +129,21 @@ export function Written({
   start?: number;
   busy: boolean;
   onCommit: (text: string) => void;
-  onCancel: () => void;
   onSplit: (before: string, after: string) => void;
   onRemove: () => void;
+  onMove: (up: boolean, text: string, at: number) => boolean;
   onDelta: (delta: number) => void;
   onLive: (text: string, at: number) => void;
   onNav: (dir: Dir, x: number) => void;
   faces: { bold?: string; italic?: string };
 }) {
   const box = useRef<HTMLDivElement>(null);
-  // while editing, the browser owns the text: React re-setting it under the caret would move the caret
+  // while editing, the browser owns the text: React re-setting it under the caret would move the caret. It's
+  // taken as the edit starts, which may be in the same render as the text changing (a bullet moved into this one)
   const [frozen, setFrozen] = useState(text);
-  if (!editing && frozen !== text) setFrozen(text);
+  const [was, setWas] = useState(editing);
+  if (editing !== was) setWas(editing);
+  if ((!editing || !was) && frozen !== text) setFrozen(text);
   const orig = g.rows * g.lh;
   const [h, setH] = useState(orig);
   // set once a key has handled the edit, so the blur that follows doesn't commit it again
@@ -146,9 +152,11 @@ export function Written({
   const top = g.top + offset;
 
   // the caret goes where the click was, which lands on the same word since the text sits where the PDF's did
+  // handled is cleared as an edit starts, not as it ends: the field being left still has its blur to come
   useLayoutEffect(() => {
+    if (!editing) return;
     handled.current = false;
-    if (editing && box.current) caret(box.current, at, start);
+    if (box.current) caret(box.current, at, start);
     // once per edit: later clicks move the caret natively
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
@@ -186,7 +194,11 @@ export function Written({
       // the drawer would close on it
       e.stopPropagation();
       handled.current = true;
-      onCancel();
+      onCommit(marked(el));
+    } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      // never the caret's own ⌥↑, which would jump to the paragraph's start: a move that can't happen does nothing
+      e.preventDefault();
+      if (onMove(e.key === "ArrowUp", marked(el), offsetIn(el) ?? 0)) handled.current = true;
     } else {
       const to = leaving(e, g.lh);
       if (!to) return;
@@ -245,7 +257,7 @@ export function Written({
 // Any other run of text written on the page (a title, a date, a skill line): one line in the run's font and
 // place, growing the way the PDF sets it: from its left, from its right for text set flush right (dates),
 // from its middle for centered text (the name). A run set in capitals (the name, uppercased by the template)
-// shows capitals as you type. Enter or a click away saves, Esc drops it, the arrow keys walk out of it.
+// shows capitals as you type. Enter, Esc or a click away saves it, the arrow keys walk out of it.
 export function Run({
   x,
   y,
@@ -263,7 +275,6 @@ export function Run({
   busy,
   start,
   onCommit,
-  onCancel,
   onLive,
   onNav,
 }: {
@@ -283,7 +294,6 @@ export function Run({
   busy: boolean;
   start?: number;
   onCommit: (text: string) => void;
-  onCancel: () => void;
   onLive: (text: string, at: number) => void;
   onNav: (dir: Dir, x: number) => void;
 }) {
@@ -305,7 +315,7 @@ export function Run({
       lang="en"
       contentEditable={editing ? "plaintext-only" : false}
       suppressContentEditableWarning
-      onBlur={(e) => editing && !handled.current && commitLater(e.currentTarget, onCommit)}
+      onBlur={(e) => editing && !handled.current && commitLater(e.currentTarget, onCommit, (el) => el.textContent ?? "")}
       onInput={(e) => onLive(e.currentTarget.textContent ?? "", offsetIn(e.currentTarget) ?? 0)}
       onKeyUp={(e) => editing && onLive(e.currentTarget.textContent ?? "", offsetIn(e.currentTarget) ?? 0)}
       onKeyDown={(e) => {
@@ -315,7 +325,7 @@ export function Run({
         } else if (e.key === "Escape") {
           e.stopPropagation();
           handled.current = true;
-          onCancel();
+          onCommit(e.currentTarget.textContent ?? "");
         } else {
           const to = leaving(e, h);
           if (!to) return;

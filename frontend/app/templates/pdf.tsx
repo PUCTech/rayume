@@ -1,18 +1,23 @@
-"use client";
+// no "use client": only client components import this, so its function props never cross from the server
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import type { PDFDocumentProxy, PDFWorker } from "pdfjs-dist";
 
 // pdf.js's worker, made on the first PDF and kept: a document destroyed leaves a worker it was given running
 let worker: PDFWorker | undefined;
 import "./pdf.css";
 
-// the zoom buttons step through these; a pinch goes anywhere between the ends
+// the zoom buttons step through these; a pinch goes anywhere between the ends. Writing on the page goes down
+// to a quarter, where a phone's fit (about 42%) sits
 const zooms = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
-const [min, max] = [zooms[0], zooms.at(-1)!];
+const vectorZooms = [0.25, ...zooms];
+const max = zooms.at(-1)!;
 // pages open at three quarters of the box's width, with room around them; Reset comes back here
 const start = 0.75;
+// a US Letter sheet at its real size, in CSS pixels: what the editor's 100% is
+const sheet = 816;
+const shadow = "shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]";
 
 // A drawn page as an overlay sees it: the sheet element, its size, and every run of text on it with its
 // box in CSS pixels from the sheet's top left, all in reading order. font is the PDF's own embedded font,
@@ -31,13 +36,18 @@ const zoomButton = "grid size-8 place-items-center rounded-full text-ink/70 tran
 // A PDF whose fonts pdf.js can't load as fonts (drawn as shapes instead) falls back to the canvas either way.
 // The text layer's CSS is in pdf.css. The layer comes from pdf.js's viewer kit (TextLayerBuilder), not the bare
 // TextLayer: the kit adds the end-of-content element and selection listener that keep a drag through
-// gaps between lines from jumping ahead and back. At 100% a page fills the width of the box;
-// zooming redraws from the loaded document and scrolls both ways once a page is wider than the box.
+// gaps between lines from jumping ahead and back. At 100% a page fills the width of the box (with an
+// overlay, it's the sheet's real size: see below); zooming redraws from the loaded document and scrolls both ways once a page is wider than the box.
 // The browser's own PDF viewer (an iframe) frames the page in its grey background, which no CSS can reach.
 // overlay, when given, is rendered over each page (through a portal into the sheet) once its text is laid out,
 // and again after every zoom with the new positions.
 // Pages are drawn again when the box changes width (a panel beside it opened, closed or was dragged), once
-// the resizing pauses.
+// the resizing pauses. With an overlay the zoom is a share of the real sheet instead, as a document's is
+// (100% is 816 CSS pixels for US Letter), so the percentage shown is the page's true size: the page opens
+// fitted to the box's width, never past 100%, and then keeps its size whatever the panels beside it do,
+// scrolling sideways inside the box once it's wider. Fit to width fits it again, and so does resizing the
+// window, until you zoom yourself. Until the first page is drawn a blank sheet of that size stands where it
+// will land, so the editor doesn't open on an empty desk.
 export function Pdf({ src, title, overlay }: { src: string; title: string; overlay?: (page: Page) => ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy>();
@@ -48,35 +58,28 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
   const vector = !!overlay;
   // the box's width the pages are drawn for; 0 until it's measured
   const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    let wait = 0;
-    const fit = () => setWidth((w) => (Math.abs(el.clientWidth - w) > 2 ? el.clientWidth : w));
-    fit();
-    const ro = new ResizeObserver(() => {
-      clearTimeout(wait);
-      wait = window.setTimeout(fit, 150);
-    });
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-      clearTimeout(wait);
-    };
-  }, []);
+  // live is the zoom on screen, drawn the one the pages were drawn at (see zoomTo)
+  const live = useRef(start);
+  const drawn = useRef(start);
+  const steps = vector ? vectorZooms : zooms;
+  const min = steps[0];
+  // true until you zoom yourself: the page then follows the window's width
+  const auto = useRef(true);
+  // set once the box has a width and the page's zoom was fitted to it
+  const opened = useRef(false);
+  const fitted = () => Math.min(1, Math.max(min, ((box.current?.clientWidth ?? 0) - 48) / sheet));
   // Zoom follows the fingers: while a pinch (or a button) changes it, the pages already drawn are scaled with
   // CSS zoom, around the pinch so what's under the fingers stays there, and once it pauses they're drawn again,
   // sharp, at the new size. A trackpad pinch arrives as ctrl+wheel, in Safari as gesture events, on a phone as
   // two touches; the browser's own page zoom is held off over the PDF.
-  // live is the zoom on screen, drawn the one the pages were drawn at; shown is live, for the controls
-  const live = useRef(start);
-  const drawn = useRef(start);
+  // shown is live, for the controls
   const [shown, setShown] = useState(start);
   const settle = useRef(0);
   const zoomTo = (to: number, at?: { x: number; y: number }) => {
     const el = box.current;
     const next = Math.min(max, Math.max(min, to));
     const f = next / live.current;
+    auto.current = false;
     if (!el || f === 1) return;
     live.current = next;
     (el.firstElementChild as HTMLElement).style.zoom = String(next / drawn.current);
@@ -87,6 +90,49 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
     clearTimeout(settle.current);
     settle.current = window.setTimeout(() => setZoom(live.current), 250);
   };
+  const refit = () => {
+    zoomTo(fitted());
+    auto.current = true;
+  };
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    let wait = 0;
+    // the window changed size since the last fit: the panels have settled by the time fit runs
+    let resized = false;
+    const fit = () => {
+      if (!vector) return setWidth((w) => (Math.abs(el.clientWidth - w) > 2 ? el.clientWidth : w));
+      if (!el.clientWidth) return;
+      // the first width the box has sets the zoom; after that only the window's does (see auto)
+      if (!opened.current) {
+        opened.current = true;
+        const z = fitted();
+        live.current = drawn.current = z;
+        setZoom(z);
+        setShown(z);
+        setWidth(el.clientWidth);
+      } else if (resized && auto.current) refit();
+      resized = false;
+    };
+    fit();
+    const later = () => {
+      clearTimeout(wait);
+      wait = window.setTimeout(fit, 150);
+    };
+    const ro = new ResizeObserver(later);
+    ro.observe(el);
+    const onWindow = () => {
+      resized = true;
+      later();
+    };
+    window.addEventListener("resize", onWindow);
+    return () => {
+      ro.disconnect();
+      clearTimeout(wait);
+      window.removeEventListener("resize", onWindow);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refit reads refs only
+  }, [vector]);
   useEffect(() => {
     const el = box.current;
     if (!el) return;
@@ -133,6 +179,7 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
       el.removeEventListener("gesturechange", onGesture);
       clearTimeout(settle.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- zoomTo reads refs and the mode, which never changes
   }, []);
   // the text layers on screen; each holds a global selection listener until it's cancelled
   const layers = useRef<{ cancel(): void }[]>([]);
@@ -171,11 +218,11 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
       const { Util } = await import("pdfjs-dist");
       for (let n = 1; n <= doc.numPages; n++) {
         const page = await doc.getPage(n);
-        const scale = (fit / page.getViewport({ scale: 1 }).width) * zoom;
+        const scale = (vector ? 96 / 72 : fit / page.getViewport({ scale: 1 }).width) * zoom;
         const viewport = page.getViewport({ scale });
         const sheet = document.createElement("div");
         // isolate: the layers' z-indexes stay inside the page, under the zoom controls
-        sheet.className = "relative isolate shrink-0 bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)]";
+        sheet.className = `relative isolate shrink-0 bg-white ${shadow}`;
         sheet.style.cssText = `width:${viewport.width}px;height:${viewport.height}px;--scale-factor:${scale};--total-scale-factor:${scale};--scale-round-x:1px;--scale-round-y:1px`;
         const canvas = document.createElement("canvas");
         canvas.width = Math.floor(viewport.width * devicePixelRatio);
@@ -268,8 +315,10 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
         });
         el.querySelector(".textLayer")?.classList.add("drawn");
       });
-      // measured once the sheets are in the document, where the text layer has its final layout
-      setPages(
+      // Measured once the sheets are in the document, where the text layer has its final layout. Set in the same
+      // task as the swap above: the old sheets took the field being typed in with them, and a key pressed before
+      // the overlay is back on the new ones would go nowhere
+      flushSync(() => setPages(
         pages.map((el, i) => {
           const at = el.getBoundingClientRect();
           const spans = [...el.querySelectorAll<HTMLElement>(".textLayer span:not(.markedContent)")]
@@ -280,8 +329,10 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
             });
           return { n: i + 1, of: pages.length, el, width: at.width, height: at.height, spans };
         }),
-      );
-    })().catch(() => !cancelled && setFailed(true));
+      ));
+      // a document replaced while it was being drawn (typing typesets a new one every pause) isn't a failure: the
+      // new one draws next
+    })().catch(() => !cancelled && !doc.loadingTask.destroyed && setFailed(true));
     return () => {
       cancelled = true;
     };
@@ -300,22 +351,26 @@ export function Pdf({ src, title, overlay }: { src: string; title: string; overl
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       {/* the stable gutter keeps the measured width the same once pages overflow and the scrollbar shows */}
-      <div ref={box} role="document" aria-label={title} className="min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable]">
+      <div ref={box} role="document" aria-label={title} className="relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable]">
         {/* w-max centres pages narrower than the box and lets wider ones scroll from their left edge; at
-            100% of the full box width pages sit edge to edge, as before zoom existed */}
-        <div className={`mx-auto flex w-max min-w-full flex-col items-center ${shown === 1 ? "" : "gap-4 py-6"}`} />
+            100% of the full box width pages sit edge to edge, as before zoom existed. The room above and below
+            clears the View and Zoom pills, which otherwise sit over the page's corner and its foot; written on,
+            a page always has it, and room either side once it scrolls sideways */}
+        <div className={`mx-auto flex w-max min-w-full flex-col items-center ${vector ? "gap-4 px-6 pt-16 pb-20" : shown === 1 ? "" : "gap-4 pt-16 pb-20"}`} />
+        {/* the sheet, blank, exactly where the first page will be drawn (centred, below the same room) */}
+        {vector && !pages.length && width > 0 && <div aria-hidden style={{ width: sheet * shown, height: sheet * shown * (11 / 8.5) }} className={`absolute inset-x-0 top-16 mx-auto animate-pulse bg-white ${shadow} motion-reduce:animate-none`} />}
       </div>
       {overlay && pages.map((p) => createPortal(overlay(p), p.el, `page-${p.n}`))}
       <div role="group" aria-label="Zoom" className="glass absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center rounded-full p-1 text-sm">
-        <button type="button" aria-label="Zoom out" disabled={shown <= min} onClick={() => zoomTo(zooms.findLast((z) => z < shown - 0.01) ?? min)} className={zoomButton}>
+        <button type="button" aria-label="Zoom out" disabled={shown <= min} onClick={() => zoomTo(steps.findLast((z) => z < shown - 0.01) ?? min)} className={zoomButton}>
           <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <path d="M5 10h10" />
           </svg>
         </button>
-        <button type="button" aria-label="Reset zoom" onClick={() => zoomTo(start)} className="w-14 rounded-full py-1.5 font-medium tabular-nums text-ink/70 transition hover:bg-ink/5 hover:text-ink">
+        <button type="button" aria-label={vector ? "Fit to width" : "Reset zoom"} title={vector ? "Fit to width" : undefined} onClick={() => (vector ? refit() : zoomTo(start))} className="w-14 rounded-full py-1.5 font-medium tabular-nums text-ink/70 transition hover:bg-ink/5 hover:text-ink">
           {Math.round(shown * 100)}%
         </button>
-        <button type="button" aria-label="Zoom in" disabled={shown >= max} onClick={() => zoomTo(zooms.find((z) => z > shown + 0.01) ?? max)} className={zoomButton}>
+        <button type="button" aria-label="Zoom in" disabled={shown >= max} onClick={() => zoomTo(steps.find((z) => z > shown + 0.01) ?? max)} className={zoomButton}>
           <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <path d="M5 10h10M10 5v10" />
           </svg>

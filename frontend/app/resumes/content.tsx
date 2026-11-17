@@ -1,18 +1,26 @@
-"use client";
+// no "use client": only client components import this, so its function props never cross from the server
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { Accordion } from "@base-ui/react/accordion";
-import { Check, ChevronDown, Link2, LoaderCircle, Plus, Trash2, X } from "lucide-react";
+import { Popover } from "@base-ui/react/popover";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Link2, Plus, Trash2, X } from "lucide-react";
 import { entries } from "../app/data";
-import { blank, dates, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withoutJob, type Doc, type Field, type Group, type Job } from "./tex";
+import { blank, dates, kinds, mark, months, outline, projectBullets, strip, tidy, undates, settle, withBullet, withJob, withLine, withLink, withoutEntry, withoutJob, withoutLink, withProject, type Doc, type Field, type Group, type Job } from "./tex";
 
+// rounded-2xl: a one-line field is a pill, a bullet's box keeps soft corners (the sign-in form's fields)
 const input =
-  "w-full rounded-lg bg-white px-2.5 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text disabled:opacity-40 sm:text-[13px]";
-const quiet = "flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/5 hover:text-ink";
+  "w-full rounded-2xl bg-white px-3 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text disabled:opacity-40 sm:text-[13px] pointer-coarse:py-2.5";
+const quiet = "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/5 hover:text-ink";
 const originals = entries.flatMap((e) => e.bullets);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
-const years = Array.from({ length: 50 }, (_, i) => String(new Date().getFullYear() + 1 - i));
+// what a header link is, by its text: an email, a phone number, or anything else, with the address it takes
+const linkKind = (text: string) =>
+  text.includes("@")
+    ? { name: "Email", address: "Email address link", placeholder: "mailto:you@example.com" }
+    : /^\+?[\d\s().-]{7,}$/.test(text.trim())
+      ? { name: "Phone", address: "Phone number link", placeholder: "tel:+5511987654321" }
+      : { name: "Link", address: `Link address for ${text}`, placeholder: "https://" };
 
 // A field's name, always shown above it: a placeholder goes once the field is filled, and then nothing says
 // which box is the company and which the place.
@@ -25,43 +33,146 @@ function Labeled({ label, className = "", children }: { label: string; className
   );
 }
 
-// A month as the API keeps it (YYYY-MM), picked as a month and a year
-function Month({ label, value, onChange }: { label: string; value: string; onChange: (ym: string) => void }) {
-  const [y, m] = value.split("-");
-  const sel = "cursor-pointer rounded-lg bg-white py-1.5 pl-2 pr-1 text-base text-ink ring-1 ring-ink/10 outline-none transition hover:ring-ink/25 focus:ring-2 focus:ring-accent-text sm:text-[13px]";
+// the month menus' surface, the toolbar's Pick popup's (editor.tsx), so both read as one family
+const popup =
+  "origin-(--transform-origin) rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none";
+const cell = "rounded-full text-[13px] text-ink/80 outline-none transition hover:bg-ink/5 focus-visible:ring-2 focus-visible:ring-accent-text disabled:pointer-events-none disabled:opacity-30";
+const short = (ym: string) => `${months[Number(ym.slice(5, 7)) - 1].slice(0, 3)} ${ym.slice(0, 4)}`;
+const long = (ym: string) => `${months[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+
+// A month as the API keeps it (YYYY-MM), or null for still there (present, the end only), picked as the
+// resume reads it: a pill saying "Feb 2025" that opens a year with its twelve months. Years step without
+// closing; a month picks and closes. Months before min can't be picked. The arrow keys walk the months.
+function Month({ label, value, min, present, onChange }: { label: string; value: string | null; min?: string; present?: boolean; onChange: (ym: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [year, setYear] = useState(Number((value ?? thisMonth()).slice(0, 4)));
+  const chosen = useRef<HTMLButtonElement>(null);
+  const pick = (ym: string | null) => {
+    onChange(ym);
+    setOpen(false);
+  };
+  const walk = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -4, ArrowDown: 4 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const all = [...e.currentTarget.querySelectorAll("button")];
+    let i = all.indexOf(document.activeElement as HTMLButtonElement);
+    do i += step;
+    while (all[i]?.disabled);
+    all[i]?.focus();
+  };
   return (
-    <span role="group" aria-label={label} className="flex gap-1">
-      <select aria-label={`${label} month`} value={m} onChange={(e) => onChange(`${y}-${e.target.value}`)} className={sel}>
-        {months.map((name, i) => (
-          <option key={name} value={String(i + 1).padStart(2, "0")}>
-            {name.slice(0, 3)}
-          </option>
-        ))}
-      </select>
-      <select aria-label={`${label} year`} value={y} onChange={(e) => onChange(`${e.target.value}-${m}`)} className={sel}>
-        {(years.includes(y) ? years : [y, ...years]).map((v) => (
-          <option key={v}>{v}</option>
-        ))}
-      </select>
-    </span>
+    <Popover.Root
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setYear(Number((value ?? min ?? thisMonth()).slice(0, 4)));
+      }}
+    >
+      <Popover.Trigger aria-label={`${label}, ${value ? long(value) : "Present"}`} className={`${input} text-left tabular-nums data-popup-open:ring-2 data-popup-open:ring-accent-text`}>
+        {value ? short(value) : "Present"}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner sideOffset={6} align="start" collisionPadding={8} className="z-[70] outline-none">
+          <Popover.Popup initialFocus={chosen} aria-label={label} className={`${popup} w-60`}>
+            {present && (
+              <button type="button" onClick={() => pick(null)} className={`${cell} mb-1 flex h-8 w-full items-center justify-between px-2.5 pointer-coarse:h-11 ${value === null ? "text-accent-text" : ""}`}>
+                Present
+                {value === null && <Check aria-hidden className="size-3.5 text-accent-text" />}
+              </button>
+            )}
+            <div className="flex items-center justify-between">
+              <button type="button" aria-label="Previous year" disabled={!!min && year <= Number(min.slice(0, 4))} onClick={() => setYear((y) => y - 1)} className={`${cell} grid size-8 place-items-center pointer-coarse:size-11`}>
+                <ChevronLeft aria-hidden className="size-4" />
+              </button>
+              <span aria-live="polite" className="text-[13px] font-medium tabular-nums">
+                {year}
+              </span>
+              <button type="button" aria-label="Next year" onClick={() => setYear((y) => y + 1)} className={`${cell} grid size-8 place-items-center pointer-coarse:size-11`}>
+                <ChevronRight aria-hidden className="size-4" />
+              </button>
+            </div>
+            <div onKeyDown={walk} className="mt-1 grid grid-cols-4 gap-0.5">
+              {months.map((name, i) => {
+                const ym = `${year}-${String(i + 1).padStart(2, "0")}`;
+                const on = ym === value;
+                return (
+                  <button
+                    key={name}
+                    ref={on || (!value && ym === (min ?? thisMonth())) ? chosen : undefined}
+                    type="button"
+                    aria-label={`${name} ${year}`}
+                    aria-pressed={on}
+                    disabled={!!min && ym < min}
+                    onClick={() => pick(ym)}
+                    className={`${cell} h-8 pointer-coarse:h-11 ${on ? "bg-accent/10 font-medium text-accent-text" : ""}`}
+                  >
+                    {name.slice(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
-// A job's dates: from, to, or still there (end null, like the API's ExperienceData). Leaving "Current" ends it
-// this month.
+// A job's dates: from, to, or still there (end null, like the API's ExperienceData), as two pills with a dash
+// between, the way the resume writes them. An end before the start can't be picked, and a start moved past
+// the end takes the end with it.
 function Dates({ start, end, onChange }: { start: string; end: string | null; onChange: (start: string, end: string | null) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-      <Month label="Start" value={start} onChange={(s) => onChange(s, end)} />
-      <span aria-hidden className="text-ink/40">–</span>
-      {end === null ? <span className="px-1 text-[13px] text-ink/70">Present</span> : <Month label="End" value={end} onChange={(e) => onChange(start, e)} />}
-      <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-ink/70">
-        <input type="checkbox" checked={end === null} onChange={(e) => onChange(start, e.target.checked ? null : thisMonth())} className="size-3.5 accent-accent-deep" />
-        Current
-      </label>
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+      <Month label="Start date" value={start} onChange={(s) => s && onChange(s, end && end < s ? s : end)} />
+      <span aria-hidden className="text-ink/40">
+        –
+      </span>
+      <Month label="End date" value={end} min={start} present onChange={(e) => onChange(start, e)} />
     </div>
   );
 }
+
+// what an entry of each section is called on its buttons; the sections the form can add to and take from
+const nouns: Record<string, string> = { Projects: "project", Education: "education", Certifications: "certification", "Technical Skills": "skill line" };
+// entries that are a line each, one after another down their card: removed with the quiet ×, like a link
+const lineSections = new Set(["Certifications", "Technical Skills"]);
+
+// Anything else that isn't on the resume yet, as a short form like a new job's: the texts its line needs, a
+// name above each, and it goes in once the ones not optional are filled
+function NewEntry({ title, fields, submit, onAdd, onCancel }: { title: string; fields: { label: string; placeholder: string; optional?: boolean }[]; submit: string; onAdd: (values: string[]) => void; onCancel: () => void }) {
+  const [values, setValues] = useState(fields.map(() => ""));
+  const ready = fields.every((f, i) => f.optional || values[i].trim());
+  return (
+    <form
+      aria-label={title}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready) onAdd(values.map(tidy));
+      }}
+      className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-accent-text/30"
+    >
+      <p className="text-[13px] font-medium">{title}</p>
+      {fields.map((f, i) => (
+        <Labeled key={f.label} label={f.optional ? `${f.label} (optional)` : f.label}>
+          <input autoFocus={i === 0} value={values[i]} onChange={(e) => setValues((v) => v.map((x, j) => (j === i ? e.target.value : x)))} placeholder={f.placeholder} className={input} />
+        </Labeled>
+      ))}
+      <div className="flex items-center justify-end gap-1.5 pt-1">
+        <button type="button" onClick={onCancel} className="rounded-full px-3 py-1.5 text-[13px] font-medium text-ink/65 transition hover:bg-ink/5 hover:text-ink pointer-coarse:py-2.5">
+          Cancel
+        </button>
+        <button type="submit" disabled={!ready} className="rounded-full bg-accent-deep px-3.5 py-1.5 text-[13px] font-medium text-white transition hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 pointer-coarse:py-2.5">
+          {submit}
+        </button>
+      </div>
+    </form>
+  );
+}
+const placeholders: Record<string, string> = { Degree: "B.S. in Computer Science", School: "University", Dates: "2022 -- 2026", Name: "AWS Certified Developer", Issuer: "Amazon Web Services", Year: "2025", Label: "Languages", Skills: "TypeScript, Python, SQL" };
+// the dashed row that opens a new entry's form
+const addRow = "flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink/20 px-3 py-2.5 text-[13px] font-medium text-ink/70 transition hover:border-accent-text/50 hover:bg-white hover:text-accent-text pointer-coarse:min-h-11";
 
 // A job that isn't on the resume yet, as a short form: it goes in, in its place by date, only once it has
 // what a \role line needs (title, company, place, dates) and a first bullet; after that it's edited like the rest.
@@ -118,8 +229,10 @@ function NewJob({ onAdd, onCancel }: { onAdd: (j: Job) => void; onCancel: () => 
 // A text of the resume as a form field. It saves itself as a document does: on a pause in the typing, and
 // when you leave it. An empty field isn't saved: leaving it brings the text back. What the resume has
 // (value) replaces what's shown whenever the field isn't being typed in: a change made on the page, an undo.
-// late waits for you to leave the field (a bullet that doesn't exist yet, which saving would move); empty
-// lets an emptied field save (a link's address, taken off).
+// late waits for you to leave the field (a bullet that doesn't exist yet, which saving would move), and
+// saves on leaving even unchanged (a split-off bullet's text); empty lets an emptied field save (a link's
+// address, taken off). A bullet's keys, each saying whether it took the edit (it then saves nothing itself):
+// Enter splits it at the caret (onEnter), Backspace in an empty one removes it (onEmpty), ⌥↑ ⌥↓ move it (onMove).
 function Text({
   value,
   label,
@@ -131,6 +244,9 @@ function Text({
   className = "",
   onSave,
   onLive,
+  onEnter,
+  onEmpty,
+  onMove,
 }: {
   value: string;
   label: string;
@@ -143,8 +259,19 @@ function Text({
   onSave: (text: string) => void;
   // each keystroke's text, for a live preview, ahead of the save on a pause
   onLive?: (text: string) => void;
+  onEnter?: (before: string, after: string) => boolean;
+  onEmpty?: (el: HTMLTextAreaElement) => boolean;
+  onMove?: (up: boolean, text: string, el: HTMLTextAreaElement) => boolean;
 }) {
   const [text, setText] = useState(value);
+  const timer = useRef(0);
+  // set once a key took the edit: the blur that follows saves nothing
+  const taken = useRef(false);
+  // a field opened for you starts at its start: a split-off bullet's caret goes before its text
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (autoFocus) ref.current?.setSelectionRange(0, 0);
+  }, [autoFocus]);
   const [seen, setSeen] = useState<string | null>(value);
   const [focused, setFocused] = useState(false);
   if (value !== seen) {
@@ -154,8 +281,8 @@ function Text({
   useEffect(() => {
     if (late || !focused || text === value || !(empty || text.trim())) return;
     onLive?.(text);
-    const id = window.setTimeout(() => onSave(text), 700);
-    return () => clearTimeout(id);
+    timer.current = window.setTimeout(() => onSave(text), 700);
+    return () => clearTimeout(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts with each keystroke
   }, [text]);
   const props = {
@@ -169,7 +296,8 @@ function Text({
       setFocused(false);
       // shows what the resume has from here on: the saved text tidied, or the old one if this wasn't saved
       setSeen(null);
-      if (text !== value && (empty || text.trim())) onSave(text);
+      if (taken.current) return void (taken.current = false);
+      if ((late || text !== value) && (empty || text.trim())) onSave(text);
     },
     className: `${input} ${className}`,
   };
@@ -178,9 +306,24 @@ function Text({
       {...props}
       rows={1}
       onChange={(e) => setText(e.target.value.replace(/\n/g, " "))}
-      // a bullet is one paragraph: Enter finishes it
-      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), e.currentTarget.blur())}
-      className={`${props.className} resize-none leading-snug [field-sizing:content]`}
+      ref={ref}
+      onKeyDown={(e) => {
+        const el = e.currentTarget;
+        const take = (done: boolean) => done && (clearTimeout(timer.current), (taken.current = true));
+        // a bullet is one paragraph: Enter finishes it, or starts the next
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          if (!onEnter) el.blur();
+          else take(onEnter(text.slice(0, el.selectionStart), text.slice(el.selectionEnd)));
+        } else if (e.key === "Backspace" && !text && onEmpty) {
+          e.preventDefault();
+          take(onEmpty(el));
+        } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && onMove) {
+          e.preventDefault();
+          take(onMove(e.key === "ArrowUp", text, el));
+        }
+      }}
+      className={`${input} ${className} resize-none leading-snug [field-sizing:content]`}
     />
   ) : (
     <input {...props} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
@@ -193,7 +336,9 @@ function Text({
 // its capitals: the page reads the name in the capitals the template sets it in, the form as the LaTeX has it.
 function form(body: string, doc: Doc, change: (d: Doc) => void, preview?: (d: Doc) => void) {
   const runKey = (f: Field) => Object.keys(doc.runs).find((k) => k.toLowerCase() === f.key.toLowerCase());
-  const text = (id: string) => strip(doc.added.find((a) => a.id === id)?.text ?? doc.bullets[id] ?? [...originals, ...projectBullets(doc)].find((b) => b.id === id)?.text ?? "");
+  // a bullet as the document keeps it, bold and italic included, and as bare text
+  const raw = (id: string) => doc.added.find((a) => a.id === id)?.text ?? doc.bullets[id] ?? [...originals, ...projectBullets(doc)].find((b) => b.id === id)?.text ?? "";
+  const text = (id: string) => strip(raw(id));
   const chain = (id: string): { id: string; text: string }[] => {
     const t = text(id);
     const next = doc.added.filter((a) => a.after === id).reverse().flatMap((a) => chain(a.id));
@@ -232,26 +377,52 @@ function form(body: string, doc: Doc, change: (d: Doc) => void, preview?: (d: Do
       const next = withText(id, raw);
       if (next) preview?.(next);
     },
-    onAdd: (after: string, raw: string) => tidy(raw) && change({ ...doc, added: [...doc.added, { id: `new-${Date.now()}`, after, text: mark(tidy(raw)) }] }),
+    // the new bullet's id, or nothing for an empty one
+    onAdd: (after: string, typed: string) => {
+      if (!tidy(typed)) return;
+      const id = `new-${Date.now()}`;
+      change({ ...doc, added: [...doc.added, { id, after, text: mark(tidy(typed)) }] });
+      return id;
+    },
+    // A bullet moved past its neighbour swaps texts with it: the page's bullets are matched by their place, so
+    // the text is what moves. typed is what its field holds now; unchanged, it keeps its bold and italic.
+    // shortcut: a bold label opening an item (Relevant Activities:) stays where it is; real order needs the API's
+    // bullets as a list (ExperienceData)
+    onMove: (id: string, typed: string, to: string) => {
+      if (!tidy(typed)) return false;
+      const mine = tidy(typed) === text(id) ? raw(id) : mark(tidy(typed));
+      change(withBullet(withBullet(doc, id, raw(to)), to, mine));
+      return true;
+    },
     onLink: (f: Field, url: string) => change({ ...doc, links: { ...doc.links, [f.was]: url } }),
     onJob: (j: Job) => change(withJob(body, doc, j)),
     // any job, the resume's own too: the user says what's on their resume
     onDrop: (id: string) => change(withoutJob(body, doc, id)),
+    // any other entry or link put on or taken off; texts go into the LaTeX through esc, addresses through href
+    onLine: (section: string, fields: string[]) => change(withLine(body, doc, { id: `line-${Date.now()}`, section, fields })),
+    onProject: (title: string, stack: string, bullet: string) => change(withProject(body, doc, { id: `new-${Date.now()}`, title, ...(stack ? { stack } : {}), bullets: bullet ? [bullet] : [] })),
+    onEntryDrop: (id: string) => change(withoutEntry(body, doc, id)),
+    onLinkAdd: (text: string, url: string) => change(withLink(body, doc, text, url.trim())),
+    onLinkDrop: (f: Field) => change(withoutLink(body, doc, f.was)),
   };
 }
 
 // The resume's content as a form, beside the page: a section of the accordion per section of the resume,
 // each entry a card with its texts and its bullets (tex.ts's outline reads them off the LaTeX). It writes the
 // same changes the page does, so either can be used and both stay in step. Every field has its name above
-// it; a job's dates are picked as months; Experience takes new jobs. Texts the resume underlines in its header
-// (email, LinkedIn) also take the address they link to in the PDF. It saves as you type, and says so at the
-// top, with the PDF being typeset again when busy says it is; settings links to where else it can be edited.
+// it; a job's dates are picked as months. Texts the resume underlines in its header (email, phone, LinkedIn)
+// also take the address they link to in the PDF, each named for what it is. Links, jobs, projects, schools,
+// certifications and skill lines are put on and taken off here too; a section left empty loses its heading in
+// the PDF, and keeps its add button here. With undo (the editor's ⌘Z) a remove is one press, without (settings)
+// it asks for a second. It saves as you type, and says so at the top unless status is off (the editor says
+// it by the resume's name); settings links to where else it can be edited.
 export function Content({
   body,
   doc,
   change,
   preview,
-  busy,
+  status = true,
+  undo,
   settings,
 }: {
   body: string;
@@ -259,17 +430,56 @@ export function Content({
   change: (d: Doc) => void;
   // typesets a document without saving it: what a field holds while it's being typed in
   preview?: (d: Doc) => void;
-  // whether the PDF is being typeset with the latest changes
-  busy?: boolean;
+  // whether it says that changes are saved
+  status?: boolean;
+  // whether a removal can be undone, so it needn't be asked twice
+  undo?: boolean;
   settings?: { href: string; label: string };
 }) {
-  const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onLink, onJob, onDrop } = form(body, doc, change, preview);
+  const { sections, run, bullets, links, onRun, onBullet, liveRun, liveBullet, onAdd, onMove, onLink, onJob, onDrop, onLine, onProject, onEntryDrop, onLinkAdd, onLinkDrop } = form(body, doc, change, preview);
   const saved = doc !== blank;
-  // the entry a new bullet is being written for: "section/group"
-  const [adding, setAdding] = useState<string | null>(null);
+  // the bullet being written that isn't in the resume yet: its entry ("section/group"), the bullet it goes
+  // under, and the text it starts with (what Enter split off)
+  const [adding, setAdding] = useState<{ group: string; after: string; text: string } | null>(null);
+  // the field n places from el among its entry's bullets, the caret at its end (or at caret)
+  const focusNear = (el: HTMLElement, n: number, caret?: number) => {
+    const all = [...el.closest("[data-bullets]")!.querySelectorAll("textarea")];
+    const to = all[all.indexOf(el as HTMLTextAreaElement) + n];
+    to?.focus();
+    to?.setSelectionRange(caret ?? to.value.length, caret ?? to.value.length);
+    return !!to;
+  };
   const [newJob, setNewJob] = useState(false);
-  // the job a first press on its remove button asked about: a second one removes it (settings have no undo)
+  // the section whose new entry's form is open ("Contact" for a link)
+  const [newIn, setNewIn] = useState<string | null>(null);
+  // what a first press on a remove button asked about: a second one removes it (settings have no undo)
   const [dropping, setDropping] = useState<string | null>(null);
+  // The quiet remove of an item that repeats down a card (a link, a certification, a skill line): the bullet's
+  // ×, at the right of the item's first row; one press with undo, two without (it turns red and says so)
+  const cross = (key: string, name: string, act: () => void, at = "top-1") => (
+    <button
+      type="button"
+      aria-label={dropping === key ? `Press again to remove ${name}` : `Remove ${name}`}
+      title={dropping === key ? "Press again to remove" : `Remove ${name}`}
+      onClick={() => (undo || dropping === key ? act() : setDropping(key))}
+      onBlur={() => setDropping(null)}
+      className={`absolute right-1 ${at} grid size-6 place-items-center rounded-full transition hover:bg-error/25 hover:text-error-text pointer-coarse:size-8 ${dropping === key ? "bg-error/25 text-error-text" : "text-ink/35"}`}
+    >
+      <X aria-hidden className="size-3.5" />
+    </button>
+  );
+  // the worded remove of a whole entry, once per card: one press with undo, two without
+  const removal = (key: string, label: string, act: () => void) => (
+    <button
+      type="button"
+      onClick={() => (undo || dropping === key ? act() : setDropping(key))}
+      onBlur={() => setDropping(null)}
+      className={`${quiet} hover:bg-error/25 hover:text-error-text pointer-coarse:min-h-11 ${dropping === key ? "bg-error/25 text-error-text" : ""}`}
+    >
+      <Trash2 aria-hidden className="size-3.5" />
+      {dropping === key ? "Press again to remove" : label}
+    </button>
+  );
   // an entry folded to one line: its title, then its company and dates (or its first two texts)
   const by = (g: Group, hint: string) => g.fields.find((f) => f.hint === hint);
   const summary = (g: Group, i: number) => {
@@ -280,17 +490,21 @@ export function Content({
   const panel = "h-(--accordion-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none";
   return (
     <div className="flex h-full flex-col">
+    {(status || settings) && (
     <div className="flex shrink-0 items-center justify-between gap-2 border-b border-ink/10 px-4 py-2 text-xs text-ink/55">
+      {status && (
       <span role="status" className="flex items-center gap-1.5">
-        {busy ? <LoaderCircle aria-hidden className="size-3.5 animate-spin motion-reduce:animate-none" /> : saved && <Check aria-hidden className="size-3.5 text-accent-text" />}
-        {busy ? "Saved, updating the PDF" : saved ? "Saved in this browser" : "Changes save as you type"}
+        {saved && <Check aria-hidden className="size-3.5 text-accent-text" />}
+        {saved ? "Saved in this browser" : "Changes save as you type"}
       </span>
+      )}
       {settings && (
-        <Link href={settings.href} className="font-medium text-accent-text hover:underline">
+        <Link href={settings.href} className="ml-auto font-medium text-accent-text hover:underline">
           {settings.label}
         </Link>
       )}
     </div>
+    )}
     <Accordion.Root multiple defaultValue={sections.map((s) => s.title)} className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
       {sections.map((s) => (
         <Accordion.Item key={s.title} value={s.title} className="border-b border-ink/10">
@@ -307,13 +521,42 @@ export function Content({
             {/* several entries (jobs, schools) fold to a line each, one open at a time, so the form isn't a wall of fields */}
             <Accordion.Root className="space-y-1.5 px-3 pb-4">
               {s.groups.map((g, i) => {
-                const id = `${s.title}/${i}`;
+                // by what it is, not where: an entry moved by its dates, or one after a removed one, keeps its panel
+                const id = g.job ?? g.entry ?? `${s.title}/${i}`;
+                const crossed = !!g.entry && lineSections.has(s.title);
                 const shown = g.items.flatMap(bullets);
                 const labelled = g.fields.filter((f) => f.hint && !f.link);
                 const rest = g.fields.filter((f) => !f.hint || f.link);
                 const { head, sub } = summary(g, i);
+                const open = adding?.group === id ? adding : null;
+                const fresh = open && (
+                  <Text
+                    key={`new:${open.after}`}
+                    value={open.text}
+                    label="New bullet"
+                    multiline
+                    late
+                    empty
+                    autoFocus
+                    onSave={(t) => {
+                      onAdd(open.after, t);
+                      setAdding(null);
+                    }}
+                    // the text before the caret goes in, the rest starts the next new bullet
+                    onEnter={(before, after) => {
+                      const added = onAdd(open.after, before);
+                      if (added) setAdding({ group: id, after: added, text: after });
+                      return !!added;
+                    }}
+                    onEmpty={(el) => {
+                      focusNear(el, -1);
+                      setAdding(null);
+                      return true;
+                    }}
+                  />
+                );
                 const fields = (
-                  <div className="space-y-1.5 p-2">
+                  <div data-bullets className="space-y-1.5 p-2">
                     {labelled.length > 0 && (
                       // a company and its place share a row; a title or dates need the width
                       <div className="grid grid-cols-2 gap-1.5">
@@ -336,18 +579,20 @@ export function Content({
                         })}
                       </div>
                     )}
-                    {rest.map((f) =>
-                      f.link ? (
+                    {rest.map((f) => {
+                      const kind = linkKind(run(f));
+                      return f.link ? (
                         <div key={f.key}>
-                        <span className="mb-1 block text-xs font-medium text-ink/55">Link</span>
-                        <div className="rounded-lg bg-white ring-1 ring-ink/10 focus-within:ring-2 focus-within:ring-accent-text">
-                          <Text value={run(f)} label="Link text" onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent !ring-0" />
-                          <div className="flex items-center gap-1.5 border-t border-ink/10 pl-2.5 text-ink/40">
+                        <span className="mb-1 block text-xs font-medium text-ink/55">{kind.name}</span>
+                        <div className="relative rounded-2xl bg-white ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
+                          <Text value={run(f)} label={kind.name === "Link" ? "Link text" : kind.name} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent pr-8 !ring-0" />
+                          {cross(`link:${f.was}`, `${kind.name === "Link" ? run(f) : kind.name} link`, () => onLinkDrop(f))}
+                          <div className="flex items-center gap-1.5 border-t border-ink/10 pl-3 text-ink/40">
                             <Link2 aria-hidden className="size-3.5 shrink-0" />
                             <Text
                               value={links[f.was] ?? ""}
-                              label={`Address for ${run(f)}`}
-                              placeholder={f.was.includes("@") ? "mailto:you@example.com" : "https://"}
+                              label={kind.address}
+                              placeholder={kind.placeholder}
                               // an emptied address takes the link off
                               empty
                               onSave={(t) => onLink(f, t.trim())}
@@ -357,60 +602,101 @@ export function Content({
                         </div>
                         </div>
                       ) : (
-                        <Labeled key={f.key} label={f === g.fields[0] ? "Title" : "Details"}>
-                          <Text value={run(f)} label={f === g.fields[0] ? "Title" : "Details"} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className={f === g.fields[0] && g.fields.length > 1 ? "font-medium" : ""} />
-                        </Labeled>
-                      ),
+                        <div key={f.key} className="relative">
+                          <Labeled label={f === g.fields[0] ? "Title" : "Details"}>
+                            <Text value={run(f)} label={f === g.fields[0] ? "Title" : "Details"} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className={`${f === g.fields[0] && g.fields.length > 1 ? "font-medium" : ""} ${f === g.fields[0] && crossed ? "pr-8" : ""}`} />
+                          </Labeled>
+                          {/* outside the label, which would otherwise take the button as the field it names */}
+                          {f === g.fields[0] && crossed && cross(g.entry!, `${nouns[s.title]} ${run(f).replace(/:$/, "")}`, () => onEntryDrop(g.entry!), "bottom-1 pointer-coarse:bottom-1.5")}
+                        </div>
+                      );
+                    })}
+                    {(shown.length > 0 || open) && (
+                      // wraps under the label in a narrow panel rather than running out of it
+                      <span className="flex flex-wrap items-baseline justify-between gap-x-2 pt-1 text-xs">
+                        <span className="font-medium text-ink/55">Bullets</span>
+                        <span className="text-ink/40 pointer-coarse:hidden">Enter adds one, Alt ↑ ↓ moves it</span>
+                      </span>
                     )}
-                    {(shown.length > 0 || adding === id) && <span className="block pt-1 text-xs font-medium text-ink/55">Bullets</span>}
                     {shown.map((b, n) => (
-                      <div key={b.id} className="relative">
-                        <Text value={b.text} label={`Bullet ${n + 1}`} placeholder="Bullet" multiline onSave={(t) => onBullet(b.id, t)} onLive={(t) => liveBullet(b.id, t)} className="pr-8" />
+                      <div key={b.id} className="space-y-1.5">
+                      <div className="relative">
+                        <Text
+                          value={b.text}
+                          label={`Bullet ${n + 1}`}
+                          placeholder="Bullet"
+                          multiline
+                          onSave={(t) => onBullet(b.id, t)}
+                          onLive={(t) => liveBullet(b.id, t)}
+                          // Enter at the start leaves the bullet whole and opens an empty one under it
+                          onEnter={(before, after) => {
+                            const keep = tidy(before) ? before : b.text;
+                            if (tidy(keep) !== b.text) onBullet(b.id, keep);
+                            setAdding({ group: id, after: b.id, text: tidy(before) ? after : "" });
+                            return true;
+                          }}
+                          onEmpty={(el) => {
+                            if (!focusNear(el, -1)) focusNear(el, 1, 0);
+                            onBullet(b.id, "");
+                            return true;
+                          }}
+                          onMove={(up, t, el) => {
+                            const to = shown[n + (up ? -1 : 1)];
+                            if (!to) return false;
+                            const at = el.selectionStart;
+                            el.blur();
+                            onMove(b.id, t, to.id);
+                            requestAnimationFrame(() => focusNear(el, up ? -1 : 1, at));
+                            return true;
+                          }}
+                          className="pr-8"
+                        />
                         <button
                           type="button"
                           aria-label={`Delete bullet ${n + 1}`}
                           title="Delete this bullet"
                           onClick={() => onBullet(b.id, "")}
-                          className="absolute right-1 top-1 grid size-6 place-items-center rounded-md text-ink/35 transition hover:bg-error/25 hover:text-error-text pointer-coarse:size-8"
+                          className="absolute right-1 top-1 grid size-6 place-items-center rounded-full text-ink/35 transition hover:bg-error/25 hover:text-error-text pointer-coarse:size-8"
                         >
                           <X aria-hidden className="size-3.5" />
                         </button>
                       </div>
+                      {open?.after === b.id && fresh}
+                      </div>
                     ))}
-                    {adding === id && (
-                      <Text
-                        value=""
-                        label="New bullet"
-                        multiline
-                        late
-                        autoFocus
-                        onSave={(t) => {
-                          onAdd(shown.at(-1)?.id ?? g.items.at(-1)!, t);
-                          setAdding(null);
-                        }}
-                      />
-                    )}
-                    {(g.items.length > 0 || g.job) && (
+                    {open && !shown.some((b) => b.id === open.after) && fresh}
+                    {s.title === "Contact" &&
+                      (newIn === "Contact" ? (
+                        <NewEntry
+                          title="New link"
+                          fields={[
+                            { label: "Text", placeholder: "GitHub, or you@example.com" },
+                            { label: "Address", placeholder: "https://", optional: true },
+                          ]}
+                          submit="Add link"
+                          onAdd={([text, url]) => {
+                            onLinkAdd(text, url);
+                            setNewIn(null);
+                          }}
+                          onCancel={() => setNewIn(null)}
+                        />
+                      ) : (
+                        <button type="button" onClick={() => setNewIn("Contact")} className={addRow}>
+                          <Plus aria-hidden className="size-4" />
+                          Add link
+                        </button>
+                      ))}
+                    {(g.items.length > 0 || g.job || (g.entry && nouns[s.title] && !crossed)) && (
                       <div className="flex items-center justify-between gap-2">
-                        {g.items.length > 0 && adding !== id ? (
-                          <button type="button" onClick={() => setAdding(id)} className={quiet}>
+                        {g.items.length > 0 && !open ? (
+                          <button type="button" onClick={() => setAdding({ group: id, after: shown.at(-1)?.id ?? g.items.at(-1)!, text: "" })} className={quiet}>
                             <Plus aria-hidden className="size-3.5" />
                             Add bullet
                           </button>
                         ) : (
                           <span />
                         )}
-                        {g.job && (
-                          <button
-                            type="button"
-                            onClick={() => (dropping === g.job ? onDrop(g.job) : setDropping(g.job!))}
-                            onBlur={() => setDropping(null)}
-                            className={`${quiet} hover:bg-error/25 hover:text-error-text ${dropping === g.job ? "bg-error/25 text-error-text" : ""}`}
-                          >
-                            <Trash2 aria-hidden className="size-3.5" />
-                            {dropping === g.job ? "Press again to remove" : "Remove experience"}
-                          </button>
-                        )}
+                        {g.job ? removal(g.job, "Remove experience", () => onDrop(g.job!)) : g.entry && nouns[s.title] && !crossed && removal(g.entry, `Remove ${nouns[s.title]}`, () => onEntryDrop(g.entry!))}
                       </div>
                     )}
                   </div>
@@ -431,8 +717,36 @@ export function Content({
                   </Accordion.Item>
                 );
               })}
-              {/* the jobs' section takes new ones: the section with a company in it, whatever it's called */}
-              {s.groups.some((g) => by(g, "Company")) &&
+              {/* Projects, schools, certifications and skill lines take new ones, with what their line needs */}
+              {nouns[s.title] &&
+                (newIn === s.title ? (
+                  <NewEntry
+                    title={`New ${nouns[s.title]}`}
+                    fields={
+                      s.title === "Projects"
+                        ? [
+                            { label: "Name", placeholder: "pix-kit" },
+                            { label: "Stack", placeholder: "TypeScript, open source", optional: true },
+                            { label: "First bullet", placeholder: "What you built, and what changed because of it", optional: true },
+                          ]
+                        : kinds[s.title].fields.map((f, i) => ({ label: f, placeholder: placeholders[f] ?? "", optional: i === kinds[s.title].optional }))
+                    }
+                    submit={`Add ${nouns[s.title]}`}
+                    onAdd={(v) => {
+                      if (s.title === "Projects") onProject(v[0], v[1], v[2]);
+                      else onLine(s.title, v);
+                      setNewIn(null);
+                    }}
+                    onCancel={() => setNewIn(null)}
+                  />
+                ) : (
+                  <button type="button" onClick={() => setNewIn(s.title)} className={addRow}>
+                    <Plus aria-hidden className="size-4" />
+                    Add {nouns[s.title]}
+                  </button>
+                ))}
+              {/* the jobs' section takes new ones, even once it's emptied */}
+              {(s.title === "Experience" || s.groups.some((g) => by(g, "Company"))) &&
                 (newJob ? (
                   <NewJob
                     onAdd={(j) => {

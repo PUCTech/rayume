@@ -3,19 +3,40 @@ import { plain } from "./regions";
 // Every change written on the page, applied to the pristine LaTeX each time it's typeset:
 // bullets by id ("" deletes one), added bullets after the bullet they follow, any other run of text
 // (a title, a date, a skill line) by "occurrence:original text", the nth run with that text on the page,
-// projects added from the chat, at the top of Projects, and jobs added from the form, in Experience by date.
-// A project's or job's bullets are "<its id>-<n>". Either one's texts, once added, change as runs do.
+// projects added from the chat or the form, at the top of Projects, jobs added from the form, in Experience by
+// date, and lines added to Education, Certifications and Technical Skills, at the end of their section.
+// A project's or job's bullets are "<its id>-<n>". Any of them, once added, changes its texts as runs do.
 export type Added = { id: string; after: string; text: string };
-export type Project = { id: string; title: string; bullets: string[] };
+// stack is what a project's line says after its name (Next.js, Supabase), when there is one
+export type Project = { id: string; title: string; stack?: string; bullets: string[] };
+// a line added to one of the sections whose entries are a line each, its texts in the order kinds says
+export type Line = { id: string; section: string; fields: string[] };
 // a job as the API's ExperienceData has it (start and end YYYY-MM, end null while it's current)
 // shortcut: no hard_skills or soft_skills yet, nothing on the page shows them; add them with POST /experiences
 export type Job = { id: string; title: string; organization: string; location: string; start: string; end: string | null; bullets: string[] };
-// projects is optional: documents kept in a browser before it existed don't have it
-// links are the URLs behind the header's underlined texts, by the text the body first had; setup is the
-// document's font, type size and margins, where they differ from the template's
+// Every field after added is optional: documents kept in a browser before it existed don't have it, and
+// read as they did. links are the URLs behind the header's underlined texts, by the text the body first had;
+// setup is the document's font, type size and margins, where they differ from the template's
 export type Setup = { font?: string; size?: string; margin?: string };
-// order and hidden: Experience's jobs as shown and the body's taken off (see blocksOf)
-export type Doc = { bullets: Record<string, string>; runs: Record<string, string>; added: Added[]; projects?: Project[]; jobs?: Job[]; order?: string[]; hidden?: string[]; links?: Record<string, string>; setup?: Setup };
+// order and hidden: Experience's jobs as shown and the body's taken off (see blocksOf). dropped: the body's
+// other entries taken off, as "<section>/<n>", the nth of the body's own in that section (see tagged); lines:
+// lines added to them. unlinked: the header's links taken off, by the text the body first had; newLinks: ones
+// added, after the body's own (their URL in links, by the text, as fromTex reads it back: see linkKey)
+export type Doc = {
+  bullets: Record<string, string>;
+  runs: Record<string, string>;
+  added: Added[];
+  projects?: Project[];
+  jobs?: Job[];
+  order?: string[];
+  hidden?: string[];
+  dropped?: string[];
+  lines?: Line[];
+  unlinked?: string[];
+  newLinks?: { id: string; text: string }[];
+  links?: Record<string, string>;
+  setup?: Setup;
+};
 export const blank: Doc = { bullets: {}, runs: {}, added: [], projects: [] };
 // a bullet's text written into the document: an added bullet's own, any other's by its id ("" deletes it)
 export const withBullet = (d: Doc, id: string, text: string): Doc =>
@@ -24,8 +45,11 @@ export const withBullet = (d: Doc, id: string, text: string): Doc =>
 export const tidy = (t: string) => t.replace(/\s+/g, " ").trim().replace(/^((?:<[biu]>)*) /, "$1").replace(/ ((?:<\/[biu]>)*)$/, "$1");
 export const projectBullets = (d: Doc) => [...(d.projects ?? []), ...(d.jobs ?? [])].flatMap((p) => p.bullets.map((text, i) => ({ id: `${p.id}-${i}`, text })));
 
+// the three characters esc spells as commands come back as themselves, so a typed text reads back as typed
+const spelledBack: Record<string, string> = { textbackslash: "\\", textasciitilde: "~", textasciicircum: "^" };
 export const fromTex = (s: string) =>
   s
+    .replace(/\\(textbackslash|textasciitilde|textasciicircum)\{\}/g, (_, c: string) => spelledBack[c])
     .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, "$1")
     .replace(/\\,/g, " ")
     .replace(/\\([%$&#_{}])/g, "$1")
@@ -78,7 +102,23 @@ export const toTex = (s: string) => {
 // A run's text as it can be written in LaTeX: dashes as -- or ---, spaces as thin spaces or ties, symbols
 // escaped. It must fill a whole argument or phrase, so "São Paulo, Brazil" doesn't match inside
 // "São Paulo, Brazil (Hybrid)".
-const spelled: Record<string, string> = { "–": "(?:--|–)", "—": "(?:---|—)", "’": "['’]", "‘": "[`‘]", "%": "\\\\%", $: "\\\\\\$", "&": "\\\\&", "#": "\\\\#", _: "\\\\_" };
+// every character esc spells, as esc spells it, so a text typed with braces or a backslash is found again
+const spelled: Record<string, string> = {
+  "–": "(?:--|–)",
+  "—": "(?:---|—)",
+  "’": "['’]",
+  "‘": "[`‘]",
+  "%": "\\\\%",
+  $: "\\\\\\$",
+  "&": "\\\\&",
+  "#": "\\\\#",
+  _: "\\\\_",
+  "{": "\\\\\\{",
+  "}": "\\\\\\}",
+  "\\": "\\\\textbackslash\\{\\}",
+  "~": "\\\\textasciitilde\\{\\}",
+  "^": "\\\\textasciicircum\\{\\}",
+};
 const pattern = (t: string) =>
   new RegExp(
     `(?<=^|[{\\s])${[...t.normalize("NFKC").trim()]
@@ -143,6 +183,16 @@ const roleOf = (j: Job) => [
   "\\vspace{3pt}",
 ];
 const experience = "\\ressection{Experience}";
+// The sections whose entries are a line each, the texts a new one asks for and its line, as the body writes
+// its own; a text left empty (an optional last one) leaves its part out. Every text goes through esc.
+const dashed = ([a, b, c]: string[]) => `\\textbf{${a}} -- ${b}${c ? `\\hfill ${c}` : ""}`;
+export const kinds: Record<string, { fields: string[]; optional?: number; tex: (f: string[]) => string }> = {
+  Education: { fields: ["Degree", "School", "Dates"], optional: 2, tex: dashed },
+  Certifications: { fields: ["Name", "Issuer", "Year"], optional: 2, tex: dashed },
+  "Technical Skills": { fields: ["Label", "Skills"], tex: ([a, b]) => `\\textbf{${a}:} ${b}` },
+};
+// the key an added link's URL is kept under: its text as withDoc reads it back off the LaTeX
+export const linkKey = (text: string) => fromTex(esc(text));
 
 // Experience as blocks, a job each with its lines: the body's own ("exp-<n>", in the body's order) and the ones
 // added from the form (by id). doc.order says the order they're shown in (newest first, see sorted), doc.hidden
@@ -165,25 +215,80 @@ function blocksOf(body: string, doc: Doc) {
   const blocks = [...(doc.jobs ?? []).map((j) => ({ id: j.id, lines: roleOf(j) })), ...own].filter((b) => !doc.hidden?.includes(b.id)).sort((x, y) => rank(x.id) - rank(y.id));
   return { pre, blocks, post: lines.slice(end) };
 }
-// the body's lines with Experience's blocks in order and the projects added from the chat at the top of
-// Projects, each line tagged with where it came from (its block, or before or after Experience) and its place there
-function tagged(body: string, doc: Doc): Tagged[] {
-  const { pre, blocks, post } = blocksOf(body, doc);
-  const projects = (doc.projects ?? []).flatMap((p) => [
-    `\\textbf{${esc(p.title)}}`,
-    "\\begin{itemize}",
-    ...p.bullets.map((b) => `\\item ${esc(b)}`),
-    "\\end{itemize}",
-    "\\vspace{3pt}",
-  ]);
-  const after = post.flatMap((l) => (l === "\\ressection{Projects}" ? [l, ...projects] : [l]));
-  return [
-    ...pre.map((line, i) => ({ line, tag: "pre", i })),
-    ...blocks.flatMap((b) => b.lines.map((line, i) => ({ line, tag: b.id, i }))),
-    ...after.map((line, i) => ({ line, tag: "post", i })),
+// The header's items with its links taken off and added, each on its own line as the body sets them, the
+// separators between them only. Lines keep their place in the body as i (an added link is tagged by its id),
+// so rekey still finds where an edit was.
+// shortcut: a header written on one line keeps its links as they are; the body's isn't
+function header(pre: string[], doc: Doc): Tagged[] {
+  const lines = pre.map((line, i) => ({ line, tag: "pre", i }));
+  if (!doc.unlinked?.length && !doc.newLinks?.length) return lines;
+  const at = lines.findIndex((l) => l.line.startsWith("\\resheader{"));
+  let end = at;
+  while (end >= 0 && end < lines.length && !lines[end].line.endsWith("}}")) end++;
+  if (at < 0 || end >= lines.length || end === at) return lines;
+  const open = lines[at].line.match(/^\\resheader\{[^}]*\}\{/)![0];
+  const items = lines.slice(at, end + 1).map((l, k) => ({ ...l, line: l.line.slice(k ? 0 : open.length).replace(k === end - at ? /\}$/ : / \$\\bullet\$$/, "") }));
+  const kept = [
+    ...items.filter((it) => {
+      const u = it.line.match(/^\\underline\{(.*)\}$/);
+      return !(u && doc.unlinked?.includes(fromTex(u[1])));
+    }),
+    ...(doc.newLinks ?? []).map((n) => ({ line: `\\underline{${esc(n.text)}}`, tag: n.id, i: 0 })),
   ];
+  const rebuilt = kept.length ? kept.map((it, k) => ({ ...it, line: `${k ? "" : open}${it.line}${k < kept.length - 1 ? " $\\bullet$" : "}"}` })) : [{ line: `${open}}`, tag: "pre", i: at }];
+  return [...lines.slice(0, at), ...rebuilt, ...lines.slice(end + 1)];
 }
-const sourceOf = (body: string, doc: Doc) => tagged(body, doc).map((t) => t.line);
+
+// a line that's text of its own, not a list's or a section's
+const plainLine = (l: string) => !!l.trim() && !/^(%|\\begin|\\end|\\item|\\vspace|\\ressection|\\role)/.test(l);
+
+// The body's lines with the header's links, Experience's blocks in order, the projects added at the top of
+// Projects, the lines added at the end of their section and the body's entries taken off, each line tagged
+// with where it came from (its block or entry, or before or after Experience), its place there, and the entry
+// it belongs to after Experience ("<section>/<n>" for the body's own, the id for an added one).
+// Lines set one under another (Certifications, Technical Skills) end in "\\" but the last, whatever was
+// taken off or added. A heading whose section has nothing left stays here, for the form; sourceOf leaves it out.
+function tagged(body: string, doc: Doc): (Tagged & { entry?: string })[] {
+  const { pre, blocks, post } = blocksOf(body, doc);
+  const out: (Tagged & { entry?: string })[] = [...header(pre, doc), ...blocks.flatMap((b) => b.lines.map((line, i) => ({ line, tag: b.id, i, entry: b.id })))];
+  let section = "";
+  let n = -1;
+  const added = () =>
+    (doc.lines ?? []).filter((l) => l.section === section && kinds[section]).forEach((l) => out.push({ line: kinds[section].tex(l.fields.map(esc)), tag: l.id, i: 0, entry: l.id }));
+  post.forEach((line, i) => {
+    const head = line.match(/^\\ressection\{(.*)\}$/);
+    if (head) {
+      added();
+      section = fromTex(head[1]);
+      n = -1;
+      out.push({ line, tag: "post", i });
+      if (section === "Projects")
+        for (const p of doc.projects ?? [])
+          [`\\textbf{${esc(p.title)}}${p.stack ? ` $\\bullet$ ${esc(p.stack)}` : ""}`, "\\begin{itemize}", ...p.bullets.map((b) => `\\item ${esc(b)}`), "\\end{itemize}", "\\vspace{3pt}"].forEach((l, k) =>
+            out.push({ line: l, tag: p.id, i: k, entry: p.id }),
+          );
+      return;
+    }
+    if (plainLine(line)) n++;
+    const entry = n < 0 ? undefined : `${section}/${n}`;
+    if (entry && doc.dropped?.includes(entry)) return;
+    out.push({ line, tag: "post", i, entry });
+  });
+  added();
+  // the entries after Experience only: the header's items are separated by bullets, and a job's lines by its role
+  const set = (t?: Tagged & { entry?: string }) => !!t?.entry && plainLine(t.line) && !blocks.some((b) => b.id === t.tag);
+  return out.map((t, k) => {
+    if (!set(t)) return t;
+    const bare = t.line.replace(/\\\\$/, "");
+    return { ...t, line: set(out[k + 1]) ? `${bare}\\\\` : bare };
+  });
+}
+// a section heading with nothing under it before the next one
+const emptyHeading = (lines: string[], k: number) => lines[k].startsWith("\\ressection") && (k + 1 >= lines.length || lines[k + 1].startsWith("\\ressection"));
+const sourceOf = (body: string, doc: Doc) => {
+  const lines = tagged(body, doc).map((t) => t.line);
+  return lines.filter((_, k) => !emptyHeading(lines, k));
+};
 // how many times a run's text is on a line, as withDoc counts them (bullets are matched by id instead)
 const matches = (line: string, text: string) => (line.startsWith("\\item ") ? 0 : [...line.matchAll(pattern(text))].length);
 
@@ -242,6 +347,25 @@ export const settle = (body: string, from: Doc, to: Doc): Doc => rekey(body, fro
 export const withJob = (body: string, doc: Doc, job: Job) => settle(body, doc, { ...doc, jobs: [job, ...(doc.jobs ?? [])] });
 export const withoutJob = (body: string, doc: Doc, id: string) =>
   settle(body, doc, doc.jobs?.some((j) => j.id === id) ? { ...doc, jobs: doc.jobs.filter((j) => j.id !== id) } : { ...doc, hidden: [...(doc.hidden ?? []), id] });
+// Any other entry added or taken off, and the header's links: each rekeyed, so edits stay on their own texts.
+// An added project or line is deleted, the body's own dropped.
+export const withLine = (body: string, doc: Doc, line: Line) => rekey(body, doc, { ...doc, lines: [...(doc.lines ?? []), line] });
+export const withProject = (body: string, doc: Doc, p: Project) => rekey(body, doc, { ...doc, projects: [p, ...(doc.projects ?? [])] });
+export const withoutEntry = (body: string, doc: Doc, id: string) =>
+  rekey(
+    body,
+    doc,
+    doc.projects?.some((p) => p.id === id)
+      ? { ...doc, projects: doc.projects.filter((p) => p.id !== id) }
+      : doc.lines?.some((l) => l.id === id)
+        ? { ...doc, lines: doc.lines.filter((l) => l.id !== id) }
+        : { ...doc, dropped: [...(doc.dropped ?? []), id] },
+  );
+export const withLink = (body: string, doc: Doc, text: string, url: string) =>
+  rekey(body, doc, { ...doc, newLinks: [...(doc.newLinks ?? []), { id: `link-${Date.now()}`, text }], links: url ? { ...doc.links, [linkKey(text)]: url } : doc.links });
+// was is the link's text as the body (or an added link) first had it
+export const withoutLink = (body: string, doc: Doc, was: string) =>
+  rekey(body, doc, doc.newLinks?.some((l) => linkKey(l.text) === was) ? { ...doc, newLinks: doc.newLinks.filter((l) => linkKey(l.text) !== was) } : { ...doc, unlinked: [...(doc.unlinked ?? []), was] });
 // Experience's jobs as shown, by block id: the editor matches the body's against its entries
 export const jobOrder = (body: string, doc: Doc) => blocksOf(body, doc).blocks.map((b) => b.id);
 
@@ -262,7 +386,8 @@ export function withDoc(body: string, doc: Doc, bullets: { id: string; text: str
       return { id, line: to === undefined ? line : to ? `\\item ${label}${toTex(to)}` : null };
     }
     // an underlined text with a URL kept for it becomes a link, whatever the text is changed to after
-    let out = line.replace(/\\underline\{([^}]*)\}/g, (m, text) => {
+    // the text may hold escaped braces and commands (\{, \textbackslash{}), so the match counts them
+    let out = line.replace(/\\underline\{((?:\\[a-zA-Z]+\{\}|\\.|[^{}\\])*)\}/g, (m, text) => {
       const url = href(doc.links?.[fromTex(text)] ?? "");
       return url ? `\\href{${url}}{${m}}` : m;
     });
@@ -294,14 +419,16 @@ export const inline = (template: string, body: string) => template.replace("\\in
 // gives it ("occurrence:text", counted the way withDoc finds it), so the form and the page write the same
 // changes; link marks a text the body underlines, which can carry a URL.
 export type Field = { key: string; was: string; hint?: string; link?: boolean };
-// job is the id of an Experience entry (see blocksOf), which can be taken off the resume
-export type Group = { fields: Field[]; items: string[]; job?: string };
+// job is the id of an Experience entry (see blocksOf), which can be taken off the resume; entry is any other
+// section's entry (see tagged), which can too
+export type Group = { fields: Field[]; items: string[]; job?: string; entry?: string };
 export type Section = { title: string; groups: Group[] };
 const hints: Record<string, string[]> = { "\\role": ["Company", "Location", "Title", "Dates"], "\\resheader": ["Name"] };
 export function outline(body: string, doc: Doc, bullets: { id: string; text: string }[]): Section[] {
   bullets = [...bullets, ...projectBullets(doc)];
   const sections: Section[] = [{ title: "Contact", groups: [{ fields: [], items: [] }] }];
-  const source = sourceOf(body, doc);
+  const all = tagged(body, doc);
+  const source = all.map((t) => t.line);
   const texts = source.map((line) => (line.startsWith("\\item ") ? "" : line));
   texts.forEach((line, at) => {
     const section = sections.at(-1)!;
@@ -311,7 +438,7 @@ export function outline(body: string, doc: Doc, bullets: { id: string; text: str
       return;
     }
     if (/^(%|\\begin|\\end|\\vspace)/.test(line)) return;
-    if (sections.length > 1) section.groups.push({ fields: [], items: [] });
+    if (sections.length > 1) section.groups.push({ fields: [], items: [], entry: all[at].entry });
     let queue: string[] = [];
     let last = 0;
     let before = "";
@@ -324,7 +451,9 @@ export function outline(body: string, doc: Doc, bullets: { id: string; text: str
       const seen = texts.slice(0, at).reduce((n, l) => n + [...l.matchAll(pattern(was))].length, 0) + [...line.matchAll(pattern(was))].filter((m) => m.index < start).length;
       sections.at(-1)!.groups.at(-1)?.fields.push({ key: `${seen}:${was}`, was, hint: queue.shift(), link: before === "\\underline" });
     };
-    for (const m of line.matchAll(/\$[^$]*\$|\\\\(?:\[[^\]]*\])?|\\[a-zA-Z]+|[{}]/g)) {
+    // an escaped character (\{, \$) or a spelled one (\textbackslash{}) is part of the text, not a break in it
+    for (const m of line.matchAll(/\\(?:textbackslash|textasciitilde|textasciicircum)\{\}|\\[^a-zA-Z\\]|\$[^$]*\$|\\\\(?:\[[^\]]*\])?|\\[a-zA-Z]+|[{}]/g)) {
+      if (/^\\(?:[^a-zA-Z\\]|text\w+\{\})$/.test(m[0])) continue;
       chunk(m.index);
       last = m.index + m[0].length;
       if (m[0] in hints) queue = [...hints[m[0]]];
@@ -333,9 +462,8 @@ export function outline(body: string, doc: Doc, bullets: { id: string; text: str
     }
     chunk(line.length);
   });
-  // Experience's entries are its jobs, in the order they're shown
+  // Experience's entries are its jobs, in the order they're shown. A section left with no entries stays, so
+  // the form can add one again (the PDF leaves its heading out)
   const jobs = jobOrder(body, doc);
-  return sections
-    .map((s) => ({ ...s, groups: s.groups.filter((g) => g.fields.length || g.items.length).map((g, i) => (s.title === "Experience" && jobs[i] ? { ...g, job: jobs[i] } : g)) }))
-    .filter((s) => s.groups.length);
+  return sections.map((s) => ({ ...s, groups: s.groups.filter((g) => g.fields.length || g.items.length).map((g, i) => (s.title === "Experience" && jobs[i] ? { ...g, job: jobs[i] } : g)) }));
 }

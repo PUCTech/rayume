@@ -41,9 +41,9 @@
 
 ## Colour
 
-![The six colour tokens with their contrast ratios](images/palette.svg)
+![The six brand colour tokens and the six status tokens, with their contrast ratios](images/palette.svg)
 
-All colours are Tailwind theme tokens in `frontend/app/globals.css` (`@theme`). Use the token names, never raw hex: `bg-paper`, `text-ink`, `bg-mist`, `bg-accent`, `bg-accent-deep`, `text-accent-text`. Opacity modifiers work as usual (`text-ink/60`, `bg-accent/15`).
+All colours are Tailwind theme tokens in `frontend/app/globals.css` (`@theme`): six brand tokens and six [status tokens](#status-colours). Use the token names, never raw hex: `bg-paper`, `text-ink`, `bg-mist`, `bg-accent`, `bg-accent-deep`, `text-accent-text`, and for status only `error`, `error-text`, `warning`, `warning-text`, `success`, `success-text`. Opacity modifiers work as usual (`text-ink/60`, `bg-accent/15`).
 
 The accent is **ultramarine**, picked in November 2026 over vermilion, cobalt, violet, emerald and magenta. It replaced vermilion, so older screenshots in this doc still show the vermilion version; the layout and rules are the same.
 
@@ -72,6 +72,54 @@ The base shade is the brand. The two deeper ones keep contrast for small text an
 | `accent-text` on `paper` | 8.1 : 1 | All text |
 | `accent` on `paper` | 5.9 : 1 | All text |
 | white on dark glass over `accent` | 5.9 : 1 | All text (the band's cards) |
+
+### Status colours
+
+Errors, warnings and successes get two shades each, the same split the accent has: a base for fills, icons, rings, borders and tints, and a deeper `-text` shade for words. Tints are opacity on the base (`bg-error/15`), never separate tokens. Info adds no colour: it is the ultramarine.
+
+| Token | Hex | Use it for |
+|---|---|---|
+| `error` | `#C2362B` | Destructive buttons (white text on it), error icons, field rings and borders, tints (`bg-error/15`) |
+| `error-text` | `#9A1F1A` | Error messages and labels on paper, mist, white, or on an error tint |
+| `warning` | `#B26A00` | Warning icons, borders, tints (`bg-warning/15`). **Never under white text** |
+| `warning-text` | `#7A4700` | Warning text on paper, mist, white, or on a warning tint |
+| `success` | `#1E7B52` | Success icons, ticks, borders, tints (`bg-success/15`), solid fills with white text |
+| `success-text` | `#135C3C` | Success text on paper, mist, white, or on a success tint |
+| info | `accent` / `accent-text` | Neutral notices and tips: `bg-accent/10` with `accent-text` |
+
+Brick red, ochre and pine are the warm, slightly muted relatives of paper and navy. None is as saturated as the ultramarine, so the accent stays the one loud thing, and the red is deeper and browner than the old vermilion accent so it doesn't read as brand.
+
+Contrast (WCAG ratio, tints composited over the surface named):
+
+| Pair | Ratio | Verdict |
+|---|---|---|
+| white on `error` / `success` | 5.45 / 5.24 : 1 | All text (solid fills) |
+| white on `warning` | 4.24 : 1 | **Fails** for text, hence never under white |
+| `error` / `warning` / `success` on paper | 4.80 / 3.73 / 4.61 : 1 | Icons and borders (3:1) |
+| `error` / `warning` / `success` on mist | 4.27 / 3.32 / 4.10 : 1 | Icons and borders (3:1) |
+| `error-text` on paper / mist / white | 7.16 / 6.37 / 8.12 : 1 | All text |
+| `warning-text` on paper / mist / white | 6.78 / 6.03 / 7.70 : 1 | All text |
+| `success-text` on paper / mist / white | 7.05 / 6.27 / 8.00 : 1 | All text |
+| `error-text` on `error/15` over paper / mist · `/12` over white | 5.75 / 5.17 · 6.79 : 1 | All text (the message pattern) |
+| `warning-text` on `warning/15` over paper / mist · `/12` over white | 5.70 / 5.14 · 6.64 : 1 | All text |
+| `success-text` on `success/15` over paper / mist · `/12` over white | 5.79 / 5.21 · 6.80 : 1 | All text |
+| `error-text` on `error/20` over paper / mist / white | 5.35 / 4.80 / 5.99 : 1 | All text |
+| `warning-text` on `warning/20` over paper / mist / white | 5.36 / 4.86 / 5.99 : 1 | All text |
+| `success-text` on `success/20` over paper / mist / white | 5.44 / 4.88 / 6.09 : 1 | All text |
+| `error-text` on `error/25` over paper / mist / white | 4.97 / **4.49** / 5.53 : 1 | Fails on mist |
+| `warning-text` on `warning/25` over paper / mist / white | 5.04 / 4.59 / 5.62 : 1 | All text, barely on mist |
+| `success-text` on `success/25` over paper / mist / white | 5.07 / 4.58 / 5.65 : 1 | All text, barely on mist |
+| `ink` on `error/15` / `warning/15` / `success/15` over paper | 12.25 / 12.82 / 12.51 : 1 | All text |
+
+Rules:
+- A status colour only ever means its status. Never decoration, never a brand moment, never a chart series.
+- Colour is never the only signal: every status comes with an icon or words (and `sr-only` text where an icon stands alone).
+- One pattern for a message: a tint of the base (`/15` on paper or mist, `/12` on white) with the `-text` shade for the words and the base for the icon. No border needed. **Never go past `/20` under text**: `error-text` on `error/25` over mist is 4.49:1.
+- An inline field error is `error-text` text under the field and a 2px `error` ring on the field in place of the focus ring's colour.
+- Solid fills with white text: `error` (a destructive confirm) and `success` only. A warning is never a solid fill.
+- Info is ultramarine, so a page should rarely show info next to a primary button; prefer plain `ink/60` text for low-stakes hints.
+- Status never uses glass, and status shadows stay navy.
+- Status colour is absent from a calm screen. It does not join the 60/30/10 split below.
 
 ### Proportions
 
@@ -378,6 +426,7 @@ Brand column (mark, wordmark, tagline) plus four columns. Entries are plain text
 | Ocean (`ocean.tsx`) | Mantas glide and beat their wings, a fish school passes, god rays sway, caustics shimmer, seagrass bends, specks drift and bubbles rise | SVG + SMIL only (no per-frame JS), loops of 20 to 90 s with negative `begin` so it never visibly restarts; paused while off screen | Frozen on a calm frame |
 | Steps (`steps.tsx`) | Progress bars fill in turn, the note types out, keywords light up, the PDF compiles and prints | Once, when the row's top passes 65% of the screen height (a stacked row on a short phone never reaches "35% visible"); CSS transitions staggered by `--d` (0.9 s per card) | Final state, no transitions |
 | Phone hero (`hero-phone.tsx`) | Rayume asks, he rants (lines fly up with a blur), "thats about it", Rayume answers, his card compiles, then a camera move over his new resume and his reaction | One loop of about 24 s; timers for the typing, Web Animations for the camera (eased holds, motion blur mid-move) | Final frame: the finished resume, still |
+| Auth slogan (`(auth)/slogan.tsx`) | "Glide through the job hunt." types out, then its ending is deleted and retyped twice before landing back on it | Once per visit, about 15 s, then stops (it is not a loop); the full line is always in an `sr-only` span | The full line, still (pure CSS, so no hydration mismatch) |
 | Lens drift | Lens wanders over the page until the visitor moves the mouse | `requestAnimationFrame`, slow sine path | Static |
 | Lens toggle | Radius and zoom open to the full page | 700 ms `cubic-bezier(0.2,0.8,0.2,1)` | Instant |
 | Nav compact | Width, wordmark and "Sign in" collapse | 300 ms `ease-out` | Instant (no transition needed) |
@@ -406,6 +455,7 @@ Written for an English-speaking Gen Z developer hunting their first tech job.
 ## Accessibility
 
 - Contrast: every pairing in [Colour](#colour) is AA; don't introduce new ones without checking.
+- Status never relies on colour alone: an error, warning or success always has an icon or words, and an icon on its own has `sr-only` text.
 - Focus: a global `:focus-visible` ring, 2 px `accent-text`, offset 3 px (`globals.css`, `@layer base`).
 - Motion: everything animated checks `prefers-reduced-motion`.
 - Semantics: landmarks (`header`, `nav`, `section` with `aria-labelledby`, `footer`), table headers with `scope`, decorative SVGs `aria-hidden`.
@@ -420,9 +470,11 @@ Written for an English-speaking Gen Z developer hunting their first tech job.
 |---|---|---|
 | Manta mark | `logo.tsx` (`MARK_D`, `<Mark />`) | Traced from the README banner. Uses `currentColor`. Eyes are holes (`fill-rule: evenodd`). |
 | Competitor marks | `brands.tsx` | Simple Icons (CC0). The Word tile is hand-drawn because Simple Icons dropped Microsoft marks. |
-| Resumes | `frontend/resumes/` → `public/resumes/` | Lucas Mendes, a fictional full-stack dev. Companies are invented. |
+| Resumes | `frontend/resumes/` → `public/resumes/` | Lucas Mendes, a fictional full-stack dev. The employers on his resume (Lumen Labs, Trilha, Quintal Logística) are invented. |
+| Job logos | `public/logos/*.svg` | Simple Icons 16.38 (CC0): Nubank, Stripe, Vercel, VTEX, Spotify, iFood, the companies of the demo job postings (`app/data.ts`). The companies are real; the postings are invented demo data. One path each, filled with `ink`: they load through `<img>`, where `currentColor` can't reach, so the hex is in the file. A new demo company needs a Simple Icons mark. |
 | Favicon | `app/icon.svg` | The manta mark in white on an ultramarine tile, solid so it reads at 16 px on light and dark tabs. Replaces Next's `favicon.ico`. |
 | Ocean creatures | `ocean.tsx` | Drawn from scratch (mantas, fish, seagrass), not the brand mark. Manta wings are 12 precomputed path frames morphed with `<animate attributeName="d">`. |
+| Ray photos (sign in, sign up) | `public/auth/`, picked at random per visit in `(auth)/banner.tsx` | All [Unsplash License](https://unsplash.com/license) (commercial use and edits allowed, credit not required; we credit on the photo anyway). `manta-signup.jpg`: Ishan @seefromthesky, [3rSr37wFxKQ](https://unsplash.com/photos/3rSr37wFxKQ). `manta-login.jpg`: Swanson Chan, [yB1k0KaVcXE](https://unsplash.com/photos/yB1k0KaVcXE). `ray-andre-kaim.jpg`: Andre Kaim, [Syzn3nfkYE4](https://unsplash.com/photos/Syzn3nfkYE4). `ray-heidi-bruce.jpg`: Heidi Bruce, [qX_WaCWaIng](https://unsplash.com/photos/qX_WaCWaIng). `ray-ty-feague.jpg`: Ty Feague, [MFDHmnUs7Sc](https://unsplash.com/photos/MFDHmnUs7Sc). A new photo needs a calm, mid-to-dark blue lower third for the white slogan and colour behind the glass logo. |
 
 ### Resume pipeline
 
@@ -468,7 +520,7 @@ flowchart TB
 ```
 
 - **Tailwind first.** Plain CSS is only for what Tailwind can't express: the glass utilities, the Chromium refraction rule and the registered `@property` values the lens animates. CSS that belongs to one component sits next to it (`prism.css`, `templates/pdf.css`).
-- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `ocean.tsx` (pause off screen and for reduced motion), `hero-phone.tsx` (the phone story's timeline).
+- **Server by default.** Client components only where there is state or effects: `nav.tsx` (scroll), `lens.tsx` (pointer), `steps.tsx` (in-view trigger), `ocean.tsx` (pause off screen and for reduced motion), `hero-phone.tsx` (the phone story's timeline), `(auth)/slogan.tsx` (the typewriter).
 - New pages reuse the tokens, the `glass` utilities and the component class strings above; they don't add new colours, fonts or radii.
 
 ---
@@ -487,3 +539,5 @@ flowchart TB
 | Build a phone version of a section that doesn't fit, and keep desktop as it is | Shrink a desktop composition until it technically fits |
 | Fit the hero's title, pitch, visual and buttons on a phone's first screen | Push the buttons below the fold |
 | Drop text on phones to make room | Make a table scroll sideways |
+| Set status words in the `-text` shade (`text-error-text`) | Put white text on `warning`, or status words in the base shade |
+| Pair a status colour with an icon or words | Rely on colour alone to say something went wrong |
