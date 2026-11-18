@@ -4,7 +4,12 @@ from sqlalchemy.orm import DeclarativeBase, Session
 
 from .config import settings
 
-engine = create_engine(settings.database_url)
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=5,
+)
 
 class Base(DeclarativeBase):
     # team convention: every str is `text`, every timestamp is `timestamptz`

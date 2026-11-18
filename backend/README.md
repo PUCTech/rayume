@@ -23,7 +23,7 @@ On macOS we use [Colima](https://github.com/abiosoft/colima) instead of Docker D
 
 On Windows, Docker Desktop runs on top of WSL2. The installer turns WSL2 on for you if it isn't already, and may ask you to restart. After installing, **open a new PowerShell window**, so it can find the new `uv` and `docker` commands.
 
-On Linux, install Docker Engine with your package manager.
+On Linux, install Docker Engine with your package manager, and uv with `curl -LsSf https://astral.sh/uv/install.sh | sh`. Then open a new terminal (or run `source ~/.local/bin/env`) so it finds `uv`.
 
 Check that everything is there:
 
@@ -44,15 +44,19 @@ cp backend/.env.example backend/.env
 # 2. Install Python and all dependencies into backend/.venv
 cd backend
 uv sync
+
+# 3. Generate a secret for signing tokens, and paste it after JWT_SECRET= in backend/.env
+uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 These work as they are in PowerShell too: `cp` is a built-in shortcut for `Copy-Item` there, and forward slashes in paths are fine.
 
-`backend/.env` holds your local settings and is git-ignored, so it never gets committed. The defaults already match the database from step 3, so you don't need to edit anything.
+`backend/.env` holds your local settings and is git-ignored, so it never gets committed. The defaults already match the database from step 3. The only thing to fill in yourself is `JWT_SECRET`: it has no default on purpose, so the API won't start (and the tests won't run) until you set it.
 
 | Variable | What it is |
 |----------|------------|
 | `DATABASE_URL` | Where to find Postgres. The default points at the Docker container on `localhost:5432` (user, password and database are all `rayume`). |
+| `JWT_SECRET` | The key that signs login tokens. At least 32 characters, different for everyone, never committed. |
 | `CORS_ORIGINS` | Which frontend URLs may call the API from a browser. The default is the Next.js dev server, `http://localhost:3000`. |
 
 ## 3. Start the database
@@ -133,6 +137,16 @@ uv run pytest
 ```
 
 You need `backend/.env` (step 2) and the database running (step 3), with the tables created (step 4). The template tests insert their own rows inside a transaction and roll it back at the end, so they never change your data and don't need the seed.
+
+---
+
+## Using the shared Supabase database (optional)
+
+The team also has a Postgres on Supabase. You don't need it to develop: the Docker database is enough. To point your backend at it, ask for an invite to the Supabase organization and for the database password (in a private message, never in git or an issue), then in `backend/.env` comment out the Docker `DATABASE_URL` and use the Supabase one from the commented line in `.env.example`. Copy the host from **Connect → Session pooler** in the dashboard.
+
+- The password goes in the URL, so special characters must be URL-encoded (`@` becomes `%40`), without the `[ ]` the dashboard shows around it.
+- Run `uv run pytest` against the **Docker** database only. Switch the line back first.
+- Don't change tables on the shared database on your own: `create_all` doesn't alter existing tables, so agree with the team first.
 
 ---
 
