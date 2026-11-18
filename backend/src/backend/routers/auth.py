@@ -1,14 +1,16 @@
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from websockets.version import commit
 
 from ..config import settings
 from ..db import get_db
 from ..models import User
 from ..schemas import LoginRequest, TokenResponse, UserOut
 from ..security import create_access_token, hash_password, verify_password
+from ..auth_session import start_session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -16,7 +18,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
+def login(body: LoginRequest, https_response: Response, db: Session = Depends(get_db)):
     user = db.scalar(
         select(User).where(
             User.email == body.email.lower(),
@@ -35,9 +37,9 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     if user is None or user.password_hash is None or not password_valid:
         raise HTTPException(status_code=401, detail="invalid_credentials")
 
-    return TokenResponse(
-        access_token=create_access_token(user.public_id),
-        token_type="bearer",
-        expires_in=settings.access_token_ttl_seconds,
-        user=UserOut.model_validate(user),
-    )
+    tokens_response = start_session(db, user, https_response)
+    db.commit()
+    return tokens_response
+
+
+#CONFIRM THE IMPLEMENTATION THIERRY

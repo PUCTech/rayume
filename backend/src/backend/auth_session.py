@@ -11,11 +11,11 @@ from .models import RefreshToken, User
 from .schemas import TokenResponse, UserOut
 from .security import create_access_token
 
-def start_session(db: Session, user: User, route: Response) -> TokenResponse:
+def start_session(db: Session, user: User, https_response: Response) -> TokenResponse:
     refresh_token = secrets.token_urlsafe(32)
     token_hash = sha256(refresh_token.encode("utf-8")).hexdigest()
 
-    lifetime = timedelta(days=settings.refresh_token_lifetime)
+    lifetime = timedelta(days=settings.refresh_token_ttl_days)
     expires_at = datetime.now(timezone.utc) + lifetime
 
     db.add(
@@ -27,7 +27,7 @@ def start_session(db: Session, user: User, route: Response) -> TokenResponse:
         )
     )
 
-    route.set_cookie(
+    https_response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         max_age=int(lifetime.total_seconds()),
@@ -40,6 +40,6 @@ def start_session(db: Session, user: User, route: Response) -> TokenResponse:
     return TokenResponse(
         access_token=create_access_token(user.public_id),
         token_type="bearer",
-        expires_in=settings.acess_token_ttl_seconds,
+        expires_in=settings.access_token_ttl_seconds,
         user=UserOut.model_validate(user),
     )
