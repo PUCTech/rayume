@@ -7,15 +7,17 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.responses import JSONResponse
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import user, now
+from sqlalchemy.exc import IntegrityError
+
 from websockets.version import commit
 
 from ..config import settings
 from ..db import get_db
 from ..models import User, RefreshToken, Log, LogLevel
-from ..schemas import LoginRequest, TokenResponse, UserOut
+from ..schemas import LoginRequest, TokenResponse, UserOut, RegisterRequest
 from ..security import create_access_token, hash_password, verify_password
 from ..auth_session import start_session, revoke_token_family, find_and_lock_refresh_token
 
@@ -47,6 +49,53 @@ def login(body: LoginRequest, https_response: Response, db: Session = Depends(ge
     tokens_response = start_session(db, user, https_response)
     db.commit()
     return tokens_response
+
+
+@router.post("/register", status_code=201, response_model=TokenResponse)
+def register(body: RegisterRequest, https_response: Response, db: Session = Depends(get_db),) -> TokenResponse:
+    email = body.email.lower()
+    username = body.username.lower()
+
+    existing_email = db.scalar(select(User.id).where(User.email == email))
+    if existing_email is not None:
+        raise HTTPException(status_code=409, detail="email_taken")
+
+    existing_username = db.scalar(
+        select(User.id).where(func.lower(User.username) == username)
+    )
+    if existing_username is not None:
+        raise HTTPException(status_code=409, detail="username_taken")
+
+    user = User(
+        name=body.name,
+        email=body.email,
+        username=username,
+        language=body.language,
+        password_hash=hash_password(body.password),
+    )
+
+    try:
+        db.add(user)
+        db.flush()
+
+        token_response = start_session(db, user, https_response)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+
+        constraint_name = getattr(
+            getattr(exc.orig, "diag", None), "constraint_name", None
+        )
+
+        if constraint_name == "users_email_key":
+            raise HTTPException(status_code=409, detail="email_taken") from exc
+
+        if constraint_name == "uq_users_username_lower":
+            raise HTTPException(status_code=409, detail="username_taken") from exc
+
+        raise
+
+    return token_response
 
 
 @router.post("/refresh", response_model=TokenResponse)
