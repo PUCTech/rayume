@@ -28,25 +28,31 @@ DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, https_response: Response, db: Session = Depends(get_db)):
-    user = db.scalar(
-        select(User).where(
-            User.email == body.email.lower(),
-            User.disabled_at.is_(None),
-        )
-    )
+    user = db.scalar(select(User).where(User.email == body.email.lower()))
 
     password_hash = (
         user.password_hash
-        if user is not None and user.password_hash is not None
-        else DUMMY_PASSWORD_HASH
+        if user is not None and user.disabled_at is None
+        else None
+    )
+    password_valid = verify_password(
+        body.password,
+        password_hash if password_hash is not None else DUMMY_PASSWORD_HASH,
     )
 
-    password_valid = verify_password(body.password, password_hash)
-
-    if user is None or user.password_hash is None or not password_valid:
+    if user is None or password_hash is None or not password_valid:
+        db.add(
+            Log(
+                user_id=user.id if user is not None else None,
+                level=LogLevel.warning,
+                event="auth.login_failed",
+            )
+        )
+        db.commit()
         raise HTTPException(status_code=401, detail="invalid_credentials")
 
     tokens_response = start_session(db, user, https_response)
+    db.add(Log(user_id=user.id, level=LogLevel.info, event="auth.login"))
     db.commit()
     return tokens_response
 
@@ -79,6 +85,7 @@ def register(body: RegisterRequest, https_response: Response, db: Session = Depe
         db.flush()
 
         token_response = start_session(db, user, https_response)
+        db.add(Log(user_id=user.id, level=LogLevel.info, event="auth.login"))
         db.commit()
     except IntegrityError as exc:
         db.rollback()
