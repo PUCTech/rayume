@@ -27,7 +27,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, https_response: Response, db: Session = Depends(get_db)):
+def login(body: LoginRequest, https_response: Response, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else None
+
     user = db.scalar(select(User).where(User.email == body.email.lower()))
 
     password_hash = (
@@ -43,9 +45,10 @@ def login(body: LoginRequest, https_response: Response, db: Session = Depends(ge
     if user is None or password_hash is None or not password_valid:
         db.add(
             Log(
-                user_id=user.id if user is not None else None,
-                level=LogLevel.warning,
-                event="auth.login_failed",
+                user_id = user.id if user is not None else None,
+                level = LogLevel.warning,
+                event = "auth.login_failed",
+                ip = client_ip,
             )
         )
         db.commit()
