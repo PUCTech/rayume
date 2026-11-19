@@ -139,7 +139,7 @@ def refresh(request: Request, http_response: Response, db: Session = Depends(get
     )
     return token_response
 
-def rotate_refresh_token(token: str, db: Session = Depends(get_db)):
+def rotate_refresh_token(token: str, db: Session):
     received_hash = sha256(token.encode("utf-8")).hexdigest()
     stored_token = find_and_lock_refresh_token(db, received_hash)
 
