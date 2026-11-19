@@ -1,0 +1,38 @@
+$kind: http-request
+description: ""
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "KOIqqZ98MDCj1YR@NuxYojXLnTEavaD.uaqb",
+      "password": "string"
+    }
+  $type: |-
+    {
+      "title": "LoginRequest",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "title": "Email",
+          "format": "email"
+        },
+        "password": {
+          "type": "string",
+          "maxLength": 128,
+          "title": "Password"
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ]
+    }
+settings: {}
+examples: ./.resources/Login.resources/examples
+order: 1000

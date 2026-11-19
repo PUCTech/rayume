@@ -1,0 +1,24 @@
+$kind: http-request
+description: ""
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "{{email}}",
+      "password": "{{password}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const cookie = (pm.response.headers.get('Set-Cookie') || '').match(/refresh_token=([^;]*)/);
+      pm.test('sets the refresh cookie', () => pm.expect(cookie && cookie[1]).to.be.ok);
+      pm.environment.set('accessToken', pm.response.json().access_token);
+      pm.environment.set('refreshToken', cookie[1]);
+settings:
+  disableCookies: true
+order: 2000

@@ -1,0 +1,5 @@
+$kind: collection
+order: 3000
+# the gallery is public, so no bearer token
+auth:
+  type: noauth

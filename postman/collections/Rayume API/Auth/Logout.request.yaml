@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/logout"
+method: POST
+headers:
+  Cookie: refresh_token={{refreshToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 204', () => pm.response.to.have.status(204));
+      const cookie = (pm.response.headers.get('Set-Cookie') || '').match(/refresh_token=([^;]*)/);
+      pm.test('clears the refresh cookie', () => pm.expect(cookie && cookie[1]).to.be.oneOf(['', '""']));
+settings:
+  disableCookies: true
+order: 4000

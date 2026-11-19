@@ -1,0 +1,232 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/auth/register"
+  method: POST
+  headers:
+    Content-Type: application/json
+    Accept: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "name": "string",
+        "email": "NT3we3Qhtfme8G@GdZJFikkRqIxGOUEgVMhKanKQO.lgx",
+        "username": "6ipt5g3i",
+        "password": "stringstring",
+        "language": "en"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "access_token": "string",
+        "token_type": "string",
+        "expires_in": 300,
+        "user": {
+          "public_id": "string",
+          "name": "string",
+          "email": "sxy2fQY@PQUnMqpwHkawZmGMYXOTKKKP.zvf",
+          "username": "string",
+          "language": "string",
+          "profession": null,
+          "summary": null,
+          "phone": "string",
+          "address": null,
+          "picture_url": "string",
+          "links": [
+            {
+              "label": "string",
+              "url": "http://PSIu.fieBd2Em47VoWXWGIiXyzJCyzf8X72GnK,1G+JFgXQB"
+            },
+            {
+              "label": "string",
+              "url": "https://zMbfwfBchzsNLJyXZNo.fiamQ,1DFxgPBVXHrOQ2LfuMjqHOb+rm+IGJaWKVnXmu-VwI.yfqJPow,DJ8Pw8HkMWDpfvJAN+oC4J2"
+            }
+          ],
+          "has_password": false,
+          "github_connected": false,
+          "google_connected": true,
+          "created_at": "1987-01-15T23:24:23.289Z",
+          "updated_at": "1986-11-26T01:28:20.200Z"
+        }
+      }
+    $type: |-
+      {
+        "title": "TokenResponse",
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          },
+          "user": {
+            "type": "object",
+            "title": "UserOut",
+            "properties": {
+              "public_id": {
+                "type": "string",
+                "title": "Public Id"
+              },
+              "name": {
+                "type": "string",
+                "title": "Name"
+              },
+              "email": {
+                "type": "string",
+                "title": "Email",
+                "format": "email"
+              },
+              "username": {
+                "type": "string",
+                "title": "Username"
+              },
+              "language": {
+                "type": "string",
+                "title": "Language"
+              },
+              "profession": {
+                "title": "Profession",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "summary": {
+                "title": "Summary",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "phone": {
+                "title": "Phone",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "address": {
+                "title": "Address",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "picture_url": {
+                "title": "Picture Url",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "links": {
+                "type": "array",
+                "title": "Links",
+                "items": {
+                  "title": "Link",
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "title": "Label"
+                    },
+                    "url": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2083,
+                      "title": "Url",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "url"
+                  ]
+                }
+              },
+              "has_password": {
+                "type": "boolean",
+                "title": "Has Password"
+              },
+              "github_connected": {
+                "type": "boolean",
+                "title": "Github Connected"
+              },
+              "google_connected": {
+                "type": "boolean",
+                "title": "Google Connected"
+              },
+              "created_at": {
+                "type": "string",
+                "title": "Created At",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "title": "Updated At",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "public_id",
+              "name",
+              "email",
+              "username",
+              "language",
+              "profession",
+              "summary",
+              "phone",
+              "address",
+              "picture_url",
+              "links",
+              "has_password",
+              "github_connected",
+              "google_connected",
+              "created_at",
+              "updated_at"
+            ]
+          }
+        },
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "user"
+        ]
+      }
+order: 1000

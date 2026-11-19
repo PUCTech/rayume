@@ -1,0 +1,36 @@
+$kind: collection
+description: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // refresh the access token when it has under a minute left; skip the /auth routes themselves
+      const access = pm.environment.get('accessToken');
+      const refresh = pm.environment.get('refreshToken');
+      const isAuthRoute = pm.request.url.getPath().startsWith('/auth/');
+
+      function expiresAt(jwt) {
+        const part = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(part + '='.repeat((4 - part.length % 4) % 4))).exp;
+      }
+
+      if (refresh && !isAuthRoute && (!access || expiresAt(access) - Date.now() / 1000 < 60)) {
+        pm.sendRequest({
+          url: pm.environment.get('baseUrl') + '/auth/refresh',
+          method: 'POST',
+          header: { Cookie: `refresh_token=${refresh}` },
+        }, (err, res) => {
+          if (err || res.code !== 200) return console.warn('refresh failed', err || res.code);
+          pm.environment.set('accessToken', res.json().access_token);
+          const cookie = (res.headers.get('Set-Cookie') || '').match(/refresh_token=([^;]*)/);
+          if (cookie) pm.environment.set('refreshToken', cookie[1]);
+        });
+      }
+    language: text/javascript
+auth:
+  - id: fafda55d-9dd4-446a-9a6c-111d0aadafbf
+    type: bearer
+    name: Bearer Token
+    credentials:
+      token: "{{accessToken}}"
+    rules:
+      url: localhost:8000/

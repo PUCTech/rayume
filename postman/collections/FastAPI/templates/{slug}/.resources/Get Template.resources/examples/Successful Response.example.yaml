@@ -1,0 +1,89 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/templates/:slug"
+  method: GET
+  headers:
+    Accept: application/json
+  pathVariables:
+    slug: string
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "slug": "string",
+        "name": "string",
+        "preview_url": null,
+        "tags": [
+          "string",
+          "string"
+        ],
+        "created_at": "1979-04-26T22:43:26.797Z",
+        "updated_at": "1973-11-27T03:45:08.866Z",
+        "tex_source": "string"
+      }
+    $type: |-
+      {
+        "description": "GET /templates/{slug}: the card plus the LaTeX, which the template page shows and lets people edit.",
+        "title": "TemplateDetail",
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "preview_url": {
+            "title": "Preview Url",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "title": "Tags",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "format": "date-time"
+          },
+          "tex_source": {
+            "type": "string",
+            "title": "Tex Source"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "preview_url",
+          "tags",
+          "created_at",
+          "updated_at",
+          "tex_source"
+        ]
+      }
+order: 1000

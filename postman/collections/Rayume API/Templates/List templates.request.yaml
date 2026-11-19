@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/templates"
+method: GET
+queryParams:
+  - key: q
+    value: ""
+    disabled: true
+    description: Name contains this text
+  - key: tag
+    value: ""
+    disabled: true
+    description: Has this tag; repeat the param to require several
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const templates = pm.response.json();
+      pm.test('returns a list', () => pm.expect(templates).to.be.an('array'));
+      // Get template reads this, so the two run in order without editing the slug by hand
+      if (templates.length) pm.environment.set('templateSlug', templates[0].slug);
+order: 1000

@@ -51,3 +51,7 @@ Only when the code might be what's wrong: A) change the doc ... B) change the co
 | [`contradiction-status-colours.md`](contradiction-status-colours.md) | `contradiction` | Nothing; recolours the frontend's error, warning and destructive states to the status scheme |
 | [`missing-schema-job-applications.md`](missing-schema-job-applications.md) | `missing-schema` | Moving `/jobs` off localStorage |
 | [`scope-application-tracking.md`](scope-application-tracking.md) | `scope` | Building `/jobs`' backend; the tailoring review needs `POST /resumes` to return proposals |
+| [`contradiction-auth-built-status.md`](contradiction-auth-built-status.md) | `contradiction` | Nothing; docs still say auth isn't built |
+| [`missing-doc-refresh-client-rules.md`](missing-doc-refresh-client-rules.md) | `missing-doc` | Wiring the frontend auth forms; choosing production domains |
+| [`security-auth-rate-limiting.md`](security-auth-rate-limiting.md) | `security` | Deploying the API publicly |
+| [`security-proxy-client-ip.md`](security-proxy-client-ip.md) | `security` | IP-based rate limiting; any use of `logs.ip` after deploying |

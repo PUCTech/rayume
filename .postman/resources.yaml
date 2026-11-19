@@ -1,0 +1,8 @@
+workspace:
+  id: 38a6b232-8de0-4fd3-8989-b305a2d81d1d
+localResources:
+  specs:
+    - ../postman/specs/FastAPI/index.json
+resourceNameMappings:
+  specs:
+    - ../postman/specs/FastAPI/index.json: FastAPI

@@ -4,7 +4,9 @@ from hashlib import sha256
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, Request
 from fastapi.responses import JSONResponse
 
 from sqlalchemy import select, func
@@ -23,8 +25,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # Reduces timing differences that could reveal whether an email is registered
 DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, responses={401: {"description": "invalid_credentials"}})
 def login(body: LoginRequest, https_response: Response, request: Request, db: Session = Depends(get_db)):
+    """Log in with email and password. Returns an access token and sets the refresh cookie."""
     client_ip = request.client.host if request.client else None
 
     user = db.scalar(select(User).where(User.email == body.email.lower()))
@@ -57,8 +60,9 @@ def login(body: LoginRequest, https_response: Response, request: Request, db: Se
     return tokens_response
 
 
-@router.post("/register", status_code=201, response_model=TokenResponse)
+@router.post("/register", status_code=201, response_model=TokenResponse, responses={409: {"description": "email_taken or username_taken"}})
 def register(body: RegisterRequest, https_response: Response, db: Session = Depends(get_db),) -> TokenResponse:
+    """Create an account and log it in. Returns an access token and sets the refresh cookie."""
     email = body.email.lower()
     username = body.username.lower()
 
@@ -105,9 +109,13 @@ def register(body: RegisterRequest, https_response: Response, db: Session = Depe
     return token_response
 
 
-@router.post("/refresh", response_model=TokenResponse)
-def refresh(request: Request, http_response: Response, db: Session = Depends(get_db)):
-    received_token = request.cookies.get("refresh_token")
+@router.post("/refresh", response_model=TokenResponse, responses={401: {"description": "invalid_credentials"}})
+def refresh(
+    http_response: Response,
+    db: Session = Depends(get_db),
+    received_token: Annotated[str | None, Cookie(alias="refresh_token")] = None,
+):
+    """Swap the refresh cookie for a new access token. Rotates the cookie; reusing an old one revokes the session."""
 
     try:
         if not received_token:
@@ -189,8 +197,11 @@ def rotate_refresh_token(token: str, db: Session):
 
 
 @router.post("/logout", status_code=204)
-def logout(request: Request, db: Session = Depends(get_db)) -> Response:
-    received_token = request.cookies.get("refresh_token")
+def logout(
+    db: Session = Depends(get_db),
+    received_token: Annotated[str | None, Cookie(alias="refresh_token")] = None,
+) -> Response:
+    """Revoke the session behind the refresh cookie and clear it."""
 
     if received_token:
         received_token_hash = sha256(received_token.encode("utf-8")).hexdigest()

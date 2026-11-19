@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .routers import templates, auth
 
-app = FastAPI()
+app = FastAPI(title="Rayume API", version="0.1.0")
 
 # the frontend runs on another origin (:3000 locally), so browser calls here need CORS
 app.add_middleware(
@@ -22,4 +22,5 @@ app.include_router(auth.router)
 
 @app.get("/health")
 def health():
+    """Liveness check for the API process."""
     return {"ok": True}

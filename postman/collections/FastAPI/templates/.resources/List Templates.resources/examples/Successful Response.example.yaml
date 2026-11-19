@@ -1,0 +1,100 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/templates?q=string"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    q: string
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      [
+        {
+          "slug": "string",
+          "name": "string",
+          "preview_url": "string",
+          "tags": [
+            "string",
+            "string"
+          ],
+          "created_at": "1991-03-01T23:21:43.972Z",
+          "updated_at": "1985-09-20T13:06:01.963Z"
+        },
+        {
+          "slug": "string",
+          "name": "string",
+          "preview_url": "string",
+          "tags": [
+            "string",
+            "string"
+          ],
+          "created_at": "1992-11-06T17:41:55.674Z",
+          "updated_at": "2008-12-30T23:18:45.313Z"
+        }
+      ]
+    $type: |-
+      {
+        "type": "array",
+        "title": "Response List Templates Templates Get",
+        "items": {
+          "description": "A gallery card in GET /templates. The spec's author and license have no column yet (open team question).",
+          "title": "TemplateOut",
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "title": "Slug"
+            },
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "preview_url": {
+              "title": "Preview Url",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "title": "Tags",
+              "items": {
+                "type": "string"
+              }
+            },
+            "created_at": {
+              "type": "string",
+              "title": "Created At",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "title": "Updated At",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "slug",
+            "name",
+            "preview_url",
+            "tags",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      }
+order: 1000
