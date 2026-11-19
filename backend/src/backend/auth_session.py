@@ -12,6 +12,17 @@ from .models import RefreshToken, User
 from .schemas import TokenResponse, UserOut
 from .security import create_access_token
 
+def set_refresh_cookie(response: Response, token: str, max_age: int) -> None:
+    response.set_cookie(
+        key="refresh_token",
+        value=token,
+        max_age=max_age,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/auth",
+    )
+
 def start_session(db: Session, user: User, https_response: Response) -> TokenResponse:
     refresh_token = secrets.token_urlsafe(32)
     token_hash = sha256(refresh_token.encode("utf-8")).hexdigest()
@@ -28,15 +39,7 @@ def start_session(db: Session, user: User, https_response: Response) -> TokenRes
         )
     )
 
-    https_response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        max_age=int(lifetime.total_seconds()),
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        path="/auth",
-    )
+    set_refresh_cookie(https_response, refresh_token, int(lifetime.total_seconds()))
 
     return TokenResponse(
         access_token=create_access_token(user.public_id),

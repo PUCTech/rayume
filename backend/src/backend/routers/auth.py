@@ -16,7 +16,7 @@ from ..db import get_db
 from ..models import User, RefreshToken, Log, LogLevel
 from ..schemas import LoginRequest, TokenResponse, UserOut, RegisterRequest
 from ..security import create_access_token, hash_password, verify_password
-from ..auth_session import start_session, revoke_token_family, find_and_lock_refresh_token
+from ..auth_session import start_session, revoke_token_family, find_and_lock_refresh_token, set_refresh_cookie
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -128,15 +128,7 @@ def refresh(request: Request, http_response: Response, db: Session = Depends(get
         return error_response
 
     remaining_seconds = int((expires_at - datetime.now(timezone.utc)).total_seconds())
-    http_response.set_cookie(
-        key="refresh_token",
-        value=new_refresh_token,
-        max_age=max(0, remaining_seconds),
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        path="/auth",
-    )
+    set_refresh_cookie(http_response, new_refresh_token, max(0, remaining_seconds))
     return token_response
 
 def rotate_refresh_token(token: str, db: Session):
