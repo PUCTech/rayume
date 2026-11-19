@@ -85,7 +85,7 @@ def refresh(request: Request, http_response: Response, db: Session = Depends(get
 
 def rotate_refresh_token(token: str, db: Session = Depends(get_db)):
     received_hash = sha256(token.encode("utf-8")).hexdigest()
-    query = select(RefreshToken).where(RefreshToken.token_hash == received_hash).with_for_update
+    query = select(RefreshToken).where(RefreshToken.token_hash == received_hash).with_for_update()
     stored_token = db.scalar(query)
 
     if stored_token is None:
