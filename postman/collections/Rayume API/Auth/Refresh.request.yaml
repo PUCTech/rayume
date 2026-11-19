@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/refresh"
+method: POST
+headers:
+  Cookie: refresh_token={{refreshToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const previous = pm.environment.get('refreshToken');
+      const cookie = (pm.response.headers.get('Set-Cookie') || '').match(/refresh_token=([^;]*)/);
+      pm.test('sets the refresh cookie', () => pm.expect(cookie && cookie[1]).to.be.ok);
+      pm.environment.set('accessToken', pm.response.json().access_token);
+      pm.environment.set('refreshToken', cookie[1]);
+      pm.test('rotates the token', () => pm.expect(cookie[1]).to.not.eql(previous));
+settings:
+  disableCookies: true
+order: 3000

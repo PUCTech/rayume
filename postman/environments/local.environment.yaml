@@ -1,0 +1,17 @@
+name: local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8000'
+  - key: email
+    value: ''
+  - key: username
+    value: ''
+  - key: password
+    value: hunter2hunter2
+  - key: name
+    value: Postman Tester
+  - key: accessToken
+    value: ''
+  - key: refreshToken
+    value: ''
+color: 0
