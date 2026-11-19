@@ -1,7 +1,7 @@
 # Logged IPs will be the proxy's address in production
 
 > Kind: `security`. Found: 2026-11-19 by hand reviewing PR #25 on `feat/polish` (`185845b`).
-> Blocks: an IP-based rate limit ([`security-auth-rate-limiting.md`](security-auth-rate-limiting.md)), and any use of `logs.ip` after deploying.
+> Blocks: deploying the API publicly. The auth rate limits in `routers/auth.py` count per IP, so behind a proxy every request would share one limit. Also any use of `logs.ip`.
 
 ## What the code does
 

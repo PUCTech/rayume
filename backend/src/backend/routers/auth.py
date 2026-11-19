@@ -25,10 +25,30 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # Reduces timing differences that could reveal whether an email is registered
 DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
-@router.post("/login", response_model=TokenResponse, responses={401: {"description": "invalid_credentials"}})
+# Per client IP, counted from logs so every API instance shares them.
+# Behind a proxy this needs the real client IP: docs/todo/security-proxy-client-ip.md
+LOGIN_FAILURES_LIMIT = 10, timedelta(minutes=15)
+REGISTER_LIMIT = 5, timedelta(hours=1)
+
+
+def check_rate_limit(db: Session, event: str, ip: str | None, limit: tuple[int, timedelta]):
+    max_events, window = limit
+    if ip is None:
+        return
+    count = db.scalar(
+        select(func.count())
+        .select_from(Log)
+        .where(Log.event == event, Log.ip == ip, Log.created_at > func.now() - window)
+    )
+    if count >= max_events:
+        raise HTTPException(status_code=429, detail="rate_limited", headers={"Retry-After": str(int(window.total_seconds()))})
+
+
+@router.post("/login", response_model=TokenResponse, responses={401: {"description": "invalid_credentials"}, 429: {"description": "rate_limited"}})
 def login(body: LoginRequest, https_response: Response, request: Request, db: Session = Depends(get_db)):
     """Log in with email and password. Returns an access token and sets the refresh cookie."""
     client_ip = request.client.host if request.client else None
+    check_rate_limit(db, "auth.login_failed", client_ip, LOGIN_FAILURES_LIMIT)
 
     user = db.scalar(select(User).where(User.email == body.email.lower()))
 
@@ -60,9 +80,12 @@ def login(body: LoginRequest, https_response: Response, request: Request, db: Se
     return tokens_response
 
 
-@router.post("/register", status_code=201, response_model=TokenResponse, responses={409: {"description": "email_taken or username_taken"}})
-def register(body: RegisterRequest, https_response: Response, db: Session = Depends(get_db),) -> TokenResponse:
+@router.post("/register", status_code=201, response_model=TokenResponse, responses={409: {"description": "email_taken or username_taken"}, 429: {"description": "rate_limited"}})
+def register(body: RegisterRequest, https_response: Response, request: Request, db: Session = Depends(get_db),) -> TokenResponse:
     """Create an account and log it in. Returns an access token and sets the refresh cookie."""
+    client_ip = request.client.host if request.client else None
+    # only register's auth.login row carries an ip, so this counts accounts created, not logins
+    check_rate_limit(db, "auth.login", client_ip, REGISTER_LIMIT)
     email = body.email.lower()
     username = body.username.lower()
 
@@ -89,7 +112,7 @@ def register(body: RegisterRequest, https_response: Response, db: Session = Depe
         db.flush()
 
         token_response = start_session(db, user, https_response)
-        db.add(Log(user_id=user.id, level=LogLevel.info, event="auth.login"))
+        db.add(Log(user_id=user.id, level=LogLevel.info, event="auth.login", ip=client_ip))
         db.commit()
     except IntegrityError as exc:
         db.rollback()

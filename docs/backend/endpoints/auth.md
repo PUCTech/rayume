@@ -63,10 +63,10 @@ Email signup. Creates the user and logs them in.
 | `language` | string | optional, `en` (default) or `pt-BR` |
 
 Responses:
-- `201` `TokenResponse` + refresh cookie. Logs `auth.login`.
+- `201` `TokenResponse` + refresh cookie. Logs `auth.login` with the client `ip` (login's `auth.login` has none, which is how the limit below counts only sign-ups).
 - `409` email or username taken (`{"detail": "email_taken"}` / `"username_taken"`). A disabled account still holds its email.
 - `422` validation.
-- `429` rate limited.
+- `429` `{"detail": "rate_limited"}` after 5 sign-ups from the same IP in the last hour. `Retry-After: 3600`. Checked before anything else.
 
 ### POST /auth/login
 
@@ -78,7 +78,7 @@ Responses:
 Responses:
 - `200` `TokenResponse` + refresh cookie. Starts a new token family. Logs `auth.login`.
 - `401` `{"detail": "invalid_credentials"}` for an unknown email, wrong password, OAuth-only account (no `password_hash`) **or** a disabled user. One message for all, so emails can't be enumerated. Logs `auth.login_failed` (with `user_id` null when the email is unknown).
-- `429` rate limited.
+- `429` `{"detail": "rate_limited"}` after 10 `auth.login_failed` from the same IP in the last 15 minutes, even with the right password. `Retry-After: 900`. Checked before the password, so a blocked attempt costs no argon2 hash and writes no log row.
 
 ### POST /auth/refresh
 
