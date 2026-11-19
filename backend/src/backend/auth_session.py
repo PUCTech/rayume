@@ -1,9 +1,10 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from fastapi import Response
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from .config import settings
@@ -43,3 +44,15 @@ def start_session(db: Session, user: User, https_response: Response) -> TokenRes
         expires_in=settings.access_token_ttl_seconds,
         user=UserOut.model_validate(user),
     )
+
+
+def revoke_token_family(db: Session, family_id: UUID, revoked_at: datetime) -> None:
+    statement = (
+        update(RefreshToken)
+        .where(
+            RefreshToken.family_id == family_id,
+            RefreshToken.revoked_at.is_(None),
+        )
+        .values(revoked_at=revoked_at)
+    )
+    db.execute(statement)
