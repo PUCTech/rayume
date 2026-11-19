@@ -139,3 +139,30 @@ def rotate_refresh_token(token: str, db: Session = Depends(get_db)):
 
     db.commit()
     return token_response, new_refresh_token, expires_at
+
+
+@router.post("/logout", status_code=204)
+def logout(request: Request, db: Session = Depends(get_db)) -> Response:
+    received_token = request.cookies.get("refresh_token")
+
+    if received_token:
+        received_token_hash = sha256(received_token.encode("utf-8")).hexdigest()
+        query = select(RefreshToken).where(RefreshToken.token_hash == received_token_hash).with_for_update()
+        stored_token = db.scalar(query)
+
+        if stored_token is not None:
+            now = datetime.now(timezone.utc)
+            revoke_token_family(db, stored_token.family_id, now)
+
+            db.add(
+                Log(
+                    user_id=stored_token.user_id,
+                    level=LogLevel.info,
+                    event="auth.logout",
+                )
+            )
+            db.commit()
+
+    response = Response(status_code=204)
+    response.delete_cookie("refresh_token", path="/auth")
+    return response
