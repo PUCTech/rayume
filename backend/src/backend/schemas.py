@@ -71,15 +71,15 @@ class TemplateDetail(TemplateOut):
 
 # Class for a existing user to Login
 class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(max_length=128)
+    email: EmailStr = Field(examples=["ana@example.com"])
+    password: str = Field(max_length=128, examples=["correct-horse-battery"])
 
 # Class for a non-existing user to register
 class RegisterRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    email: EmailStr
-    username: str = Field(min_length=3, max_length=30, pattern=r"^[a-z0-9_-]+$")
-    password: str = Field(min_length=8, max_length=128)
+    name: str = Field(min_length=1, max_length=100, examples=["Ana Souza"])
+    email: EmailStr = Field(examples=["ana@example.com"])
+    username: str = Field(min_length=3, max_length=30, pattern=r"^[a-z0-9_-]+$", examples=["ana_souza"])
+    password: str = Field(min_length=8, max_length=128, examples=["correct-horse-battery"])
     language: Literal["en", "pt-BR"] = "en"
 
     @field_validator("username", mode="before")

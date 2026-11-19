@@ -19,6 +19,7 @@ def list_templates(
     q: str | None = None,
     tag: Annotated[list[str], Query()] = [],
 ):
+    """List gallery templates, filtered by name (`q`) and tags (`tag`, all must match)."""
     stmt = select(Template).order_by(Template.name)
     if q:
         # autoescape so a % or _ typed in the search box matches itself, not everything
@@ -30,6 +31,7 @@ def list_templates(
 
 @router.get("/{slug}", response_model=TemplateDetail)
 def get_template(slug: str, db: Annotated[Session, Depends(get_db)]):
+    """One template with its LaTeX source."""
     template = db.scalar(select(Template).where(Template.slug == slug))
     if template is None:
         raise HTTPException(404, "Template not found")
