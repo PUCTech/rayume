@@ -14,4 +14,6 @@ values:
     value: ''
   - key: refreshToken
     value: ''
+  - key: templateSlug
+    value: ''
 color: 0
