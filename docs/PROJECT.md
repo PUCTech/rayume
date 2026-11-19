@@ -99,7 +99,7 @@ Local dev: Next on `:3000`, FastAPI on `:8000` (CORS is already configured for t
 - **CI** (GitHub Actions, `.github/workflows/`) runs on every PR and every push to `main`:
   - **Backend / Test**: `uv sync --locked`, create the tables in a Postgres 18 service, `uv run pytest`;
   - **Frontend / Lint and build**: `npm ci`, `npm run lint` (only errors fail it), `npm run build` (also type-checks).
-  - No deploys yet: Vercel and Fly will deploy from `main` through their own git integrations.
+  - Deploys are not in CI: the frontend deploys through Vercel's git integration (a preview per PR); the backend has no deploy yet.
 - **Weekly report:** at the end of each week, a GitHub issue in **pt-BR** summarizes what reached `main` (merged PRs, key diagrams and designs, next steps). The first one is [#6](https://github.com/PUCTech/rayume/issues/6) (2 to 8 November 2026).
 
 ## Current state
