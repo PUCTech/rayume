@@ -4,7 +4,7 @@ from hashlib import sha256
 from uuid import uuid4, UUID
 
 from fastapi import Response
-from sqlalchemy import select, update
+from sqlalchemy import select, update, text
 from sqlalchemy.orm import Session
 
 from .config import settings
@@ -56,3 +56,20 @@ def revoke_token_family(db: Session, family_id: UUID, revoked_at: datetime) -> N
         .values(revoked_at=revoked_at)
     )
     db.execute(statement)
+
+
+def find_and_lock_refresh_token(db: Session, token_hash: str) -> RefreshToken | None:
+    token_matches = RefreshToken.token_hash == token_hash
+    family_id = db.scalar(select(RefreshToken.family_id).where(token_matches))
+    stored_token = None
+
+    if family_id is not None:
+        if db.get_bind().dialect.name == "postgresql":
+            lock_key = int.from_bytes(family_id.bytes[:8], "big", signed=True)
+            db.execute(text("SELECT pg_advisory_xact_lock(CAST(:lock_key AS bigint))"),{"lock_key": lock_key},)
+
+        stored_token = db.scalar(
+            select(RefreshToken).where(token_matches).with_for_update()
+        )
+
+    return stored_token

@@ -17,7 +17,7 @@ from ..db import get_db
 from ..models import User, RefreshToken, Log, LogLevel
 from ..schemas import LoginRequest, TokenResponse, UserOut
 from ..security import create_access_token, hash_password, verify_password
-from ..auth_session import start_session, revoke_token_family
+from ..auth_session import start_session, revoke_token_family, find_and_lock_refresh_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -85,8 +85,7 @@ def refresh(request: Request, http_response: Response, db: Session = Depends(get
 
 def rotate_refresh_token(token: str, db: Session = Depends(get_db)):
     received_hash = sha256(token.encode("utf-8")).hexdigest()
-    query = select(RefreshToken).where(RefreshToken.token_hash == received_hash).with_for_update()
-    stored_token = db.scalar(query)
+    stored_token = find_and_lock_refresh_token(db, received_hash)
 
     if stored_token is None:
         raise HTTPException(status_code=401, detail="invalid_credentials")
@@ -147,8 +146,7 @@ def logout(request: Request, db: Session = Depends(get_db)) -> Response:
 
     if received_token:
         received_token_hash = sha256(received_token.encode("utf-8")).hexdigest()
-        query = select(RefreshToken).where(RefreshToken.token_hash == received_token_hash).with_for_update()
-        stored_token = db.scalar(query)
+        stored_token = find_and_lock_refresh_token(db, received_token_hash)
 
         if stored_token is not None:
             now = datetime.now(timezone.utc)
