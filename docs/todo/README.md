@@ -53,5 +53,4 @@ Only when the code might be what's wrong: A) change the doc ... B) change the co
 | [`scope-application-tracking.md`](scope-application-tracking.md) | `scope` | Building `/jobs`' backend; the tailoring review needs `POST /resumes` to return proposals |
 | [`contradiction-auth-built-status.md`](contradiction-auth-built-status.md) | `contradiction` | Nothing; docs still say auth isn't built |
 | [`missing-doc-refresh-client-rules.md`](missing-doc-refresh-client-rules.md) | `missing-doc` | Wiring the frontend auth forms; choosing production domains |
-| [`security-auth-rate-limiting.md`](security-auth-rate-limiting.md) | `security` | Deploying the API publicly |
-| [`security-proxy-client-ip.md`](security-proxy-client-ip.md) | `security` | IP-based rate limiting; any use of `logs.ip` after deploying |
+| [`security-proxy-client-ip.md`](security-proxy-client-ip.md) | `security` | Deploying the API publicly (the auth rate limits count per IP) |

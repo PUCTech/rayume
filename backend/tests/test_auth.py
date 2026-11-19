@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from backend.db import engine, get_db
@@ -46,7 +46,8 @@ def refresh(client, token):
 
 
 def events(db, event):
-    return db.scalars(select(Log).where(Log.event == event)).all()
+    # now() is when the test's transaction began, so rows a dev database already holds don't count
+    return db.scalars(select(Log).where(Log.event == event, Log.created_at >= func.now())).all()
 
 
 def cleared(res):
@@ -113,7 +114,7 @@ def test_refresh_rotates_the_token(client, db):
     assert r2 != r1
     assert refresh(client, r2).status_code == 200
     # the whole chain is one family with one deadline
-    tokens = db.scalars(select(RefreshToken)).all()
+    tokens = db.scalars(select(RefreshToken).where(RefreshToken.created_at >= func.now())).all()
     assert len({t.family_id for t in tokens}) == 1
     assert len({t.expires_at for t in tokens}) == 1
 
@@ -159,3 +160,41 @@ def test_logout_revokes_only_its_family(client, db):
 def test_logout_without_cookie_is_204(client):
     client.cookies.clear()
     assert client.post("/auth/logout").status_code == 204
+
+
+# a documentation IP (RFC 5737), so rows a dev database already holds for 127.0.0.1 don't count
+LIMITED_IP = "203.0.113.7"
+
+
+def past(db, event, n, ago=timedelta(0)):
+    db.add_all(Log(level="info", event=event, ip=LIMITED_IP, created_at=datetime.now(timezone.utc) - ago) for _ in range(n))
+    db.flush()
+
+
+@pytest.fixture
+def limited(db):
+    return TestClient(app, base_url="https://testserver", client=(LIMITED_IP, 50000))
+
+
+def test_login_is_limited_after_ten_failures(limited, db):
+    assert register(limited).status_code == 201
+    past(db, "auth.login_failed", 9)
+    assert login(limited, password="wrong-password").status_code == 401
+    res = login(limited)  # the right password doesn't get past the limit
+    assert res.status_code == 429
+    assert res.json() == {"detail": "rate_limited"}
+    assert res.headers["retry-after"] == "900"
+
+
+def test_login_limit_forgets_old_failures(limited, db):
+    assert register(limited).status_code == 201
+    past(db, "auth.login_failed", 10, ago=timedelta(minutes=16))
+    assert login(limited).status_code == 200
+
+
+def test_register_is_limited_after_five_accounts(limited, db):
+    for i in range(5):
+        assert register(limited, email=f"zz-{i}@example.com", username=f"zz_{i}").status_code == 201
+    res = register(limited)
+    assert res.status_code == 429
+    assert res.headers["retry-after"] == "3600"
