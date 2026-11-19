@@ -9,10 +9,7 @@ from fastapi.responses import JSONResponse
 
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
-from sqlalchemy.sql.functions import user, now
 from sqlalchemy.exc import IntegrityError
-
-from websockets.version import commit
 
 from ..config import settings
 from ..db import get_db
