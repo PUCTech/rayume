@@ -1,0 +1,60 @@
+name: Backend
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# a new push to the same branch cancels the run it replaces
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    services:
+      # same as the db service in compose.yaml
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_USER: rayume
+          POSTGRES_PASSWORD: rayume
+          POSTGRES_DB: rayume
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rayume -d rayume"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      DATABASE_URL: postgresql+psycopg://rayume:rayume@localhost:5432/rayume
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      # installs the Python from requires-python, fails if uv.lock is out of date
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # no migrations yet: same as step 4 of backend/README.md
+      - name: Create tables
+        run: uv run python -c "import backend.models; from backend.db import Base, engine; Base.metadata.create_all(engine)"
+
+      - name: Run tests
+        run: uv run pytest
