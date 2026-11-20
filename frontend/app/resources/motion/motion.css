@@ -1,0 +1,59 @@
+/* Motion for the resources index and blog. Every animation sits behind prefers-reduced-motion: no-preference and
+   none needs JS to finish, so the reduced-motion and no-JS pages show the final state. */
+
+/* "Start here": one ring that leaves the badge once the header has risen, never again */
+@media (prefers-reduced-motion: no-preference) {
+  [data-cue]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: resources-cue 1.2s ease-out 1s both;
+  }
+}
+@keyframes resources-cue {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-accent) 0%, transparent);
+  }
+}
+
+/* titles: the underline draws left to right on hover or focus of their link, per line when wrapped */
+.draw-line {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 100% / 0% 1px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+:is(a:hover, a:focus-visible) .draw-line {
+  background-size: 100% 1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .draw-line {
+    transition: background-size 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+/* covers tilt toward the pointer (tilt.tsx sets the vars) and the drawing shifts the other way inside its frame;
+   mouse and pen only, never touch or reduced motion */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  [data-tilt] {
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition:
+      transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+      translate 0.3s ease-out,
+      box-shadow 0.3s ease-out;
+  }
+  [data-tilt] > * {
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  [data-tilt]:hover > * {
+    transform: translate(var(--px, 0px), var(--py, 0px)) scale(1.06);
+  }
+  [data-tilt]:hover,
+  [data-tilt]:hover > * {
+    transition-duration: 0.2s;
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { Sparks } from "./motion-article/sparks";
 
 // Ticks live in localStorage as the ticked indices ("0,3,4"), one key per checklist id. Storage can be
 // missing or throw (private mode, blocked cookies), so a copy in memory keeps ticking working for the visit.
@@ -39,20 +40,25 @@ export function Ticks({ id, items }: { id: string; items: { label: ReactNode; de
   const done = new Set(raw.split(",").filter(Boolean).map(Number));
   const count = items.filter((_, i) => done.has(i)).length;
 
+  const all = count === items.length && count > 0;
+  // the burst answers the tick that finished the list, so it's a counter bumped by that click, not derived from `all`:
+  // a list that loads already done, or another tab finishing it, stays still
+  const [burst, setBurst] = useState(0);
+
   const toggle = (i: number) => {
     const next = new Set(done);
     if (next.has(i)) next.delete(i);
     else next.add(i);
     write(id, [...next].sort((a, b) => a - b).join(","));
+    if (items.every((_, j) => next.has(j))) setBurst((b) => b + 1);
   };
-
-  const all = count === items.length && count > 0;
 
   return (
     <div className="mt-6">
       <div className="flex min-h-11 items-center gap-4 text-sm">
         {/* words carry the state; the bar only shows it at a glance */}
-        <p aria-live="polite" className={`mt-0! flex shrink-0 items-center gap-1.5 tabular-nums ${all ? "font-medium text-success-text" : "text-ink/60"}`}>
+        <p aria-live="polite" className={`relative mt-0! flex shrink-0 items-center gap-1.5 tabular-nums ${all ? "font-medium text-success-text" : "text-ink/60"}`}>
+          {burst > 0 && all && <Sparks key={burst} />}
           {all && (
             <svg viewBox="0 0 16 16" aria-hidden className="size-3.5 text-success" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
@@ -62,7 +68,8 @@ export function Ticks({ id, items }: { id: string; items: { label: ReactNode; de
         </p>
         <div aria-hidden className="h-1 min-w-8 flex-1 overflow-hidden rounded-full bg-ink/10">
           <div
-            className={`h-full rounded-full transition-[width,background-color] duration-300 motion-reduce:transition-none ${all ? "bg-success" : "bg-accent"}`}
+            // a slight overshoot, so each tick springs the bar forward
+            className={`h-full rounded-full transition-[width,background-color] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none ${all ? "bg-success" : "bg-accent"}`}
             style={{ width: `${(count / items.length) * 100}%` }}
           />
         </div>
@@ -86,14 +93,31 @@ export function Ticks({ id, items }: { id: string; items: { label: ReactNode; de
                     type="checkbox"
                     checked={on}
                     onChange={() => toggle(i)}
-                    className="peer absolute inset-0 cursor-pointer appearance-none rounded-full bg-white ring-1 ring-ink/25 transition checked:bg-accent-deep checked:ring-accent-deep"
+                    className="peer absolute inset-0 cursor-pointer appearance-none rounded-full bg-surface ring-1 ring-ink/25 transition active:scale-90 checked:bg-accent-deep checked:ring-accent-deep"
                   />
-                  <svg viewBox="0 0 16 16" aria-hidden className="pointer-events-none relative size-3.5 text-white opacity-0 transition peer-checked:opacity-100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
+                  {/* the tick draws itself in (dash offset, inherited by the path) and pops a little past full size */}
+                  <svg
+                    viewBox="0 0 16 16"
+                    aria-hidden
+                    className="pointer-events-none relative size-3.5 scale-50 text-white opacity-0 transition-[opacity,scale,stroke-dashoffset] delay-75 duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] [stroke-dasharray:1] [stroke-dashoffset:1] peer-checked:scale-100 peer-checked:opacity-100 peer-checked:[stroke-dashoffset:0] motion-reduce:transition-none"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path pathLength={1} d="M3.5 8.5 6.5 11.5 12.5 4.5" />
                   </svg>
                 </span>
                 <span className="min-w-0">
-                  <span className={`block font-medium transition ${on ? "text-ink/50 line-through decoration-ink/30" : "text-ink"}`}>{it.label}</span>
+                  {/* the strike is a 1px background that sweeps along the label's lines as it greys */}
+                  <span className={`block font-medium transition-colors duration-300 ${on ? "text-ink/50" : "text-ink"}`}>
+                    <span
+                      className={`bg-[linear-gradient(color-mix(in_oklab,var(--color-ink)_30%,transparent),color-mix(in_oklab,var(--color-ink)_30%,transparent))] bg-position-[0_60%] bg-no-repeat transition-[background-size] duration-300 ease-out motion-reduce:transition-none ${on ? "bg-size-[100%_1px]" : "bg-size-[0%_1px]"}`}
+                    >
+                      {it.label}
+                    </span>
+                  </span>
                   {it.detail && <span className="mt-1 block text-[15px] leading-relaxed text-ink/65">{it.detail}</span>}
                 </span>
               </label>

@@ -5,7 +5,7 @@ import { Checklist, Cite, DoDont, Example, Note, Steps, Takeaways } from "../par
 export const article: Article = {
   slug: "first-offer",
   title: "Your first offer: read\u00a0it, then negotiate\u00a0it",
-  description: "What’s in an internship or junior offer in Brazil and the US, what the estágio law guarantees, how CLT compares with PJ, and how to ask for more without risking the offer.",
+  description: "What’s in a first offer in Brazil and the US, what the estágio law guarantees, CLT versus PJ, and how to ask for more without risking it.",
   updated: "2026-11-19",
   minutes: 9,
   author: "The Rayume team",

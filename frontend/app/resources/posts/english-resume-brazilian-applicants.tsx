@@ -5,7 +5,7 @@ import { DoDont, Example, Note } from "../parts";
 export const post: Article = {
   slug: "english-resume-brazilian-applicants",
   title: "Writing an English resume when Portuguese is your first language",
-  description: "False friends, degree names, dates and grades: the translation slips that make a good Brazilian resume read oddly in English, and how to fix each one.",
+  description: "False friends, degree names, dates and grades: the slips that make a good Brazilian resume read oddly in English, and how to fix them.",
   updated: "2026-11-19",
   minutes: 4,
   author: "The Rayume team",
@@ -156,8 +156,8 @@ export const post: Article = {
           />
           <Note>
             <p>
-              Rayume writes your English resume from the facts in your master resume rather than translating your Portuguese text, so most of the false friends never get a
-              chance to appear. Read the result anyway. It’s your name at the top.
+              Rayume is being built to write your English resume from the facts in your master resume rather than translating your Portuguese text, so most false friends
+              never get a chance to appear. Read the result anyway. It’s your name at the top.
             </p>
           </Note>
         </>

@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { Ticks } from "./checklist";
+import { PlayOnce } from "./motion-article/play-once";
 
 // What the writing may use beyond plain elements. The design pass owns how these look; their props stay.
 // They render inside the article's prose, whose descendant rules (p, ul, li margins, list markers) outrank
 // plain classes, hence the `!` overrides below.
 
 // shared by every box: a white panel on the paper with a hairline navy shadow, and flush first paragraphs
-const panel = "mt-6 rounded-2xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_8px_24px_-16px_rgb(22_27_34/0.25)]";
+const panel = "mt-6 rounded-2xl bg-surface shadow-[0_1px_2px_rgb(22_27_34/0.08),0_8px_24px_-16px_rgb(22_27_34/0.25)]";
 const flush = "[&>p:first-child]:mt-0!";
 const bare = "mt-0! list-none! pl-0!";
 
@@ -43,17 +44,26 @@ export function Example({
 }) {
   const row = "grid gap-1.5 px-5 py-4 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-4";
   const label = "flex items-center gap-1.5 text-[13px] font-medium sm:pt-0.5";
+  // played once on the way in (PlayOnce): the weak line dims and gets struck through in reading order, then the
+  // strong one slides in and its bar draws down. The finished state is the resting look, so no JS shows it as is
   return (
-    <figure className={`${panel} overflow-hidden text-[15px] leading-relaxed`}>
+    <PlayOnce className={`${panel} group/ex overflow-hidden text-[15px] leading-relaxed`}>
       <div className={row}>
         <span className={`${label} text-ink/55`}>
           <Cross className="text-ink/40" />
           {beforeLabel}
         </span>
-        <div className={`text-ink/60 ${flush}`}>{before}</div>
+        <div className={`text-ink/60 transition-colors duration-500 group-data-[play=wait]/ex:text-ink ${flush}`}>
+          {/* inline, so the strike (a 1px background) runs along each wrapped line in turn */}
+          <span className={`bg-[linear-gradient(color-mix(in_oklab,var(--color-ink)_35%,transparent),color-mix(in_oklab,var(--color-ink)_35%,transparent))] bg-size-[100%_1px] bg-position-[0_58%] bg-no-repeat transition-[background-size] delay-300 duration-700 ease-out group-data-[play=wait]/ex:bg-size-[0%_1px]`}>
+            {before}
+          </span>
+        </div>
       </div>
       {/* the strong line carries the weight: full ink, and a short ultramarine bar at its edge */}
-      <div className={`${row} relative border-t border-ink/10 before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-full before:bg-accent`}>
+      <div
+        className={`${row} relative border-t border-ink/10 transition delay-900 duration-500 ease-out before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:origin-top before:rounded-r-full before:bg-accent before:transition-transform before:delay-1100 before:duration-500 group-data-[play=wait]/ex:translate-y-2 group-data-[play=wait]/ex:opacity-0 group-data-[play=wait]/ex:before:scale-y-0`}
+      >
         <span className={`${label} text-accent-text`}>
           <Check />
           {afterLabel}
@@ -61,7 +71,7 @@ export function Example({
         <div className={`text-ink ${flush}`}>{after}</div>
       </div>
       {note && <figcaption className={`bg-mist/60 px-5 py-3 text-sm leading-relaxed text-ink/75 ${flush}`}>{note}</figcaption>}
-    </figure>
+    </PlayOnce>
   );
 }
 

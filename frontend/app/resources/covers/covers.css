@@ -1,0 +1,78 @@
+/* Cover stories. Global (Tailwind's PostCSS rejects :global in a module), so every name is cv-prefixed. Every rule here animates FROM a start frame TO the element's natural (finished) state, and only
+   while play.tsx has armed the svg (data-cv). Without that attribute nothing animates and the drawing is complete. */
+
+.cv-cover {
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --i: 0;
+}
+
+.cv-type, .cv-slide, .cv-rise, .cv-draw, .cv-pop, .cv-lift, .cv-fan, .cv-fill, .cv-sweep, .cv-fade, .cv-ink, .cv-caret, .cv-wipe, .cv-resweep {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.cv-cover[data-cv] .cv-type { animation: cv-type 200ms steps(6, end) calc(var(--i) * 70ms) both paused; }
+.cv-cover[data-cv] .cv-slide { animation: cv-slide 260ms var(--ease) 560ms both paused; }
+.cv-cover[data-cv] .cv-rise { animation: cv-rise 420ms var(--ease) 720ms both paused; }
+.cv-cover[data-cv] .cv-draw { animation: cv-draw 500ms var(--ease) calc(var(--i) * 90ms) both paused; }
+.cv-cover[data-cv] .cv-lift { animation: cv-lift 420ms var(--ease) calc(420ms + var(--i) * 80ms) both paused; }
+.cv-cover[data-cv] .cv-pop { animation: cv-pop 340ms var(--ease) calc(var(--d, 700ms) + var(--i) * 70ms) both paused; }
+.cv-cover[data-cv] .cv-fan { animation: cv-fan 560ms var(--ease) calc(var(--i) * 70ms) both paused; }
+.cv-cover[data-cv] .cv-fill { animation: cv-fill 480ms var(--ease) 150ms both paused; }
+.cv-cover[data-cv] .cv-sweep { animation: cv-sweep 480ms var(--ease) 200ms both paused; }
+.cv-cover[data-cv] .cv-fade { animation: cv-fade 300ms ease-out var(--d, 500ms) both paused; }
+.cv-cover[data-cv] .cv-ink { animation: cv-ink 1000ms ease-in-out both paused; }
+.cv-cover[data-cv] .cv-caret { animation: cv-caret 760ms linear both paused; }
+.cv-cover[data-cv] .cv-wipe { animation: cv-wipe 640ms steps(8, end) both paused; }
+.cv-cover[data-cv="play"] [class*="cv-"] { animation-play-state: running; }
+
+.cv-sweep, .cv-resweep { transform-origin: left center; }
+.cv-fill { transform-origin: center bottom; }
+.cv-draw { stroke-dasharray: 1; }
+.cv-ink { stroke-dasharray: 900; }
+/* the sheet-coloured cover over the first lines; it ends shrunk to nothing, so the finished drawing never shows it */
+.cv-wipe { transform-origin: right center; transform: scaleX(0); }
+
+@keyframes cv-type { from { clip-path: inset(0 100% 0 0); } }
+@keyframes cv-slide { from { opacity: 0; transform: translateX(-10px); } }
+@keyframes cv-rise { from { opacity: 0; transform: translateY(10px) scale(0.96); } }
+@keyframes cv-draw { from { stroke-dashoffset: 1; } }
+@keyframes cv-lift { from { opacity: 0.3; transform: translateY(40px); } }
+@keyframes cv-pop { from { transform: scale(0); } 60% { transform: scale(1.15); } }
+@keyframes cv-fan { from { transform: translate(calc(var(--i) * -26px), calc(var(--i) * 12px)); } }
+@keyframes cv-fill { from { transform: scaleY(0); } }
+@keyframes cv-sweep { from { transform: scaleX(0); } }
+@keyframes cv-fade { from { opacity: 0; } }
+@keyframes cv-ink {
+  from { stroke: var(--color-ink); stroke-width: 1.2; stroke-dashoffset: 900; fill-opacity: 0; }
+  65% { stroke: var(--color-ink); stroke-width: 1.2; stroke-dashoffset: 0; fill-opacity: 0; }
+  to { stroke: var(--color-ink); stroke-width: 0; stroke-dashoffset: 0; fill-opacity: 1; }
+}
+/* the caret rides the line as it types, then drops to the next section, where it waits */
+@keyframes cv-caret {
+  from { transform: translate(0, -32px); }
+  84% { transform: translate(84px, -32px); }
+  85%, to { transform: none; }
+}
+@keyframes cv-wipe { from { transform: none; } to { transform: scaleX(0); } }
+
+/* hover: one small answer per cover, on wrappers so it never restarts the story */
+@media (prefers-reduced-motion: no-preference) {
+  .cv-nudge, .cv-tilt, .cv-grow, .cv-spin, .cv-spread, .cv-turn, .cv-bob {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 320ms var(--ease) calc(var(--i) * 40ms);
+  }
+  .group:hover .cv-nudge { transform: translateX(4px); }
+  .group:hover .cv-tilt { transform: rotate(-2deg); }
+  .group:hover .cv-grow { transform: scale(1.6); }
+  .group:hover .cv-spin { transform: rotate(90deg); }
+  .group:hover .cv-spread { transform: translate(calc(var(--i) * 6px), calc(var(--i) * -3px)); }
+  .group:hover .cv-turn { transform: rotate(90deg); }
+  .group:hover .cv-bob { transform: translateY(-8px); }
+  .group:hover .cv-resweep { animation: cv-sweep 420ms var(--ease); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-cover * { animation: none !important; }
+}

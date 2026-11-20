@@ -208,8 +208,8 @@ export const article: Article = {
             version of the resume, who referred you, and the next step with a date.
           </p>
           <p>
-            Save the posting text, not just the link. Postings get taken down, and you’ll want to re-read it the night before the interview. Rayume keeps the posting next to
-            each tailored resume for this reason. Then follow up: if two weeks pass with no answer, one polite email to the recruiter is normal.
+            Save the posting text, not just the link. Postings get taken down, and you’ll want to re-read it the night before the interview. We’re designing Rayume to keep the posting next
+            to each tailored resume for this reason. Then follow up: if two weeks pass with no answer, one polite email to the recruiter is normal.
           </p>
         </>
       ),

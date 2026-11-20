@@ -1,10 +1,13 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { GeistSerifRegular } from "geist/font/serif/regular";
+import { Play } from "./covers/play";
 
 const serif = GeistSerifRegular.className;
 const c = { mist: "var(--color-mist)", paper: "var(--color-paper)", ink: "var(--color-ink)", accent: "var(--color-accent)", deep: "var(--color-accent-deep)" };
 const W = 320;
 const H = 220;
+// per-element stagger index (and optional start delay) for the cover stories in covers/covers.css
+const v = (i: number, d?: string) => ({ "--i": i, ...(d && { "--d": d }) }) as CSSProperties;
 
 // a small seeded random source, so a post's cover is the same on every render (server and browser alike)
 function random(seed: string) {
@@ -110,22 +113,30 @@ function Latex({ r, sheet }: P) {
             {String(i + 1).padStart(2, "0")}
           </text>
           {kw ? (
-            <text x={56} y={80 + i * 13} fontSize={8} fontFamily="ui-monospace, monospace" fill={c.accent}>
+            <text className="cv-type" style={v(i)} x={56} y={80 + i * 13} fontSize={8} fontFamily="ui-monospace, monospace" fill={c.accent}>
               {kw}
               <tspan fill={c.paper} opacity={0.5}>{"{ }"}</tspan>
             </text>
           ) : (
-            <rect x={64} y={75 + i * 13} width={90 * w} height={3} rx={1.5} fill={c.paper} opacity={0.25} />
+            <rect className="cv-type" style={v(i)} x={64} y={75 + i * 13} width={90 * w} height={3} rx={1.5} fill={c.paper} opacity={0.25} />
           )}
         </g>
       ))}
-      <path d="M 176 110 H 190" stroke={c.accent} strokeWidth={2} strokeLinecap="round" />
-      <path d="M 186 105 L 191 110 L 186 115" fill="none" stroke={c.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Resume r={r} x={200} y={30} w={96} h={160} fill={sheet} hot={0} sections={3} />
-      <text x={292} y={208} textAnchor="end" fontSize={15} className={serif} fill={c.ink}>
-        T<tspan dy={3}>E</tspan>
-        <tspan dy={-3}>X</tspan>
-      </text>
+      <g className="cv-nudge">
+        <g className="cv-slide">
+          <path d="M 176 110 H 190" stroke={c.accent} strokeWidth={2} strokeLinecap="round" />
+          <path d="M 186 105 L 191 110 L 186 115" fill="none" stroke={c.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      </g>
+      <g className="cv-tilt">
+        <g className="cv-rise">
+          <Resume r={r} x={200} y={30} w={96} h={160} fill={sheet} hot={0} sections={3} />
+          <text x={292} y={208} textAnchor="end" fontSize={15} className={serif} fill={c.ink}>
+            T<tspan dy={3}>E</tspan>
+            <tspan dy={-3}>X</tspan>
+          </text>
+        </g>
+      </g>
     </>
   );
 }
@@ -155,7 +166,9 @@ function Tailoring({ r, sheet }: P) {
         <Bar x={208} y={49} w={60} h={2} opacity={0.25} />
         <line x1={208} x2={280} y1={62} y2={62} stroke={c.ink} strokeOpacity={0.18} strokeWidth={0.75} />
         {ts.map((y, i) => (
-          <Bar key={y} x={214} y={y} w={[56, 48, 60][i]} color={c.accent} opacity={1} />
+          <g key={y} className="cv-lift" style={v(i)}>
+            <Bar x={214} y={y} w={[56, 48, 60][i]} color={c.accent} opacity={1} />
+          </g>
         ))}
         {[110, 118, 126, 140, 148, 156, 164, 172].map((y) => (
           <Bar key={y} x={208} y={y} w={72 * between(r, 0.5, 0.95)} />
@@ -163,8 +176,10 @@ function Tailoring({ r, sheet }: P) {
       </Page>
       {ys.map((y, i) => (
         <g key={y}>
-          <path d={`M 134 ${y + 17} C 165 ${y + 17}, 170 ${ts[i] + 1.5}, 206 ${ts[i] + 1.5}`} fill="none" stroke={c.accent} strokeWidth={1.25} />
-          <circle cx={208} cy={ts[i] + 1.5} r={2.5} fill={c.accent} />
+          <path className="cv-draw" style={v(i)} pathLength={1} d={`M 134 ${y + 17} C 165 ${y + 17}, 170 ${ts[i] + 1.5}, 206 ${ts[i] + 1.5}`} fill="none" stroke={c.accent} strokeWidth={1.25} />
+          <g className="cv-grow" style={v(i)}>
+            <circle className="cv-pop" style={v(i, "780ms")} cx={208} cy={ts[i] + 1.5} r={2.5} fill={c.accent} />
+          </g>
         </g>
       ))}
     </>
@@ -178,10 +193,15 @@ function First({ r, sheet }: P) {
       <Dots />
       <circle cx={232} cy={92} r={58} fill={c.accent} opacity={0.12} />
       <Resume r={r} x={112} y={22} w={110} h={176} fill={sheet} sections={4} dashed />
-      <rect x={124} y={58} width={2} height={14} fill={c.accent} />
+      <rect className="cv-wipe" x={124.5} y={59} width={86} height={14} fill={sheet} />
+      <rect className="cv-caret" x={124} y={90} width={2} height={14} fill={c.accent} />
       <g transform="translate(236 128)">
-        <circle r={20} fill={c.deep} />
-        <path d="M -7 0 H 7 M 0 -7 V 7" stroke={c.paper} strokeWidth={2.5} strokeLinecap="round" />
+        <g className="cv-spin">
+          <g className="cv-pop">
+            <circle r={20} fill={c.deep} />
+            <path d="M -7 0 H 7 M 0 -7 V 7" stroke={c.paper} strokeWidth={2.5} strokeLinecap="round" />
+          </g>
+        </g>
       </g>
       <text x={40} y={190} fontSize={34} className={serif} fill={c.ink} opacity={0.9}>
         01
@@ -201,7 +221,11 @@ function Stack({ r, sheet }: P) {
     <>
       <Dots />
       {Array.from({ length: n }, (_, i) => (
-        <Resume key={i} r={r} x={x0 + i * 26} y={50 - i * 12} w={96} h={150} fill={sheet} hot={i === n - 1 ? hot : -1} sections={3} />
+        <g key={i} className="cv-spread" style={v(i)}>
+          <g className="cv-fan">
+            <Resume r={r} x={x0 + i * 26} y={50 - i * 12} w={96} h={150} fill={sheet} hot={i === n - 1 ? hot : -1} sections={3} />
+          </g>
+        </g>
       ))}
     </>
   );
@@ -225,14 +249,14 @@ function Grid({ r, sheet }: P) {
       const x = ox + i * s;
       const y = oy + j * s;
       const key = `${i}-${j}`;
-      if (i === hot[0] && j === hot[1]) cells.push(<rect key={key} x={x} y={y} width={s} height={s} fill={c.accent} />);
+      if (i === hot[0] && j === hot[1]) cells.push(<rect key={key} className="cv-fill" x={x} y={y} width={s} height={s} fill={c.accent} />);
       else if (i === arc[0] && j === arc[1]) {
         // a quarter circle filling the cell, centred on one of its corners
         const quarter = [`M ${x} ${y} h ${s} a ${s} ${s} 0 0 1 ${-s} ${s} z`, `M ${x + s} ${y} v ${s} a ${s} ${s} 0 0 1 ${-s} ${-s} z`, `M ${x} ${y + s} v ${-s} a ${s} ${s} 0 0 1 ${s} ${s} z`, `M ${x + s} ${y + s} h ${-s} a ${s} ${s} 0 0 1 ${s} ${-s} z`][corner];
         cells.push(
           <g key={key}>
             <rect x={x} y={y} width={s} height={s} fill={sheet} />
-            <path d={quarter} fill={c.ink} />
+            <path className="cv-turn" d={quarter} fill={c.ink} />
           </g>,
         );
       } else if (filled.has(key)) cells.push(<rect key={key} x={x} y={y} width={s} height={s} fill={sheet} />);
@@ -272,8 +296,10 @@ function Terminal({ r }: P) {
         const bw = between(r, 40, w - 60 - indent);
         return i === hot ? (
           <g key={i}>
-            <rect x={x + 8} y={y - 4} width={w - 16} height={11} rx={3} fill={c.accent} />
-            <rect x={x + 24 + indent} y={y} width={bw} height={3} rx={1.5} fill={c.paper} opacity={0.9} />
+            <g className="cv-resweep">
+              <rect className="cv-sweep" x={x + 8} y={y - 4} width={w - 16} height={11} rx={3} fill={c.accent} />
+            </g>
+            <rect className="cv-fade" style={v(0, "480ms")} x={x + 24 + indent} y={y} width={bw} height={3} rx={1.5} fill={c.paper} opacity={0.9} />
           </g>
         ) : (
           <rect key={i} x={x + 24 + indent} y={y} width={bw} height={3} rx={1.5} fill={c.paper} opacity={0.28} />
@@ -298,10 +324,12 @@ function Glyph({ r, sheet, slug }: P) {
         ))}
       </g>
       <line x1={0} x2={W} y1={162} y2={162} stroke={c.accent} strokeWidth={1.5} />
-      <text x={gx} y={162} fontSize={150} className={serif} fill={c.ink}>
+      <text x={gx} y={162} fontSize={150} className={`${serif} cv-ink`} fill={c.ink}>
         {letter}
       </text>
-      <circle cx={gx + between(r, 90, 115)} cy={between(r, 50, 80)} r={12} fill={c.accent} />
+      <g className="cv-bob">
+        <circle className="cv-pop" style={v(0, "820ms")} cx={gx + between(r, 90, 115)} cy={between(r, 50, 80)} r={12} fill={c.accent} />
+      </g>
       <Resume r={r} x={left ? 200 : 40} y={36} w={84} h={126} fill={sheet} hot={Math.floor(r() * 3)} sections={3} />
     </>
   );
@@ -324,8 +352,8 @@ export function Cover({ slug, onMist = false, className = "" }: { slug: string; 
   const Drawing = drawings[slug];
   const Family = families[Math.floor(r() * families.length)];
   return (
-    <svg aria-hidden viewBox={`0 0 ${W} ${H}`} className={`block aspect-[32/22] w-full rounded-[22px] ${onMist ? "bg-paper" : "bg-mist"} ${className}`}>
+    <Play viewBox={`0 0 ${W} ${H}`} className={`block aspect-[32/22] w-full rounded-[22px] ${onMist ? "bg-paper" : "bg-mist"} ${className}`}>
       {Drawing ? <Drawing r={r} sheet={sheet} slug={slug} /> : <Family r={r} sheet={sheet} slug={slug} />}
-    </svg>
+    </Play>
   );
 }

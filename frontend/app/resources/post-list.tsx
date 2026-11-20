@@ -3,8 +3,12 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import type { Article } from "./content";
 import { day } from "./article";
 import { Cover } from "./cover";
+import { Tilt } from "./motion/tilt";
+import "./motion/motion.css";
 
 const serif = GeistSerifRegular.className;
+// a cover rises off the page with its link's hover or focus (the tilt itself is in motion/tilt.tsx)
+const lift = "transition-[translate,box-shadow] duration-300 motion-safe:group-hover:-translate-y-1 motion-safe:group-focus-visible:-translate-y-1 group-hover:shadow-[0_12px_32px_-16px_rgb(22_27_34/0.3)]";
 
 // a column of posts as rows: date, title, description; the blog page shows the date in its own column and the
 // post's cover beside it (above it on a phone)
@@ -14,12 +18,18 @@ export function PostList({ posts, compact = false }: { posts: Article[]; compact
       {posts.map((p) => (
         <li key={p.slug}>
           <Link href={`/resources/blog/${p.slug}`} className={`group grid gap-2 py-6 ${compact ? "" : "sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8 lg:grid-cols-[11rem_minmax(0,1fr)_17rem] lg:items-start"}`}>
-            {!compact && <Cover slug={p.slug} className="mb-3 transition duration-300 group-hover:-translate-y-1 motion-reduce:group-hover:translate-y-0 sm:col-span-2 sm:mb-0 lg:order-last lg:col-span-1" />}
+            {!compact && (
+              <Tilt className={`mb-3 sm:col-span-2 sm:mb-0 lg:order-last lg:col-span-1 ${lift}`}>
+                <Cover slug={p.slug} />
+              </Tilt>
+            )}
             <time dateTime={p.updated} className="text-sm text-ink/55 sm:pt-1">
               {day(p.updated)}
             </time>
             <span className="min-w-0">
-              <span className={`${serif} block text-xl leading-tight lg:text-[1.375rem] tracking-[-0.015em] decoration-1 underline-offset-4 group-hover:underline`}>{p.title}</span>
+              <span className={`${serif} block text-xl leading-tight lg:text-[1.375rem] tracking-[-0.015em]`}>
+                <span className="draw-line">{p.title}</span>
+              </span>
               <span className={`mt-2 block text-[15px] leading-relaxed text-ink/70 ${compact ? "line-clamp-2" : ""}`}>{p.description}</span>
               {!compact && <span className="mt-3 block text-sm text-ink/55">{p.minutes} min read</span>}
             </span>
@@ -47,12 +57,14 @@ export function Latest({ posts }: { posts: Article[] }) {
       </div>
       <div className={`mt-6 grid grid-cols-1 gap-10 border-t border-ink pt-8 ${rest.length ? "lg:grid-cols-[1.2fr_1fr]" : ""}`}>
         <Link href={`/resources/blog/${lead.slug}`} className="group flex flex-col rounded-[28px] bg-mist p-6 sm:p-8">
-          <Cover slug={lead.slug} onMist className="mb-6" />
+          <Tilt className={`mb-6 ${lift}`}>
+            <Cover slug={lead.slug} onMist />
+          </Tilt>
           <time dateTime={lead.updated} className="text-sm text-ink/55">
             {day(lead.updated)}
           </time>
-          <h3 className={`${serif} mt-4 max-w-xl text-[clamp(1.5rem,2.4vw,1.9rem)] leading-[1.1] tracking-[-0.02em] decoration-1 underline-offset-[6px] group-hover:underline`}>
-            {lead.title}
+          <h3 className={`${serif} mt-4 max-w-xl text-[clamp(1.5rem,2.4vw,1.9rem)] leading-[1.1] tracking-[-0.02em]`}>
+            <span className="draw-line">{lead.title}</span>
           </h3>
           <p className="mt-4 max-w-[34rem] text-[15px] leading-relaxed text-ink/70">{lead.description}</p>
           <p className="mt-6 text-sm text-ink/55 lg:mt-auto lg:pt-6">{lead.minutes} min read</p>

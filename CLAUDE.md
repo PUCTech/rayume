@@ -16,6 +16,7 @@ This file loads at the start of every session, including after `/clear`. Before 
 | Backend feature | `docs/database/README.md` → `docs/backend/endpoints/<resource>.md` → `docs/backend/architecture/` |
 | A page or UI | `docs/design/README.md` |
 | LaTeX rendering, AI calls, auth, uploads | `docs/security/README.md` (+ `docs/backend/architecture/render-worker.md` for rendering) |
+| Writing a guide or blog post | `docs/resources/README.md` |
 | Resuming work | newest `docs/sessions/YYYY-MM-DD-HHMM/README.md` |
 
 ---

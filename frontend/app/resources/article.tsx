@@ -3,14 +3,15 @@ import { GeistSerifRegular } from "geist/font/serif/regular";
 import { prose as base } from "../prose";
 import type { Article } from "./content";
 import { Toc } from "./toc";
+import { FollowGlow } from "./motion-article/follow-glow";
 
 const serif = GeistSerifRegular.className;
 
 // the legal pages' long-form style, plus the elements guides use and legal text doesn't
-const prose = `${base} [&_em]:italic [&_blockquote]:mt-6 [&_blockquote]:border-l-2 [&_blockquote]:border-ink/20 [&_blockquote]:pl-5 [&_blockquote]:text-ink [&_code]:rounded-md [&_code]:bg-mist [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.88em] [&_code]:text-ink [&_table]:mt-6 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:text-sm [&_th]:border-b [&_th]:border-ink/15 [&_th]:py-2 [&_th]:pr-5 [&_th]:text-left [&_th]:align-bottom [&_th]:font-medium [&_th]:text-ink [&_td]:border-b [&_td]:border-ink/5 [&_td]:py-2 [&_td]:pr-5 [&_td]:align-top`;
+export const prose = `${base} [&_em]:italic [&_blockquote]:mt-6 [&_blockquote]:border-l-2 [&_blockquote]:border-ink/20 [&_blockquote]:pl-5 [&_blockquote]:text-ink [&_code]:rounded-md [&_code]:bg-mist [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.88em] [&_code]:text-ink [&_table]:mt-6 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:text-sm [&_th]:border-b [&_th]:border-ink/15 [&_th]:py-2 [&_th]:pr-5 [&_th]:text-left [&_th]:align-bottom [&_th]:font-medium [&_th]:text-ink [&_td]:border-b [&_td]:border-ink/5 [&_td]:py-2 [&_td]:pr-5 [&_td]:align-top`;
 
 const btn = "inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.97]";
-const primary = `${btn} bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`;
+export const primary = `${btn} bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))]`;
 
 // "2026-11-17" as "November 17, 2026", read as a calendar day so no time zone moves it
 export const day = (d: string) =>
@@ -34,15 +35,6 @@ export function Crumbs({ trail }: { trail: Crumb[] }) {
         ))}
       </ol>
     </nav>
-  );
-}
-
-// the way back to the landing page from the resources and blog indexes
-export function HomeButton() {
-  return (
-    <Link href="/" className="inline-flex min-h-11 items-center rounded-full bg-mist px-5 text-sm font-medium text-ink transition hover:bg-white active:scale-[0.97] print:hidden">
-      Back to home
-    </Link>
   );
 }
 
@@ -129,10 +121,15 @@ export function ArticlePage({ article: a, trail, prev, next }: { article: Articl
                   <Link
                     key={n.href}
                     href={n.href}
-                    className={`group rounded-[26px] bg-mist p-5 transition ring-1 ring-transparent hover:ring-ink/15 sm:p-6 ${i === 1 ? "sm:col-start-2 sm:text-right" : ""}`}
+                    // lifts on hover, and the title leans the way the link goes (back for previous, on for next)
+                    className={`group rounded-[26px] bg-mist p-5 ring-1 ring-transparent transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_32px_-20px_rgb(22_27_34/0.35)] hover:ring-ink/15 motion-reduce:hover:translate-y-0 sm:p-6 ${i === 1 ? "sm:col-start-2 sm:text-right" : ""}`}
                   >
                     <span className="block text-sm text-ink/55">{n.label}</span>
-                    <span className="mt-1 block font-medium group-hover:underline group-hover:underline-offset-4">{n.title}</span>
+                    <span
+                      className={`mt-1 block font-medium transition-transform duration-300 group-hover:underline group-hover:underline-offset-4 ${i === 1 ? "motion-safe:group-hover:translate-x-1" : "motion-safe:group-hover:-translate-x-1"}`}
+                    >
+                      {n.title}
+                    </span>
                   </Link>
                 ),
             )}
@@ -147,8 +144,8 @@ export function ArticlePage({ article: a, trail, prev, next }: { article: Articl
 // the closing call to try Rayume, shared by every article and the resources index
 export function TryRayume({ className = "" }: { className?: string }) {
   return (
-    <aside aria-labelledby="try-h" className={`relative overflow-hidden rounded-[28px] bg-ink px-6 py-12 text-white sm:px-10 print:hidden ${className}`}>
-      <div aria-hidden className="pointer-events-none absolute -bottom-48 left-1/2 size-[30rem] -translate-x-1/2 rounded-full bg-accent/60 blur-[100px]" />
+    <aside aria-labelledby="try-h" data-theme="light" className={`relative overflow-hidden rounded-[28px] bg-ink px-6 py-12 text-white sm:px-10 print:hidden ${className}`}>
+      <FollowGlow />
       <h2 id="try-h" className={`${serif} relative max-w-md text-[clamp(1.6rem,2.8vw,2.1rem)] leading-[1.1] tracking-[-0.02em]`}>
         Skip the blank page.
       </h2>

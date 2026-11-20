@@ -5,7 +5,8 @@ import { share } from "../../share";
 import { guides } from "../articles";
 import { posts } from "../posts";
 import { PostList } from "../post-list";
-import { Crumbs, HomeButton } from "../article";
+import { Crumbs } from "../article";
+import { rise } from "../motion/rise";
 
 const serif = GeistSerifRegular.className;
 
@@ -19,13 +20,10 @@ export default function Blog() {
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-16 sm:px-6 lg:pt-24">
       <header className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-end">
         <div>
-          <div className="flex flex-wrap items-center gap-x-4">
-            <HomeButton />
-            <Crumbs trail={[{ href: "/resources", label: "Resources" }]} />
-          </div>
-          <h1 className={`${serif} mt-4 text-[clamp(2.25rem,4vw,3.25rem)] leading-[1.02] tracking-[-0.03em]`}>Blog</h1>
+          <Crumbs trail={[{ href: "/resources", label: "Resources" }]} />
+          <h1 className={`${serif} ${rise} mt-2 text-[clamp(2.25rem,4vw,3.25rem)] leading-[1.02] tracking-[-0.03em]`}>Blog</h1>
         </div>
-        <p className="max-w-[34rem] text-[19px] leading-[1.55] text-ink/70 lg:justify-self-end">
+        <p className={`${rise} max-w-[34rem] text-[19px] leading-[1.55] text-ink/70 motion-safe:delay-150 lg:justify-self-end`}>
           Shorter notes on resumes, applicant tracking systems and the hiring side of tech, newest first.
         </p>
       </header>

@@ -199,7 +199,7 @@ export const article: Article = {
             note="Name the project if it’s well known, link the PRs, and count what got merged, not what you opened."
           />
           <p>
-            Rayume builds project lines from what you enter in your master resume, so this is also the moment to paste the real numbers in. The AI can reword a claim. It
+            Rayume is being built to write project lines from what you enter in your master resume, so this is also the moment to paste the real numbers in. The AI can reword a claim. It
             can’t invent the Lighthouse score.
           </p>
         </>
