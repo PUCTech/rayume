@@ -54,7 +54,7 @@ export function Home() {
             <span className="max-sm:sr-only">New resume</span>
           </button>
           {menu === "new" && (
-            <div className="absolute right-0 top-full z-40 mt-2 w-72 rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0">
+            <div className="absolute right-0 top-full z-40 mt-2 w-72 rounded-2xl bg-surface p-1.5 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0">
               <button type="button" onClick={() => create()} className={item}>
                 <span className="block font-medium text-ink">From your master resume</span>
                 <span className="block text-xs text-ink/55">Everything you&apos;ve done, to trim to the job</span>
@@ -90,7 +90,7 @@ export function Home() {
                 .sort((a, b) => b.saved.localeCompare(a.saved))
                 .slice(0, 3)
                 .map((p, i) => (
-                  <li key={p.id} className={`flex flex-col rounded-[24px] bg-white p-4 ring-1 ring-ink/10 ${i === 2 ? "sm:max-lg:hidden" : ""}`}>
+                  <li key={p.id} className={`flex flex-col rounded-[24px] bg-surface p-4 ring-1 ring-ink/10 ${i === 2 ? "sm:max-lg:hidden" : ""}`}>
                     <div className="flex min-w-0 items-center gap-3">
                       <Logo p={p} className="size-9" />
                       <div className="min-w-0 flex-1">
@@ -142,7 +142,7 @@ export function Home() {
               ))}
             </div>
             <label htmlFor="resume-sort" className="sr-only">Sort by</label>
-            <select id="resume-sort" value={sort} onChange={(e) => setSort(e.target.value as keyof typeof sorts)} className="rounded-full bg-white py-1.5 pl-3 pr-2 text-sm text-ink/75 ring-1 ring-ink/10 outline-none focus-visible:ring-2 focus-visible:ring-accent-text">
+            <select id="resume-sort" value={sort} onChange={(e) => setSort(e.target.value as keyof typeof sorts)} className="rounded-full bg-surface py-1.5 pl-3 pr-2 text-sm text-ink/75 ring-1 ring-ink/10 outline-none focus-visible:ring-2 focus-visible:ring-accent-text">
               {Object.entries(sorts).map(([k, v]) => (
                 <option key={k} value={k}>
                   {v}
@@ -160,7 +160,7 @@ export function Home() {
                   <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)] ring-1 ring-ink/10 transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] motion-reduce:group-hover:translate-y-0">
                     <Image src={`/resumes/${r.template}.png`} alt="" fill draggable={false} sizes={sheetSizes.card} className="object-cover" />
                     {r.id === master.id && (
-                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[11px] font-medium text-white">
+                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[11px] font-medium text-on-ink">
                         <svg aria-hidden viewBox="0 0 16 16" className="size-3" fill="currentColor">
                           <path d="M10.5 1.5 14.5 5.5 12 6.5 9.5 9l.5 3.5-1 1-3-3L2.5 14 2 13.5l3.5-3.5-3-3 1-1L7 6.5 9.5 4z" />
                         </svg>

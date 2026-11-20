@@ -52,7 +52,7 @@ function Pick({ label, value, items, disabled, onChange }: { label: string; valu
       </Select.Trigger>
       <Select.Portal>
         <Select.Positioner sideOffset={6} alignItemWithTrigger={false} className="z-[70] outline-none">
-          <Select.Popup className="min-w-(--anchor-width) origin-(--transform-origin) rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          <Select.Popup className="min-w-(--anchor-width) origin-(--transform-origin) rounded-xl bg-surface p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             {items.map((i) => (
               <Select.Item key={i.value} value={i.value} className="flex cursor-default items-center justify-between gap-4 rounded-lg px-2.5 py-1.5 text-[13px] outline-none select-none data-highlighted:bg-ink/5">
                 <Select.ItemText>{i.label}</Select.ItemText>
@@ -92,7 +92,7 @@ function Title({ r }: { r: Saved }) {
         requestAnimationFrame(() => el.blur());
       }}
       // as wide as the name, not the bar: a pill around it, tall enough for its descenders
-      className={`${serif} block h-8 max-w-full min-w-[4ch] truncate rounded-full bg-transparent px-2 text-xl leading-8 tracking-[-0.01em] outline-none transition [field-sizing:content] hover:ring-1 hover:ring-ink/15 focus:bg-white focus:ring-2 focus:ring-accent-text`}
+      className={`${serif} block h-8 max-w-full min-w-[4ch] truncate rounded-full bg-transparent px-2 text-xl leading-8 tracking-[-0.01em] outline-none transition [field-sizing:content] hover:ring-1 hover:ring-ink/15 focus:bg-surface focus:ring-2 focus:ring-accent-text`}
     />
   );
 }
@@ -562,7 +562,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
               </span>
             </button>
             {jobOpen && (
-              <div className="absolute right-0 top-full z-40 mt-2 w-72 rounded-2xl bg-white p-4 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0">
+              <div className="absolute right-0 top-full z-40 mt-2 w-72 rounded-2xl bg-surface p-4 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0">
                 <p className="text-sm font-medium">
                   {job.company} · {job.title}
                 </p>
@@ -599,7 +599,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           type="button"
           aria-pressed={chat}
           onClick={() => fold(right)}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition ${chat ? "bg-ink text-white" : "text-ink/75 ring-1 ring-ink/10 hover:text-ink hover:ring-ink/25"}`}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition ${chat ? "bg-ink text-on-ink" : "text-ink/75 ring-1 ring-ink/10 hover:text-ink hover:ring-ink/25"}`}
         >
           <Mark className="h-3.5 w-auto" />
           Rayume
@@ -639,7 +639,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
           </button>
           {/* plain buttons, not a menu: a menu would take the caret out of the text the symbol goes into */}
           {rich && sym && (
-            <div className="absolute left-0 top-full z-40 mt-1.5 flex gap-0.5 rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-150 starting:-translate-y-1 starting:opacity-0">
+            <div className="absolute left-0 top-full z-40 mt-1.5 flex gap-0.5 rounded-xl bg-surface p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 transition duration-150 starting:-translate-y-1 starting:opacity-0">
               {symbols.map((c) => (
                 <button key={c} type="button" aria-label={`Insert ${c}`} onClick={() => document.execCommand("insertText", false, c)} className={`${tool} ${serif} text-[15px]`}>
                   {c}
@@ -752,7 +752,7 @@ export function Editor({ r, master, template, body }: { r: Saved; master: Saved;
                 setPick(null);
               }}
               style={{ left: pick.x, top: Math.max(8, pick.y - 44) }}
-              className="fixed z-[60] inline-flex -translate-x-1/2 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-[13px] font-medium text-ink shadow-[0_8px_24px_-10px_rgb(22_27_34/0.45)] ring-1 ring-ink/10 transition duration-150 ease-out hover:bg-mist starting:translate-y-1 starting:opacity-0 pointer-coarse:py-2.5"
+              className="fixed z-[60] inline-flex -translate-x-1/2 items-center gap-1.5 rounded-lg bg-surface px-2.5 py-1.5 text-[13px] font-medium text-ink shadow-[0_8px_24px_-10px_rgb(22_27_34/0.45)] ring-1 ring-ink/10 transition duration-150 ease-out hover:bg-mist starting:translate-y-1 starting:opacity-0 pointer-coarse:py-2.5"
             >
               <MessageSquareQuote aria-hidden className="size-4 text-accent-text" />
               Send to chat

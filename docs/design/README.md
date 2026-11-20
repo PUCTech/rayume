@@ -121,6 +121,28 @@ Rules:
 - Status never uses glass, and status shadows stay navy.
 - Status colour is absent from a calm screen. It does not join the 60/30/10 split below.
 
+### Dark mode (flagged)
+
+Off unless `NEXT_PUBLIC_FLAG_DARK_MODE=true` (read only in `frontend/lib/flags.ts`, listed in `frontend/.env.example`). With it off nothing renders differently. With it on, the site follows the system (`prefers-color-scheme`); there is no toggle, since this is a developer flag. An inline script in `app/layout.tsx` sets `data-theme` on `<html>` before the first paint and follows system changes. To check dark without changing your OS, emulate the colour scheme in DevTools (Rendering → `prefers-color-scheme: dark`).
+
+Components adapt through the tokens: `[data-theme="dark"]` in `globals.css` redefines them, so no `dark:` classes. Two tokens exist for this and are white in light mode: `surface` (cards, inputs, menus: use it instead of `bg-white`) and `on-ink` (text on an `ink` fill: use it instead of `text-white` there). `bg-white` stays only for real sheets of paper (resume thumbnails, the PDF pages). A part that must keep its light look in dark mode (the lens, the closing ink panel, the scrim on the auth photo) carries `data-theme="light"`, which puts the light tokens back for its subtree.
+
+| Token | Light | Dark | Note |
+|---|---|---|---|
+| `paper` | `#F4F0EA` | `#0E1218` | Navy-black ground, from `ink` |
+| `ink` | `#161B22` | `#EEE8DF` | Paper-toned text; an `ink` fill becomes a light pill |
+| `mist` | `#E9E3D9` | `#1A2029` | Raised a step |
+| `surface` | `#FFFFFF` | `#232A34` | Raised two steps |
+| `on-ink` | `#FFFFFF` | `#0E1218` | Text on `ink` |
+| `accent` | `#4338F5` | `#625AFF` | Lifted for 3:1 on the ground; white on it 4.74 : 1 |
+| `accent-deep` | `#271BF4` | same | White on it 8.2 : 1 |
+| `accent-text` | `#180BEA` | `#A9A3FF` | Also the focus ring |
+| `error` / `error-text` | `#C2362B` / `#9A1F1A` | `#D0443A` / `#FF9C92` | |
+| `warning` / `warning-text` | `#B26A00` / `#7A4700` | same / `#F2BC63` | |
+| `success` / `success-text` | `#1E7B52` / `#135C3C` | `#228457` / `#6FD3A2` | |
+
+The ocean keeps its light shades, glass drops its tint to white 8% (`--glass-tint`), shadows stay navy. Checked pairs, all passing: `ink` on paper / mist / surface 15.4 / 13.4 / 11.9; `ink/60` on them 6.1 / 5.7 / 5.3; `accent-text` 8.4 / 7.3 / 6.5; `accent` (large text, UI) 4.0 / 3.5 / 3.1; the `-text` shades at least 7.2 on any surface and 5.7 on their `/15` and `/20` tints; status bases at least 3.0 on any surface; white on `error` 4.60 and `success` 4.66; `on-ink` on `ink` 15.4.
+
 ### Proportions
 
 ```mermaid

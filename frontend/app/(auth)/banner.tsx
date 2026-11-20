@@ -75,8 +75,9 @@ async function Photo() {
         sizes={`(min-width: 1024px) ${Math.ceil((p.src.width / p.src.height) * 100)}vh, 100vw`}
         className={`object-cover ${p.crop}`}
       />
-      {/* darkens the bottom for the slogan and the top for the wordmark and credit, over the bright water */}
-      <div aria-hidden className="absolute inset-0 bg-linear-to-t from-ink/75 via-ink/5 to-ink/40 lg:to-ink/20" />
+      {/* darkens the bottom for the slogan and the top for the wordmark and credit, over the bright water;
+          light tokens keep it navy in dark mode */}
+      <div aria-hidden data-theme="light" className="absolute inset-0 bg-linear-to-t from-ink/75 via-ink/5 to-ink/40 lg:to-ink/20" />
       <p className="absolute right-4 top-7 text-xs text-white/80 lg:right-auto lg:top-auto lg:bottom-7 lg:left-10 lg:text-white/70">
         Photo by{" "}
         <a href={p.href} className="underline underline-offset-2 transition hover:text-white focus-visible:outline-white">

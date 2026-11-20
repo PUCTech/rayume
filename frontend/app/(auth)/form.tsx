@@ -6,7 +6,7 @@ import Link from "next/link";
 
 // 16px on phones, or iOS Safari zooms the page when an input takes focus
 export const input =
-  "mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-base ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text sm:text-[15px] aria-invalid:ring-2 aria-invalid:ring-error aria-invalid:focus:ring-error-text aria-invalid:duration-400 aria-invalid:animate-shake motion-reduce:animate-none";
+  "mt-1.5 w-full rounded-2xl bg-surface px-4 py-3 text-base ring-1 ring-ink/10 transition placeholder:text-ink/40 hover:ring-ink/20 focus:outline-none focus:ring-2 focus:ring-accent-text sm:text-[15px] aria-invalid:ring-2 aria-invalid:ring-error aria-invalid:focus:ring-error-text aria-invalid:duration-400 aria-invalid:animate-shake motion-reduce:animate-none";
 
 // a field's message, under it; the jobs page's save dialog uses it too
 export function FieldError({ id, children }: { id: string; children: string }) {
@@ -83,7 +83,7 @@ function Google() {
 }
 
 const provider =
-  "flex w-full items-center justify-center gap-2.5 rounded-full bg-white px-5 py-3 text-[15px] font-medium ring-1 ring-ink/10 transition hover:ring-ink/25 active:scale-[0.98]";
+  "flex w-full items-center justify-center gap-2.5 rounded-full bg-surface px-5 py-3 text-[15px] font-medium ring-1 ring-ink/10 transition hover:ring-ink/25 active:scale-[0.98]";
 
 const submit =
   "inline-flex w-full items-center justify-center rounded-full bg-accent-deep px-6 py-3.5 text-[15px] font-medium text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))] active:scale-[0.97]";

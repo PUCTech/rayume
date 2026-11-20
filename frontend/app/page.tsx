@@ -62,7 +62,7 @@ function Tick({ v, accent = false }: { v: Mark3; accent?: boolean }) {
       <span
         aria-hidden
         className={`grid size-6 place-items-center rounded-full text-[13px] ${
-          v === "yes" ? (accent ? "bg-accent-deep text-white" : "bg-ink text-white") : v === "part" ? "bg-ink/10 text-ink/70" : "text-ink/30"
+          v === "yes" ? (accent ? "bg-accent-deep text-white" : "bg-ink text-on-ink") : v === "part" ? "bg-ink/10 text-ink/70" : "text-ink/30"
         }`}
       >
         {v === "yes" ? "✓" : v === "part" ? "~" : "–"}
@@ -96,7 +96,7 @@ function PhoneCompare() {
       <tbody>
         {compare.map((r) => {
           const us = !r.brand;
-          const cell = us ? "border-y-2 border-accent bg-white py-3.5" : "border-t border-ink/10 py-3.5";
+          const cell = us ? "border-y-2 border-accent bg-surface py-3.5" : "border-t border-ink/10 py-3.5";
           return (
             <Fragment key={r.name}>
               <tr className={us ? "shadow-[0_18px_44px_-22px_color-mix(in_srgb,var(--color-accent)_75%,transparent)]" : ""}>
@@ -152,7 +152,7 @@ export default function Landing() {
           {/* side by side from 360px so the whole hero fits the first screen of a phone */}
           <div className="mt-6 flex flex-col gap-3 min-[360px]:flex-row lg:mt-9">
             <Link href="/signup" className={`${primary} max-sm:flex-1 max-sm:px-4`}>Build my resume</Link>
-            <Link href="/templates" className={`glass glass-prism ${btn} text-ink hover:bg-white/40 max-sm:flex-1 max-sm:px-4`}>See the templates</Link>
+            <Link href="/templates" className={`glass glass-prism ${btn} text-ink hover:bg-surface/40 max-sm:flex-1 max-sm:px-4`}>See the templates</Link>
           </div>
           <p className="mt-5 text-sm text-ink/50">Free while in beta. Sign in with GitHub or Google.</p>
         </div>
@@ -179,7 +179,7 @@ export default function Landing() {
                 <p className={`${serif} mt-3 text-[22px] leading-snug sm:text-2xl`}>{s.line}</p>
                 <ul className="mt-5 flex flex-wrap gap-2" aria-label="Skills found">
                   {s.skills.map((k) => (
-                    <li key={k} className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-ink">{k}</li>
+                    <li key={k} className="rounded-full bg-surface px-3 py-1 text-[13px] font-medium text-ink">{k}</li>
                   ))}
                 </ul>
               </article>
@@ -229,7 +229,7 @@ export default function Landing() {
           </div>
           {/* the highlight and Rayume's rewrite sit over the dashboard bullet, placed in % of the render so they scale with it */}
           <figure className="relative mx-auto w-full max-w-[30rem]">
-            <div className="rounded-[28px] bg-white p-3 shadow-[0_24px_60px_-28px_rgb(22_27_34/0.45)] ring-1 ring-ink/5">
+            <div className="rounded-[28px] bg-surface p-3 shadow-[0_24px_60px_-28px_rgb(22_27_34/0.45)] ring-1 ring-ink/5">
               <div className="relative aspect-[8.5/11] overflow-hidden rounded-xl">
                 <Image src="/resumes/classic.png" alt="Lucas Mendes's resume, with one bullet being edited" fill sizes="(min-width: 1024px) 480px, 100vw" className="object-cover" />
                 <span aria-hidden className="absolute left-[5%] top-[16.25%] h-[2%] w-[90%] rounded-[3px] bg-accent/10 ring-2 ring-accent/50">
@@ -277,7 +277,7 @@ export default function Landing() {
               {compare.map((r) => {
                 const us = !r.brand;
                 // our row: an accent outline drawn on the cells (rows can't take a border radius)
-                const cell = us ? "border-y-2 border-accent bg-white py-[18px]" : "border-t border-ink/10 py-5";
+                const cell = us ? "border-y-2 border-accent bg-surface py-[18px]" : "border-t border-ink/10 py-5";
                 return (
                   <Fragment key={r.name}>
                     <tr className={us ? "shadow-[0_18px_44px_-22px_color-mix(in_srgb,var(--color-accent)_75%,transparent)]" : ""}>
@@ -303,7 +303,8 @@ export default function Landing() {
 
       {/* final call */}
       <section className="px-4 pb-6 sm:px-6">
-        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[36px] bg-ink px-6 py-24 text-center text-white sm:py-32">
+        {/* light tokens: the ink panel stays ink in dark mode too */}
+        <div data-theme="light" className="relative mx-auto max-w-6xl overflow-hidden rounded-[36px] bg-ink px-6 py-24 text-center text-white sm:py-32">
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-[150%] size-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/70 blur-[100px]" />
           <Mark className="relative mx-auto h-14 w-auto text-paper" />
           <h2 className={`${serif} relative mx-auto mt-8 max-w-3xl text-[clamp(2.4rem,5.4vw,4.6rem)] leading-[1] tracking-[-0.03em]`}>
