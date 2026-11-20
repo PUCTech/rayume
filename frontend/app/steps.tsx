@@ -12,7 +12,7 @@ const steps = [
     title: "Tell Rayume what you've done",
     body: "In your own words, as messy as you like. It asks follow-up questions and keeps everything in one Master Resume you only write once.",
     demo: (
-      <div className="rounded-2xl bg-white p-4 text-sm shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
+      <div className="rounded-2xl bg-surface p-4 text-sm shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
         <p
           className={`${anim} text-ink/45 duration-[1400ms] ease-linear [clip-path:inset(0_100%_0_0)] delay-[calc(var(--d)_+_0.5s)] group-data-seen:[clip-path:inset(0_0_0_0)]`}
         >
@@ -30,7 +30,7 @@ const steps = [
     title: "Paste the job you want",
     body: "From the app, or one click with the browser extension. Rayume reads what the posting asks for and picks what fits from your experience.",
     demo: (
-      <div className="rounded-2xl bg-white p-4 text-sm leading-relaxed shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
+      <div className="rounded-2xl bg-surface p-4 text-sm leading-relaxed shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
         <p className="font-medium">Full Stack Engineer, Orbita</p>
         <p className="mt-2 text-ink/60">
           You&apos;ll build features in <Keyword delay="0.5s">React</Keyword> and <Keyword delay="0.8s">TypeScript</Keyword>, work
@@ -58,7 +58,7 @@ const steps = [
             className={`${anim} object-cover object-top duration-[1100ms] ease-linear [clip-path:inset(0_0_100%_0)] delay-[calc(var(--d)_+_0.5s)] group-data-seen:[clip-path:inset(0_0_0_0)]`}
           />
         </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-white p-4 text-sm shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
+        <div className="flex items-center gap-3 rounded-2xl bg-surface p-4 text-sm shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-xs font-semibold text-white">PDF</span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium">lucas-mendes-orbita.pdf</span>
@@ -78,7 +78,7 @@ const steps = [
             </span>
           </span>
           <span
-            className={`${anim} rounded-full bg-ink px-3 py-1.5 text-xs text-white opacity-0 scale-90 delay-[calc(var(--d)_+_1.7s)] group-data-seen:scale-100 group-data-seen:opacity-100`}
+            className={`${anim} rounded-full bg-ink px-3 py-1.5 text-xs text-on-ink opacity-0 scale-90 delay-[calc(var(--d)_+_1.7s)] group-data-seen:scale-100 group-data-seen:opacity-100`}
           >
             Download
           </span>

@@ -105,7 +105,7 @@ export function Viewer({
       type="button"
       aria-pressed={mode === m}
       onClick={() => setMode(m)}
-      className={`relative w-14 rounded-full py-1.5 text-sm pointer-coarse:py-2.5 sm:w-16 font-medium transition-colors duration-300 ${mode === m ? "text-white" : "text-ink/70 hover:text-ink"}`}
+      className={`relative w-14 rounded-full py-1.5 text-sm pointer-coarse:py-2.5 sm:w-16 font-medium transition-colors duration-300 ${mode === m ? "text-on-ink" : "text-ink/70 hover:text-ink"}`}
     >
       {label}
     </button>
@@ -148,7 +148,7 @@ export function Viewer({
             <div style={vars(theme)} className="relative min-h-0 bg-(--c-bg) transition-colors duration-300">
               <Code id="tpl-code" label={`${name} LaTeX source`} value={code} onChange={setCode} onRun={() => canRender && !busy && render()} jump={jump} />
             </div>
-            <div className={`flex min-h-0 flex-col overflow-hidden bg-white ${preview ? "border-t border-ink/10" : ""}`}>
+            <div className={`flex min-h-0 flex-col overflow-hidden bg-surface ${preview ? "border-t border-ink/10" : ""}`}>
               {preview && <Pdf src={pdf} title={`${name} resume PDF preview`} />}
             </div>
           </div>
@@ -176,7 +176,7 @@ export function Viewer({
                   </Menu.Trigger>
                   <Menu.Portal>
                     <Menu.Positioner side="top" sideOffset={6} align="start" className="z-[70] outline-none">
-                      <Menu.Popup className="max-h-72 min-w-48 origin-(--transform-origin) overflow-y-auto rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+                      <Menu.Popup className="max-h-72 min-w-48 origin-(--transform-origin) overflow-y-auto rounded-xl bg-surface p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
                         {outline.map((h) => (
                           <Menu.Item key={h.line} onClick={() => setJump({ line: h.line })} className="flex cursor-default items-center justify-between gap-6 rounded-lg px-2.5 py-1.5 text-[13px] outline-none select-none data-highlighted:bg-ink/5">
                             {h.title}

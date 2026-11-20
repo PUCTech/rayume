@@ -85,7 +85,7 @@ export function Nav({ serif }: { serif: string }) {
         </Link>
         <div className="hidden items-center text-sm md:flex">
           {links.map(([label, href]) => (
-            <a key={label} href={href} className="whitespace-nowrap rounded-full px-4 py-2 text-ink/70 transition hover:bg-white/50 hover:text-ink">
+            <a key={label} href={href} className="whitespace-nowrap rounded-full px-4 py-2 text-ink/70 transition hover:bg-surface/50 hover:text-ink">
               {label}
             </a>
           ))}
@@ -94,13 +94,13 @@ export function Nav({ serif }: { serif: string }) {
           <Link
             href="/login"
             tabIndex={compact ? -1 : undefined}
-            className={`hidden overflow-hidden whitespace-nowrap rounded-full py-2 transition-all hover:bg-white/50 sm:inline-block ${ease} ${
+            className={`hidden overflow-hidden whitespace-nowrap rounded-full py-2 transition-all hover:bg-surface/50 sm:inline-block ${ease} ${
               compact ? "max-w-0 px-0 opacity-0" : "mr-1 max-w-24 px-4 opacity-100"
             }`}
           >
             Sign in
           </Link>
-          <Link href="/signup" className="whitespace-nowrap rounded-full bg-ink px-4 py-2 font-medium text-white transition hover:bg-ink/85">
+          <Link href="/signup" className="whitespace-nowrap rounded-full bg-ink px-4 py-2 font-medium text-on-ink transition hover:bg-ink/85">
             Start free
           </Link>
           <button
@@ -110,7 +110,7 @@ export function Nav({ serif }: { serif: string }) {
             aria-controls="mobile-menu"
             aria-label="Menu"
             onClick={() => setOpen((o) => !o)}
-            className="ml-1 grid size-9 place-items-center rounded-full transition hover:bg-white/50 md:hidden"
+            className="ml-1 grid size-9 place-items-center rounded-full transition hover:bg-surface/50 md:hidden"
           >
             <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
               {open ? <path d="M5 5l10 10M15 5L5 15" /> : <path d="M3.5 7.5h13M3.5 12.5h13" />}
@@ -121,7 +121,7 @@ export function Nav({ serif }: { serif: string }) {
       {open && (
         <div id="mobile-menu" ref={menu} className="glass glass-prism absolute inset-x-4 top-full mt-2 rounded-[28px] bg-paper/90! p-2 text-[15px] md:hidden">
           {[...links, ["Sign in", "/login"]].map(([label, href]) => (
-            <Link key={label} href={href} onClick={() => setOpen(false)} className="block rounded-full px-4 py-3 text-ink/80 transition hover:bg-white/50 hover:text-ink">
+            <Link key={label} href={href} onClick={() => setOpen(false)} className="block rounded-full px-4 py-3 text-ink/80 transition hover:bg-surface/50 hover:text-ink">
               {label}
             </Link>
           ))}

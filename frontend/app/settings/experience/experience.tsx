@@ -31,7 +31,7 @@ export function Experience({ body }: { body: string }) {
             <h1 className={`${serif} truncate text-xl leading-tight tracking-[-0.01em]`}>Your experience</h1>
             <p className="hidden truncate text-xs text-ink/50 sm:block">What your master resume says, and what every new resume starts from</p>
           </div>
-          <Link href={`/resumes/${master.id}`} className="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition hover:bg-ink/85">
+          <Link href={`/resumes/${master.id}`} className="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-medium text-on-ink transition hover:bg-ink/85">
             <span className="sm:hidden">See the PDF</span>
             <span className="max-sm:hidden">Open master resume</span>
           </Link>

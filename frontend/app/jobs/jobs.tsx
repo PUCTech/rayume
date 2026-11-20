@@ -183,7 +183,7 @@ export function Jobs() {
                     <li
                       key={j.id}
                       // a row with its menu or popover open sits over the rows below it
-                      className={`relative flex flex-col gap-3 rounded-[26px] bg-white p-4 ring-1 ring-ink/10 transition duration-300 hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] lg:hover:bg-white lg:hover:shadow-none lg:grid lg:grid-cols-[minmax(0,1fr)_7.5rem_12rem_10rem] lg:items-center lg:gap-6 lg:rounded-none lg:bg-transparent lg:px-2 lg:py-3.5 lg:ring-0 ${menu?.split(":").pop() === j.id ? "z-20" : ""}`}
+                      className={`relative flex flex-col gap-3 rounded-[26px] bg-surface p-4 ring-1 ring-ink/10 transition duration-300 hover:shadow-[0_2px_4px_rgb(22_27_34/0.08),0_24px_48px_-20px_rgb(22_27_34/0.4)] lg:hover:bg-surface lg:hover:shadow-none lg:grid lg:grid-cols-[minmax(0,1fr)_7.5rem_12rem_10rem] lg:items-center lg:gap-6 lg:rounded-none lg:bg-transparent lg:px-2 lg:py-3.5 lg:ring-0 ${menu?.split(":").pop() === j.id ? "z-20" : ""}`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <Logo p={j} className="size-9" />
@@ -240,7 +240,7 @@ export function Jobs() {
                               type="button"
                               aria-expanded={menu === `apply:${j.id}`}
                               onClick={() => setMenu(menu === `apply:${j.id}` ? null : `apply:${j.id}`)}
-                              className="rounded-full bg-ink px-3.5 py-1.5 text-[13px] font-medium text-white transition hover:bg-ink/85 pointer-coarse:py-3"
+                              className="rounded-full bg-ink px-3.5 py-1.5 text-[13px] font-medium text-on-ink transition hover:bg-ink/85 pointer-coarse:py-3"
                             >
                               Mark as applied
                             </button>
@@ -325,7 +325,7 @@ export function Jobs() {
       {/* mounted all along, so a screen reader hears it when the text arrives */}
       <div role="status" className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4">
         {undo && (
-          <p className="pointer-events-auto flex items-center gap-3 rounded-full bg-white py-1.5 pl-4 pr-1.5 text-sm text-ink/70 shadow-[0_12px_32px_-12px_rgb(22_27_34/0.35)] ring-1 ring-ink/10 transition duration-200 starting:translate-y-1 starting:opacity-0">
+          <p className="pointer-events-auto flex items-center gap-3 rounded-full bg-surface py-1.5 pl-4 pr-1.5 text-sm text-ink/70 shadow-[0_12px_32px_-12px_rgb(22_27_34/0.35)] ring-1 ring-ink/10 transition duration-200 starting:translate-y-1 starting:opacity-0">
             Marked as applied
             <button
               type="button"
@@ -383,7 +383,7 @@ function Apply({ j, list, preset, onDone, inline }: { j: Posting; list: Saved[];
         else if (when < min) setError(`Pick a day from ${day(min)}, when you saved it.`);
         else onDone(when, resume);
       }}
-      className={`grid gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-ink/10 ${inline ? "sm:grid-cols-2 sm:items-start" : "absolute right-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-3rem))] shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0"}`}
+      className={`grid gap-3 rounded-2xl bg-surface p-4 text-left ring-1 ring-ink/10 ${inline ? "sm:grid-cols-2 sm:items-start" : "absolute right-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-3rem))] shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0"}`}
     >
       <label className="block text-sm font-medium">
         When did you apply
@@ -398,13 +398,13 @@ function Apply({ j, list, preset, onDone, inline }: { j: Posting; list: Saved[];
             setError("");
           }}
           aria-invalid={!!error}
-          className="mt-1.5 block w-full rounded-full bg-white px-3.5 py-2 text-base font-normal ring-1 ring-ink/10 outline-none focus:ring-2 focus:ring-accent-text aria-invalid:ring-2 aria-invalid:ring-error sm:text-sm"
+          className="mt-1.5 block w-full rounded-full bg-surface px-3.5 py-2 text-base font-normal ring-1 ring-ink/10 outline-none focus:ring-2 focus:ring-accent-text aria-invalid:ring-2 aria-invalid:ring-error sm:text-sm"
         />
         {error && <span role="alert" className="mt-1.5 block text-xs font-medium text-error-text">{error}</span>}
       </label>
       <label className="block text-sm font-medium">
         Which resume did you send
-        <select value={resume} onChange={(e) => setResume(e.target.value)} className="mt-1.5 block w-full rounded-full bg-white px-3 py-2 text-base font-normal ring-1 ring-ink/10 outline-none focus:ring-2 focus:ring-accent-text sm:text-sm">
+        <select value={resume} onChange={(e) => setResume(e.target.value)} className="mt-1.5 block w-full rounded-full bg-surface px-3 py-2 text-base font-normal ring-1 ring-ink/10 outline-none focus:ring-2 focus:ring-accent-text sm:text-sm">
           {[...list].sort(byEdited).map((r) => (
             <option key={r.id} value={r.id}>
               {r.title}
@@ -412,7 +412,7 @@ function Apply({ j, list, preset, onDone, inline }: { j: Posting; list: Saved[];
           ))}
         </select>
       </label>
-      <button type="submit" className={`rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition hover:bg-ink/85 pointer-coarse:py-3 ${inline ? "sm:col-span-2 sm:justify-self-start" : ""}`}>
+      <button type="submit" className={`rounded-full bg-ink px-4 py-2 text-sm font-medium text-on-ink transition hover:bg-ink/85 pointer-coarse:py-3 ${inline ? "sm:col-span-2 sm:justify-self-start" : ""}`}>
         {j.applied ? "Save details" : "Mark as applied"}
       </button>
     </form>

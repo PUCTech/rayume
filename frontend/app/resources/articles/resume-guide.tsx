@@ -256,7 +256,7 @@ export const article: Article = {
           <p>
             Show the address as text: <code>github.com/lucasm</code>, not the word “GitHub” with a link behind it. Hyperlinks get lost when a parser extracts the text or a
             recruiter prints the page; the address survives both. Then check what the links lead to. A reader who clicks through to a GitHub profile full of empty forks has
-            learned something, and it isn’t good.
+            learned something, and it isn’t good. The <Link href="/resources/github-profile">GitHub guide</Link> covers what they should find instead.
           </p>
         </>
       ),

@@ -10,7 +10,7 @@ import { blank, dates, kinds, mark, months, outline, projectBullets, strip, tidy
 
 // rounded-2xl: a one-line field is a pill, a bullet's box keeps soft corners (the sign-in form's fields)
 const input =
-  "w-full rounded-2xl bg-white px-3 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text disabled:opacity-40 sm:text-[13px] pointer-coarse:py-2.5";
+  "w-full rounded-2xl bg-surface px-3 py-1.5 text-base text-ink ring-1 ring-ink/10 outline-none transition placeholder:text-ink/35 hover:ring-ink/25 focus:ring-2 focus:ring-accent-text disabled:opacity-40 sm:text-[13px] pointer-coarse:py-2.5";
 const quiet = "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/5 hover:text-ink";
 const originals = entries.flatMap((e) => e.bullets);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
@@ -35,7 +35,7 @@ function Labeled({ label, className = "", children }: { label: string; className
 
 // the month menus' surface, the toolbar's Pick popup's (editor.tsx), so both read as one family
 const popup =
-  "origin-(--transform-origin) rounded-xl bg-white p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none";
+  "origin-(--transform-origin) rounded-xl bg-surface p-1 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none";
 const cell = "rounded-full text-[13px] text-ink/80 outline-none transition hover:bg-ink/5 focus-visible:ring-2 focus-visible:ring-accent-text disabled:pointer-events-none disabled:opacity-30";
 const short = (ym: string) => `${months[Number(ym.slice(5, 7)) - 1].slice(0, 3)} ${ym.slice(0, 4)}`;
 const long = (ym: string) => `${months[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
@@ -151,7 +151,7 @@ function NewEntry({ title, fields, submit, onAdd, onCancel }: { title: string; f
         e.preventDefault();
         if (ready) onAdd(values.map(tidy));
       }}
-      className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-accent-text/30"
+      className="space-y-2 rounded-xl bg-surface p-3 ring-1 ring-accent-text/30"
     >
       <p className="text-[13px] font-medium">{title}</p>
       {fields.map((f, i) => (
@@ -172,7 +172,7 @@ function NewEntry({ title, fields, submit, onAdd, onCancel }: { title: string; f
 }
 const placeholders: Record<string, string> = { Degree: "B.S. in Computer Science", School: "University", Dates: "2022 -- 2026", Name: "AWS Certified Developer", Issuer: "Amazon Web Services", Year: "2025", Label: "Languages", Skills: "TypeScript, Python, SQL" };
 // the dashed row that opens a new entry's form
-const addRow = "flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink/20 px-3 py-2.5 text-[13px] font-medium text-ink/70 transition hover:border-accent-text/50 hover:bg-white hover:text-accent-text pointer-coarse:min-h-11";
+const addRow = "flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink/20 px-3 py-2.5 text-[13px] font-medium text-ink/70 transition hover:border-accent-text/50 hover:bg-surface hover:text-accent-text pointer-coarse:min-h-11";
 
 // A job that isn't on the resume yet, as a short form: it goes in, in its place by date, only once it has
 // what a \role line needs (title, company, place, dates) and a first bullet; after that it's edited like the rest.
@@ -187,7 +187,7 @@ function NewJob({ onAdd, onCancel }: { onAdd: (j: Job) => void; onCancel: () => 
         e.preventDefault();
         if (ready) onAdd({ ...j, id: `job-${Date.now()}`, title: tidy(j.title), organization: tidy(j.organization), location: tidy(j.location), bullets: [tidy(j.bullets[0])] });
       }}
-      className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-accent-text/30"
+      className="space-y-2 rounded-xl bg-surface p-3 ring-1 ring-accent-text/30"
     >
       <p className="text-[13px] font-medium">New experience</p>
       <Labeled label="Job title">
@@ -584,7 +584,7 @@ export function Content({
                       return f.link ? (
                         <div key={f.key}>
                         <span className="mb-1 block text-xs font-medium text-ink/55">{kind.name}</span>
-                        <div className="relative rounded-2xl bg-white ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
+                        <div className="relative rounded-2xl bg-surface ring-1 ring-ink/10 transition hover:ring-ink/25 focus-within:ring-2 focus-within:ring-accent-text">
                           <Text value={run(f)} label={kind.name === "Link" ? "Link text" : kind.name} onSave={(t) => onRun(f, t)} onLive={(t) => liveRun(f, t)} className="!bg-transparent pr-8 !ring-0" />
                           {cross(`link:${f.was}`, `${kind.name === "Link" ? run(f) : kind.name} link`, () => onLinkDrop(f))}
                           <div className="flex items-center gap-1.5 border-t border-ink/10 pl-3 text-ink/40">
@@ -759,7 +759,7 @@ export function Content({
                   <button
                     type="button"
                     onClick={() => setNewJob(true)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink/20 px-3 py-2.5 text-[13px] font-medium text-ink/70 transition hover:border-accent-text/50 hover:bg-white hover:text-accent-text"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink/20 px-3 py-2.5 text-[13px] font-medium text-ink/70 transition hover:border-accent-text/50 hover:bg-surface hover:text-accent-text"
                   >
                     <Plus aria-hidden className="size-4" />
                     Add experience

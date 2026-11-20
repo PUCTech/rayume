@@ -25,9 +25,9 @@
   --color-border: color-mix(in oklab, var(--color-ink) 10%, transparent);
   --color-input: color-mix(in oklab, var(--color-ink) 15%, transparent);
   --color-ring: var(--color-accent-text);
-  --color-popover: #fff;
+  --color-popover: var(--color-surface);
   --color-popover-foreground: var(--color-ink);
-  --color-card: #fff;
+  --color-card: var(--color-surface);
   --color-card-foreground: var(--color-ink);
   @keyframes collapsible-down {
   from {
@@ -63,6 +63,10 @@
   --color-warning-text: #7a4700;
   --color-success: #1e7b52;
   --color-success-text: #135c3c;
+  /* both white in light: surface for cards, inputs and menus on paper, on-ink for text on an ink fill. They
+     only change under [data-theme="dark"] */
+  --color-surface: #fff;
+  --color-on-ink: #fff;
   --animate-shake: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 
   @keyframes shake {
@@ -79,6 +83,53 @@
   --ocean-light: color-mix(in oklab, var(--color-accent) 60%, white);
 }
 
+/* Dark mode, behind NEXT_PUBLIC_FLAG_DARK_MODE: only the root layout's script sets data-theme on <html>, so
+   with the flag off none of this matches. A navy-black ground from ink, paper-toned text, raised mist; the
+   accent and status bases are lifted so they keep 3:1 on the ground and white text keeps 4.5:1 on them. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0e1218;
+  --foreground: #eee8df;
+  --color-paper: #0e1218;
+  --color-ink: #eee8df;
+  --color-mist: #1a2029;
+  --color-surface: #232a34;
+  --color-on-ink: #0e1218;
+  --color-accent: #625aff;
+  --color-accent-text: #a9a3ff;
+  --color-error: #d0443a;
+  --color-error-text: #ff9c92;
+  --color-warning-text: #f2bc63;
+  --color-success: #228457;
+  --color-success-text: #6fd3a2;
+  /* the ocean keeps its light-mode shades: it is colour, not ground */
+  --ocean-deep: #180bea;
+  --ocean-shade: color-mix(in oklab, #180bea, #271bf4);
+  --ocean-mid: color-mix(in oklab, #271bf4 80%, #4338f5);
+  --ocean-light: color-mix(in oklab, #4338f5 60%, white);
+  --glass-tint: rgb(255 255 255 / 0.08);
+}
+
+/* a part that keeps its light look in dark mode (the lens's sheet of paper, an ink panel): light tokens back */
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f4f0ea;
+  --foreground: #161b22;
+  --color-paper: #f4f0ea;
+  --color-ink: #161b22;
+  --color-mist: #e9e3d9;
+  --color-surface: #fff;
+  --color-on-ink: #fff;
+  --color-accent: #4338f5;
+  --color-accent-text: #180bea;
+  --color-error: #c2362b;
+  --color-error-text: #9a1f1a;
+  --color-warning-text: #7a4700;
+  --color-success: #1e7b52;
+  --color-success-text: #135c3c;
+  --glass-tint: rgb(255 255 255 / 0.22);
+}
+
 html,
 body {
   background: var(--background);
@@ -91,13 +142,20 @@ body {
     outline: 2px solid var(--color-accent-text);
     outline-offset: 3px;
   }
+  /* no one-word lines: headings balance their lines, text avoids a lone last word */
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+  p, li, figcaption, blockquote {
+    text-wrap: pretty;
+  }
 }
 
 /* Liquid glass: thin tinted body, heavy saturation, a bright rim and an inner glow. */
 @utility glass {
   position: relative;
   isolation: isolate;
-  background: rgb(255 255 255 / 0.22);
+  background: var(--glass-tint, rgb(255 255 255 / 0.22));
   -webkit-backdrop-filter: blur(10px) saturate(190%);
   backdrop-filter: blur(10px) saturate(190%);
   box-shadow:

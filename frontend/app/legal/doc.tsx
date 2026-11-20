@@ -90,7 +90,7 @@ export function LegalDoc({
 // A plain, readable table for data inventories.
 export function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
   return (
-    <div className="mt-6 overflow-x-auto rounded-2xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
+    <div className="mt-6 overflow-x-auto rounded-2xl bg-surface shadow-[0_1px_2px_rgb(22_27_34/0.08)]">
       <table className="w-full min-w-[36rem] border-collapse text-left text-sm leading-relaxed">
         <thead>
           <tr className="border-b border-ink/10 text-ink">

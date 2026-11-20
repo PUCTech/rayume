@@ -148,6 +148,8 @@ export function Lens() {
           data-full={full ? "" : undefined}
           onPointerMove={follow}
           onPointerLeave={() => (userMoved.current = false)}
+          // a sheet of paper, so it keeps the light tokens in dark mode
+          data-theme="light"
           className="group relative aspect-[8.5/11] select-none overflow-hidden rounded-[24px] shadow-[0_1px_2px_rgb(22_27_34/0.1)] [--r:min(84px,18.1cqw)] [--x:62%] [--y:38%] [--zoom:2] transition-[--r,--zoom] duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] data-full:[--r:900px] data-full:[--zoom:1] motion-reduce:transition-none"
         >
           <div aria-hidden>

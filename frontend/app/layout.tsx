@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./prism.css";
 import { Precache } from "./precache";
+import { darkMode } from "@/lib/flags";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,12 +30,23 @@ export const metadata: Metadata = {
 // the paper the pages are on, for the browser's bar on phones
 export const viewport: Viewport = { themeColor: "#f4f0ea" };
 
+// Dark mode (developer flag): sets <html data-theme> from the system before the first paint and follows it.
+// A fixed string, no user text in it.
+const themeScript = `(function(){var d=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)");function a(){d.dataset.theme=m.matches?"dark":"light"}a();m.addEventListener("change",a)})()`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // the theme script sets data-theme before React hydrates
+      suppressHydrationWarning={darkMode}
     >
+      {darkMode && (
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        </head>
+      )}
       <body className="min-h-full flex flex-col">
         {children}
         <Precache />

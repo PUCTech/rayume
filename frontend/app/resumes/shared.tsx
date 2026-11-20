@@ -32,10 +32,10 @@ export const primary =
 export const item = "block w-full rounded-lg px-3 py-2 text-left text-sm text-ink/80 transition hover:bg-ink/5 hover:text-ink";
 // a card's menu, under its ••• button
 export const menuPanel =
-  "absolute right-0 top-full z-20 mt-1 w-44 rounded-xl bg-white p-1 shadow-[0_12px_32px_-12px_rgb(22_27_34/0.35)] ring-1 ring-ink/10 transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0";
+  "absolute right-0 top-full z-20 mt-1 w-44 rounded-xl bg-surface p-1 shadow-[0_12px_32px_-12px_rgb(22_27_34/0.35)] ring-1 ring-ink/10 transition duration-200 ease-out starting:-translate-y-1 starting:opacity-0";
 export const tabTrack = "flex rounded-full bg-ink/5 p-1";
 export const tabButton = (on: boolean) =>
-  `rounded-full px-3.5 py-1.5 text-sm transition pointer-coarse:py-2.5 ${on ? "bg-white font-medium text-ink shadow-sm" : "text-ink/60 hover:text-ink"}`;
+  `rounded-full px-3.5 py-1.5 text-sm transition pointer-coarse:py-2.5 ${on ? "bg-surface font-medium text-ink shadow-sm" : "text-ink/60 hover:text-ink"}`;
 
 export function More({ label, open, onClick }: { label: string; open: boolean; onClick: () => void }) {
   return (
@@ -143,14 +143,14 @@ function Account() {
   ];
   return (
     <Menu.Root>
-      <Menu.Trigger aria-label={`Your account, ${me.name}`} className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white transition hover:bg-ink/85 data-popup-open:ring-2 data-popup-open:ring-accent-text data-popup-open:ring-offset-2 data-popup-open:ring-offset-paper pointer-coarse:size-11">
+      <Menu.Trigger aria-label={`Your account, ${me.name}`} className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-on-ink transition hover:bg-ink/85 data-popup-open:ring-2 data-popup-open:ring-accent-text data-popup-open:ring-offset-2 data-popup-open:ring-offset-paper pointer-coarse:size-11">
         {initials(me.name)}
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner side="bottom" align="end" sideOffset={8} className="z-50 outline-none">
-          <Menu.Popup className="w-64 origin-(--transform-origin) rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none">
+          <Menu.Popup className="w-64 origin-(--transform-origin) rounded-2xl bg-surface p-1.5 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none">
             <div className="flex items-center gap-3 px-2.5 pb-3 pt-2">
-              <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-white">
+              <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-on-ink">
                 {initials(me.name)}
               </span>
               <div className="min-w-0">
@@ -197,14 +197,14 @@ export function AppBar({ current, label, query, onQuery, children }: { current: 
               key={href}
               href={href}
               aria-current={href === current ? "page" : undefined}
-              className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full text-sm transition max-sm:w-9 sm:px-3.5 pointer-coarse:h-11 max-sm:pointer-coarse:w-10 ${href === current ? "bg-ink font-medium text-white" : "text-ink/60 hover:bg-ink/5 hover:text-ink"}`}
+              className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full text-sm transition max-sm:w-9 sm:px-3.5 pointer-coarse:h-11 max-sm:pointer-coarse:w-10 ${href === current ? "bg-ink font-medium text-on-ink" : "text-ink/60 hover:bg-ink/5 hover:text-ink"}`}
             >
               <Icon aria-hidden className="size-4 sm:hidden" />
               <span className="max-sm:sr-only">{name}</span>
             </Link>
           ))}
         </nav>
-        <div role="search" className="mx-auto flex w-full min-w-0 max-w-md items-center gap-2.5 rounded-full bg-white px-4 ring-1 ring-ink/10 focus-within:ring-2 focus-within:ring-accent-text max-sm:gap-1.5 max-sm:px-3">
+        <div role="search" className="mx-auto flex w-full min-w-0 max-w-md items-center gap-2.5 rounded-full bg-surface px-4 ring-1 ring-ink/10 focus-within:ring-2 focus-within:ring-accent-text max-sm:gap-1.5 max-sm:px-3">
           <svg aria-hidden viewBox="0 0 20 20" className="size-4 shrink-0 text-ink/45" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <circle cx="8.5" cy="8.5" r="5.5" />
             <path d="m13 13 4 4" />

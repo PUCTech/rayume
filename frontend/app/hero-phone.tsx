@@ -172,7 +172,7 @@ export function PhoneHero() {
     <div aria-hidden className="relative mx-auto mt-6 h-[clamp(5.5rem,41.7svh-9.3rem,14rem)] w-full max-w-sm lg:hidden">
       {/* Rayume; messages sit on the bottom edge so the newest stays in view on a short screen */}
       <div
-        className={`${enter} ${turn(rayumesTurn)} absolute bottom-0 left-0 top-3 w-[58%] -rotate-3 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)] starting:-translate-x-4 starting:opacity-0`}
+        className={`${enter} ${turn(rayumesTurn)} absolute bottom-0 left-0 top-3 w-[58%] -rotate-3 overflow-hidden rounded-2xl bg-surface shadow-[0_1px_2px_rgb(22_27_34/0.08),0_12px_32px_-16px_rgb(22_27_34/0.3)] starting:-translate-x-4 starting:opacity-0`}
       >
         <p className="absolute left-3 top-3 flex items-center gap-1.5 text-[10px] font-medium text-ink/45">
           <span className="grid size-4 place-items-center rounded-full bg-accent-deep text-white">
@@ -205,7 +205,7 @@ export function PhoneHero() {
       </div>
 
       <div className={`${enter} ${turn(!rayumesTurn)} glass absolute right-0 top-0 h-full w-[56%] rotate-2 rounded-[22px] p-2 delay-150 starting:translate-y-4 starting:opacity-0`}>
-        <div className="relative h-full overflow-hidden rounded-xl bg-white">
+        <div className="relative h-full overflow-hidden rounded-xl bg-surface">
           {/* his side of the chat, growing up from the bottom edge and scrolling out of the top */}
           <div className={`absolute inset-0 transition-opacity duration-500 ${show === "render" || show === "resume" ? "opacity-0" : "opacity-100"}`}>
             {show === "ask" && (

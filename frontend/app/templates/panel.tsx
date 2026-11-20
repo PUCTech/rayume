@@ -28,7 +28,7 @@ export function Detail({ t, tex }: { t: Template; tex: string }) {
         </p>
         <ul aria-label="What it's like" className="mt-4 flex flex-wrap gap-1.5">
           {[t.ats ? "ATS-friendly" : "Two columns can confuse ATS", t.color, t.density].map((f) => (
-            <li key={f} className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-ink/70 ring-1 ring-ink/10">
+            <li key={f} className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-ink/70 ring-1 ring-ink/10">
               {f}
             </li>
           ))}

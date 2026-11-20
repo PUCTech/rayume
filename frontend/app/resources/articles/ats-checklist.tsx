@@ -289,6 +289,9 @@ export const article: Article = {
               { label: "Read it once as a person would", detail: "Software is the first reader. A human decides." },
             ]}
           />
+          <p>
+            Applying is more than the upload. Referrals, cover letters and follow-ups are in the <Link href="/resources/applications">applications guide</Link>.
+          </p>
         </>
       ),
     },

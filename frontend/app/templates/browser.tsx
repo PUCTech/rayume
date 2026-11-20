@@ -90,7 +90,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
     <>
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         {children}
-        <div ref={bar} role="search" className="flex w-full items-center gap-3 rounded-full bg-white px-4 ring-1 ring-ink/10 transition focus-within:ring-2 focus-within:ring-accent-text lg:max-w-sm">
+        <div ref={bar} role="search" className="flex w-full items-center gap-3 rounded-full bg-surface px-4 ring-1 ring-ink/10 transition focus-within:ring-2 focus-within:ring-accent-text lg:max-w-sm">
           <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 text-ink/45" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <circle cx="8.5" cy="8.5" r="5.5" />
             <path d="m13 13 4 4" />
@@ -116,7 +116,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
       <div className="sticky top-[4.5rem] z-20 -mx-4 mt-6 border-b border-ink/10 bg-paper/95 px-4 py-3 sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-4">
           <div role="group" aria-label="Filter templates" className="-my-1 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 [scrollbar-width:none]">
-            <button type="button" aria-pressed={ats} onClick={() => transition(() => setAts((a) => !a))} className={`${chip} inline-flex items-center gap-1.5 ${ats ? "bg-ink text-white" : "bg-white text-ink/75 ring-1 ring-ink/10 hover:text-ink"}`}>
+            <button type="button" aria-pressed={ats} onClick={() => transition(() => setAts((a) => !a))} className={`${chip} inline-flex items-center gap-1.5 ${ats ? "bg-ink text-on-ink" : "bg-surface text-ink/75 ring-1 ring-ink/10 hover:text-ink"}`}>
               <svg aria-hidden viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m5 10.5 3.2 3L15 7" />
               </svg>
@@ -129,7 +129,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
                 {values(key).map((v) => {
                   const on = picked[key].includes(v);
                   return (
-                    <button key={v} type="button" aria-pressed={on} onClick={() => toggle(key, v)} className={`${chip} ${on ? "bg-ink text-white" : "text-ink/70 hover:bg-white hover:text-ink"}`}>
+                    <button key={v} type="button" aria-pressed={on} onClick={() => toggle(key, v)} className={`${chip} ${on ? "bg-ink text-on-ink" : "text-ink/70 hover:bg-surface hover:text-ink"}`}>
                       {v}
                     </button>
                   );
@@ -147,7 +147,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
               </button>
             )}
             <label className="sr-only" htmlFor="tpl-sort">Sort by</label>
-            <select id="tpl-sort" value={sort} onChange={(e) => transition(() => setSort(e.target.value as Sort))} className="rounded-full bg-white py-1.5 pl-3 pr-2 text-sm text-ink/75 ring-1 ring-ink/10 outline-none focus-visible:ring-2 focus-visible:ring-accent-text">
+            <select id="tpl-sort" value={sort} onChange={(e) => transition(() => setSort(e.target.value as Sort))} className="rounded-full bg-surface py-1.5 pl-3 pr-2 text-sm text-ink/75 ring-1 ring-ink/10 outline-none focus-visible:ring-2 focus-visible:ring-accent-text">
               {Object.entries(sorts).map(([k, v]) => (
                 <option key={k} value={k}>
                   {v}
@@ -176,7 +176,7 @@ export function Browser({ tex, children }: { tex: Record<string, string>; childr
                   />
                   {/* the whole preview opens it; the button sits above that link, not inside it */}
                   <Link href={`/templates/${t.file}`} onClick={(e) => preview(e, t)} aria-label={`Preview ${t.name}`} className="absolute inset-0 rounded-xl" />
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-ink/25 to-transparent p-3 pt-10 opacity-0 transition duration-300 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100">
+                  <div data-theme="light" className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-ink/25 to-transparent p-3 pt-10 opacity-0 transition duration-300 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100">
                     <Link
                       href={`/signup?template=${t.file}`}
                       className="pointer-events-auto rounded-full bg-accent-deep px-4 py-2 text-[13px] font-medium text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent)] transition hover:bg-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-accent-deep))] active:scale-[0.97]"

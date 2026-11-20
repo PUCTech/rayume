@@ -132,7 +132,7 @@ const On = createContext<Actions>(null!);
 const Rewrite: ToolCallMessagePartComponent<{ bulletId: string; text: string }, { applied: boolean }> = ({ args, result, addResult }) => {
   const on = useContext(On);
   return (
-    <div className="my-2 rounded-2xl bg-white p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
+    <div className="my-2 rounded-2xl bg-surface p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
       <p>{args.text}</p>
       <div className="mt-3">
         {result?.applied ? (
@@ -149,7 +149,7 @@ const Rewrite: ToolCallMessagePartComponent<{ bulletId: string; text: string }, 
 const Draft: ToolCallMessagePartComponent<{ title: string; bullets: string[] }, { added: boolean }> = ({ args, result, addResult }) => {
   const on = useContext(On);
   return (
-    <div className="my-2 rounded-2xl bg-white p-3.5 text-[14px] ring-1 ring-accent/25">
+    <div className="my-2 rounded-2xl bg-surface p-3.5 text-[14px] ring-1 ring-accent/25">
       <p className="font-medium">{args.title}</p>
       <ul className="mt-1.5 list-disc space-y-1 pl-5 text-ink/80">
         {args.bullets.map((b) => (
@@ -178,7 +178,7 @@ const Propose: ToolCallMessagePartComponent<Proposal, { done: "accepted" | "skip
   const on = useContext(On);
   const done = on.decided?.[args.bulletId] ?? result?.done;
   return (
-    <div className="my-2 rounded-2xl bg-white p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
+    <div className="my-2 rounded-2xl bg-surface p-3.5 text-[14px] leading-relaxed ring-1 ring-accent/25">
       <p className="text-xs font-medium text-ink/50">Before</p>
       <p className="text-ink/60">{args.before}</p>
       <p className="mt-2.5 text-xs font-medium text-ink/50">After</p>
@@ -239,7 +239,7 @@ function Modes({ mode, setMode, only }: { mode: Mode; setMode: (m: Mode) => void
           type="button"
           aria-pressed={mode === m.id}
           onClick={() => setMode(m.id)}
-          className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition ${mode === m.id ? "bg-ink text-white" : "text-ink/60 hover:bg-mist hover:text-ink"}`}
+          className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition ${mode === m.id ? "bg-ink text-on-ink" : "text-ink/60 hover:bg-mist hover:text-ink"}`}
         >
           {m.label}
         </button>
@@ -279,7 +279,7 @@ function Header() {
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Positioner sideOffset={6} align="start" className="z-[70] outline-none">
-            <Popover.Popup className="max-h-[60vh] w-72 origin-(--transform-origin) overflow-y-auto rounded-xl bg-white p-2 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+            <Popover.Popup className="max-h-[60vh] w-72 origin-(--transform-origin) overflow-y-auto rounded-xl bg-surface p-2 shadow-[0_16px_40px_-14px_rgb(22_27_34/0.4)] ring-1 ring-ink/10 outline-none transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
               <ThreadList />
             </Popover.Popup>
           </Popover.Positioner>

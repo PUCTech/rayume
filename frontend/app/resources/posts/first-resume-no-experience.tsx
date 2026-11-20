@@ -49,7 +49,8 @@ export const post: Article = {
           <p>
             <strong>Projects are your experience.</strong> At least two, each name linked to the repo or a live demo, with your own part spelled out.
             <Cite n={3} /> A course project counts. A bot you wrote for your friends’ Discord server counts. Something you never finished counts if you can say what you
-            learned and what you’d do next.
+            learned and what you’d do next. Before you link them, make the repos presentable: the{" "}
+            <Link href="/resources/github-profile">GitHub guide</Link> has the checklist.
           </p>
           <p>
             <strong>Experience is anything someone relied on you for.</strong> A part-time job, monitoria, freelance work, the family business, organizing an event.
