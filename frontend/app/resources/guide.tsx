@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { share } from "../share";
 import { guides } from "./articles";
+import { posts } from "./posts";
 import { ArticlePage } from "./article";
 
 // Each guide has its own static route folder (no params to wait on, so the page is fully prerendered);
@@ -23,9 +24,16 @@ export function Guide({ slug }: { slug: string }) {
   return (
     <ArticlePage
       article={guides[i]}
-      back={{ href: "/resources", label: "Resources" }}
+      trail={[{ href: "/resources", label: "Resources" }]}
       prev={prev && { href: `/resources/${prev.slug}`, title: prev.title, label: "Previous guide" }}
-      next={next && { href: `/resources/${next.slug}`, title: next.title, label: "Next guide" }}
+      // the last guide hands over to the blog, so the series never ends on a dead end
+      next={
+        next
+          ? { href: `/resources/${next.slug}`, title: next.title, label: "Next guide" }
+          : posts.length
+            ? { href: "/resources/blog", title: "Read the blog", label: "That was the last guide" }
+            : undefined
+      }
     />
   );
 }

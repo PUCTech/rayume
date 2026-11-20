@@ -41,7 +41,10 @@ async function Post({ params }: { params: Params }) {
   return (
     <ArticlePage
       article={posts[i]}
-      back={{ href: "/resources/blog", label: "Blog" }}
+      trail={[
+        { href: "/resources", label: "Resources" },
+        { href: "/resources/blog", label: "Blog" },
+      ]}
       prev={older && { href: `/resources/blog/${older.slug}`, title: older.title, label: "Older post" }}
       next={newer && { href: `/resources/blog/${newer.slug}`, title: newer.title, label: "Newer post" }}
     />

@@ -195,7 +195,10 @@ export const article: Article = {
             <li>What separates the interns or new grads who do really well here?</li>
             <li>What does the rest of the process look like, and when should I expect to hear back?</li>
           </ul>
-          <p>Skip anything the careers page already answers. They can tell.</p>
+          <p>
+            Skip anything the careers page already answers. They can tell. Save salary questions for after the offer; the{" "}
+            <Link href="/resources/first-offer">offer guide</Link> covers how to handle them.
+          </p>
         </>
       ),
     },

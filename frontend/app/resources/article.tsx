@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import { prose as base } from "../prose";
 import type { Article } from "./content";
+import { Toc } from "./toc";
 
 const serif = GeistSerifRegular.className;
 
@@ -15,34 +16,47 @@ const primary = `${btn} bg-accent-deep text-white shadow-[0_8px_24px_-8px_color-
 export const day = (d: string) =>
   new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", day: "numeric", year: "numeric" });
 
-type Neighbour = { href: string; title: string; label: string };
+type Crumb = { href: string; label: string };
+type Neighbour = Crumb & { title: string };
 
-// One page for a guide or a blog post: header, contents, sections, sources, a call to try Rayume, neighbours.
-export function ArticlePage({ article: a, back, prev, next }: { article: Article; back: { href: string; label: string }; prev?: Neighbour; next?: Neighbour }) {
+// where the page sits, as links up to the resources index; the page itself isn't repeated
+export function Crumbs({ trail }: { trail: Crumb[] }) {
+  return (
+    <nav aria-label="Breadcrumb" className="print:hidden">
+      <ol className="flex flex-wrap items-center gap-x-2 text-sm font-medium text-ink/55">
+        {trail.map((t, i) => (
+          <li key={t.href} className="flex items-center gap-2">
+            {i > 0 && <span aria-hidden className="text-ink/30">/</span>}
+            <Link href={t.href} className="inline-flex min-h-11 items-center transition hover:text-ink">
+              {t.label}
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+// the way back to the landing page from the resources and blog indexes
+export function HomeButton() {
+  return (
+    <Link href="/" className="inline-flex min-h-11 items-center rounded-full bg-mist px-5 text-sm font-medium text-ink transition hover:bg-white active:scale-[0.97] print:hidden">
+      Back to home
+    </Link>
+  );
+}
+
+// One page for a guide or a blog post: header, contents, sections, sources, what to read next, a call to try Rayume.
+export function ArticlePage({ article: a, trail, prev, next }: { article: Article; trail: Crumb[]; prev?: Neighbour; next?: Neighbour }) {
   const toc = [...a.sections.map((s) => ({ id: s.id, title: s.title })), ...(a.sources?.length ? [{ id: "sources", title: "Sources" }] : [])];
 
   return (
-    <article className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[14rem_1fr] lg:pt-24">
-      <nav aria-label="On this page" className="hidden lg:block">
-        <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto">
-          <p className="text-sm text-ink/50">On this page</p>
-          <ol className="mt-4 space-y-2 border-l border-ink/10 text-sm">
-            {toc.map((s) => (
-              <li key={s.id}>
-                <a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-0.5 pl-4 text-ink/60 transition hover:border-accent hover:text-ink">
-                  {s.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </nav>
+    <article className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[14rem_1fr] lg:pt-24 print:block print:pt-0">
+      <Toc items={toc} />
 
       <div className="min-w-0 max-w-[44rem]">
-        <Link href={back.href} className="text-sm font-medium text-ink/55 transition hover:text-ink">
-          {back.label}
-        </Link>
-        <h1 className={`${serif} mt-4 text-[clamp(2.6rem,5vw,4rem)] leading-[1.02] tracking-[-0.03em]`}>{a.title}</h1>
+        <Crumbs trail={trail} />
+        <h1 className={`${serif} mt-2 text-[clamp(2.1rem,3.6vw,3rem)] leading-[1.05] tracking-[-0.03em]`}>{a.title}</h1>
         <p className="mt-6 text-[19px] leading-[1.55] text-ink/75">{a.description}</p>
         <p className="mt-6 flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink/55">
           <span>By {a.author}</span>
@@ -54,7 +68,7 @@ export function ArticlePage({ article: a, back, prev, next }: { article: Article
 
         {/* the side contents is desktop only, so smaller screens get it folded here */}
         {toc.length > 1 && (
-          <details className="group mt-10 rounded-[28px] ring-1 ring-ink/10 lg:hidden">
+          <details className="group mt-10 rounded-[28px] ring-1 ring-ink/10 lg:hidden print:hidden">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-6 font-medium [&::-webkit-details-marker]:hidden">
               On this page
               <span aria-hidden className="text-ink/45 transition group-open:rotate-45">+</span>
@@ -72,9 +86,18 @@ export function ArticlePage({ article: a, back, prev, next }: { article: Article
         )}
 
         {a.sections.map((s) => (
-          <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-14 scroll-mt-28">
-            <h2 id={`${s.id}-h`} className={`${serif} text-[1.75rem] leading-tight tracking-[-0.02em]`}>
-              {s.title}
+          // the section is named by the title alone, so the anchor's label doesn't end up in it
+          <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="group/s mt-14 scroll-mt-28">
+            <h2 className={`${serif} relative text-[1.75rem] leading-tight tracking-[-0.02em]`}>
+              <span id={`${s.id}-h`}>{s.title}</span>
+              {/* a link to share this section, in the margin on desktop (hover or focus) so it never wraps the title; touch has no hover */}
+              <a
+                href={`#${s.id}`}
+                aria-label={`Link to ${s.title}`}
+                className="absolute -left-7 top-0.5 hidden font-sans text-xl text-ink/30 opacity-0 lg:block transition hover:text-accent-text focus-visible:opacity-100 group-hover/s:opacity-100 print:hidden"
+              >
+                #
+              </a>
             </h2>
             <div className={prose}>{s.body}</div>
           </section>
@@ -98,21 +121,8 @@ export function ArticlePage({ article: a, back, prev, next }: { article: Article
           </section>
         ) : null}
 
-        <aside aria-labelledby="try-h" className="relative mt-16 overflow-hidden rounded-[28px] bg-ink px-6 py-12 text-white sm:px-10">
-          <div aria-hidden className="pointer-events-none absolute -bottom-48 left-1/2 size-[30rem] -translate-x-1/2 rounded-full bg-accent/60 blur-[100px]" />
-          <h2 id="try-h" className={`${serif} relative max-w-md text-[clamp(1.9rem,3.6vw,2.6rem)] leading-[1.05] tracking-[-0.02em]`}>
-            Skip the blank page.
-          </h2>
-          <p className="relative mt-4 max-w-md text-white/70">
-            Tell Rayume what you did, in your own words. It writes the bullets, sets them in a template that parses, and tailors them to each job.
-          </p>
-          <Link href="/signup" className={`${primary} relative mt-8`}>
-            Build my resume
-          </Link>
-        </aside>
-
         {(prev || next) && (
-          <nav aria-label="Keep reading" className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <nav aria-label="Keep reading" className="mt-16 grid grid-cols-1 gap-3 sm:grid-cols-2 print:hidden">
             {[prev, next].map(
               (n, i) =>
                 n && (
@@ -128,7 +138,26 @@ export function ArticlePage({ article: a, back, prev, next }: { article: Article
             )}
           </nav>
         )}
+        <TryRayume className="mt-10" />
       </div>
     </article>
+  );
+}
+
+// the closing call to try Rayume, shared by every article and the resources index
+export function TryRayume({ className = "" }: { className?: string }) {
+  return (
+    <aside aria-labelledby="try-h" className={`relative overflow-hidden rounded-[28px] bg-ink px-6 py-12 text-white sm:px-10 print:hidden ${className}`}>
+      <div aria-hidden className="pointer-events-none absolute -bottom-48 left-1/2 size-[30rem] -translate-x-1/2 rounded-full bg-accent/60 blur-[100px]" />
+      <h2 id="try-h" className={`${serif} relative max-w-md text-[clamp(1.6rem,2.8vw,2.1rem)] leading-[1.1] tracking-[-0.02em]`}>
+        Skip the blank page.
+      </h2>
+      <p className="relative mt-4 max-w-md text-white/70">
+        Tell Rayume what you did, in your own words. It writes the bullets, sets them in a template that parses, and tailors them to each job.
+      </p>
+      <Link href="/signup" className={`${primary} relative mt-8`}>
+        Build my resume
+      </Link>
+    </aside>
   );
 }

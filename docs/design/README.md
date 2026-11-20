@@ -160,6 +160,7 @@ Rules:
 - Headings are **sentence case**. No all-caps labels, no tracked-out eyebrows.
 - Do **not** colour or italicise a single word in a headline. The headline is set in one colour.
 - Keep lines under ~75 characters: `max-w-[34rem]` for lead paragraphs, `max-w-xl` for section intros.
+- **No one-word lines.** A heading or paragraph must never wrap onto a line holding a single word. `globals.css` sets `text-wrap: balance` on headings and `pretty` on text; don't override it. When a heading wraps, the shorter phrase goes on top: if balance leaves the top line longer, break it by hand at a phrase boundary ("How to prepare / for a tech interview"), never mid-phrase.
 
 ---
 

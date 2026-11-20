@@ -7,7 +7,8 @@ const serif = GeistSerifRegular.className;
 
 export default function ResourcesLayout({ children }: LayoutProps<"/resources">) {
   return (
-    <div className="min-h-screen overflow-x-clip bg-paper font-sans text-ink antialiased">
+    // printing a guide keeps the article and drops the site chrome (the nav and footer are this div's children)
+    <div className="min-h-screen overflow-x-clip bg-paper font-sans text-ink antialiased print:bg-white print:[&>footer]:hidden print:[&>header]:hidden">
       <Refraction />
       <Nav serif={serif} />
       <main>{children}</main>

@@ -91,6 +91,13 @@ body {
     outline: 2px solid var(--color-accent-text);
     outline-offset: 3px;
   }
+  /* no one-word lines: headings balance their lines, text avoids a lone last word */
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+  p, li, figcaption, blockquote {
+    text-wrap: pretty;
+  }
 }
 
 /* Liquid glass: thin tinted body, heavy saturation, a bright rim and an inner glow. */
