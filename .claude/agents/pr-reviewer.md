@@ -18,6 +18,7 @@ If the task doesn't name a PR, run `gh pr list --state open` and report the list
    ```
    - **Stacked branches:** if the head was built on another open PR's branch, review only the author's own commits (`git diff origin/<parent-branch> origin/<head>`), mention the stacking in the general comment and leave no inline comments on the other author's code.
    - Note who wrote each commit (`git log --format='%h %an %s'`).
+   - **Backend routes:** check the PR against [`docs/backend/rules.md`](../../docs/backend/rules.md). Every route the app serves needs a request in `postman/collections/Rayume API/` that matches its method, path and body; a missing or stale one is `ajustar`.
 3. **Line numbers come from the PR head, never your checkout:** `git show <headRefOid>:<path> | cat -n`. Comments go on the right side of the diff (new file), and only on lines the PR changed. Pin each finding to the **smallest range that shows the problem**: the one line, or the few lines of the block. Never a whole function when one line is the bug.
 4. **Prove what you can test**, in a throwaway worktree in your scratchpad, never the user's tree:
    ```

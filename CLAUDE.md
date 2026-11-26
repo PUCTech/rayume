@@ -13,7 +13,7 @@ This file loads at the start of every session, including after `/clear`. Before 
 | Task | Read first |
 |------|------------|
 | Anything | `docs/PROJECT.md` (scope, stack, current state) |
-| Backend feature | `docs/database/README.md` → `docs/backend/endpoints/<resource>.md` → `docs/backend/architecture/` |
+| Backend feature | `docs/database/README.md` → `docs/backend/endpoints/<resource>.md` → `docs/backend/architecture/` → `docs/backend/rules.md` |
 | A page or UI | `docs/design/README.md` |
 | LaTeX rendering, AI calls, auth, uploads | `docs/security/README.md` (+ `docs/backend/architecture/render-worker.md` for rendering) |
 | Writing a guide or blog post | `docs/resources/README.md` |
@@ -66,6 +66,12 @@ This file loads at the start of every session, including after `/clear`. Before 
   - AI calls are synchronous and log `ai.call`. When the AI fails, return `502` and save nothing.
 - **Errors:** `{"detail": ...}`, using 400, 401, 404, 409, 413, 422, 429 and 502.
 - **Known schema gap:** add `resume_renders.template_id` before building the gallery previews.
+
+### Backend rules (`docs/backend/rules.md`, current)
+
+- A route PR is done only when the code, its tests, its endpoint doc and its Postman request agree.
+- **Every route has a request** in `postman/collections/Rayume API/<Resource>/<Verb noun>.request.yaml`: the ones you add or change, and any you find missing, even if someone else added them. Never hand-edit the generated `FastAPI` collection or `postman/specs/`.
+- Run `uv run pytest -q` before pushing; say which tests need Postgres instead of skipping them.
 
 ### Backend architecture (`docs/backend/README.md`, `docs/backend/architecture/`)
 

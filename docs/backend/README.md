@@ -9,8 +9,9 @@
 |-----|-----------------|
 | [`endpoints/`](endpoints/README.md) | **What** the API does: every route, its parameters, responses and errors |
 | [`architecture/`](architecture/README.md) | **How** it's built: code layout, the data layer, configuration |
+| [`rules.md`](rules.md) | The checklist for every backend PR: docs first, tests, and a Postman request for every route |
 
-Building a feature: read its endpoint file for the contract, then the architecture docs for where the code goes.
+Building a feature: read its endpoint file for the contract, then the architecture docs for where the code goes, and follow [`rules.md`](rules.md) before you open the PR.
 
 ## Stack
 
