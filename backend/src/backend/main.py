@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routers import templates, auth
+from .routers import templates, auth, users
 
 app = FastAPI(title="Rayume API", version="0.1.0")
 
@@ -17,7 +17,7 @@ app.add_middleware(
 )
 
 app.include_router(templates.router)
-
+app.include_router(users.router)
 app.include_router(auth.router)
 
 @app.get("/health")
