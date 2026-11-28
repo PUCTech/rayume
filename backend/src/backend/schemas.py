@@ -134,3 +134,34 @@ class TokenResponse(BaseModel):
     token_type: Literal["bearer"]
     expires_in: int
     user: UserOut
+
+
+class UserUpdate(BaseModel):
+    username: str | None = Field(default=None, min_length=3, max_length=30, pattern=r"^[a-z0-9_-]+$")
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    profession: str | None = Field(default=None, max_length=100)
+    summary: str | None = Field(default=None, max_length=2000)
+    phone: str | None = Field(default=None, max_length=30)
+    address: str | None = Field(default=None, max_length=200)
+    language: Literal["en", "pt-BR"] | None = None
+    links: list[Link] | None = Field(default=None, max_length=10)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def lower_username(cls, value: object) -> object:
+        return value.lower() if isinstance(value, str) else value
+
+    @field_validator("username", "name", "language")
+    @classmethod
+    def reject_explicit_null(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("field_cannot_be_null")
+        return value
+
+    @field_validator("username")
+    @classmethod
+    def username_not_reserved(cls, value: str) -> str:
+        if value in RESERVED_USERNAMES:
+            raise ValueError("username_reserved")
+        return value
