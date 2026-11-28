@@ -165,3 +165,19 @@ class UserUpdate(BaseModel):
         if value in RESERVED_USERNAMES:
             raise ValueError("username_reserved")
         return value
+
+
+class PublicUserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    username: str
+    name: str
+    profession: str | None
+    summary: str | None
+    picture_url: str | None
+    links: list[Link]
+
+    @field_validator("links", mode="before")
+    @classmethod
+    def normalize_links(cls, value: object) -> object:
+        return [] if value is None else value

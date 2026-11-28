@@ -2,12 +2,13 @@ from typing import Annotated
 
 from fastapi import Depends, APIRouter, HTTPException
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from ..dependencies import get_current_user
 from ..models import User
-from ..schemas import UserOut, UserUpdate
+from ..schemas import UserOut, UserUpdate, PublicUserOut
 from ..db import get_db
 
 router = APIRouter(tags=["users"])
@@ -41,3 +42,18 @@ def update_me(body: UserUpdate, current_user: Annotated[User, Depends(get_curren
 
     db.refresh(current_user)
     return current_user
+
+@router.get("/users/{username}", response_model=PublicUserOut)
+def get_user(username: str, db: Annotated[Session, Depends(get_db)])-> User:
+    user = db.scalar(
+        select(User).where(
+            func.lower(User.username) == username.lower(),
+            User.disabled_at.is_(None),
+        )
+    )
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
